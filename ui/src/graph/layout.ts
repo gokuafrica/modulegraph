@@ -23,6 +23,7 @@ export async function layout(model: Model): Promise<{ nodes: Node[]; edges: Edge
       'elk.spacing.nodeNode': '34',
       'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
       'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
+      'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED',
       'elk.layered.crossingMinimization.forceNodeModelOrder': 'false',
     },
     children: model.nodes.map((n) => ({ id: n.id, width: n.width, height: n.height })),
