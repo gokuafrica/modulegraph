@@ -1,3 +1,4 @@
+import { BirthConsentStore } from './modules/birth-info/BirthConsentStore.ts';
 import { BirthInfoModule } from './modules/birth-info/BirthInfoModule.ts';
 import { DocumentBirthExtractor } from './modules/birth-info/DocumentBirthExtractor.ts';
 import { ComplianceReportModule } from './modules/compliance/ComplianceReportModule.ts';
@@ -36,7 +37,7 @@ export function buildApp() {
   const identity = new IdentityModule(new DocumentStore(db), new DocumentExtractor(http));
   const nationality = new NationalityModule(db);
   const personalDetails = new PersonalDetailsModule(db);
-  const birthInfo = new BirthInfoModule(new DocumentBirthExtractor());
+  const birthInfo = new BirthInfoModule(new DocumentBirthExtractor(), new BirthConsentStore(db), outbox);
 
   const profile = new ProfileService(db, kafka, identity, nationality, personalDetails, birthInfo);
   const kyc = new KycModule(db, outbox, identity, birthInfo, nationality, new SanctionsScreening(http));

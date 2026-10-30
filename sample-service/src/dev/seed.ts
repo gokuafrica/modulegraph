@@ -9,6 +9,8 @@ export async function seed(app: App): Promise<void> {
     await db.insert('user_documents', { id: `doc-${userId}`, userId, kind: 'passport', fileRef: `s3://docs/${userId}.pdf`, uploadedAt: '2026-10-01' });
     await db.insert('user_profiles', { userId, preferredName: userId === 'u-1' ? 'Ana' : 'Raj' });
   }
+  // u-2 corrected their birth city (Bombay on the passport, Mumbai by choice) and consented to its use.
+  await db.insert('birth_info_consents', { userId: 'u-2', countryOfBirth: 'IND', cityOfBirth: 'Mumbai', consentedAt: '2026-10-20', revokedAt: null });
   await db.insert('country_codes', { alpha3: 'PRT', name: 'Portugal', isEu: true });
   await db.insert('country_codes', { alpha3: 'IND', name: 'India', isEu: false });
 

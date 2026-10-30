@@ -6,6 +6,6 @@ import type { BirthInfo } from './types.ts';
  */
 export class DocumentBirthExtractor {
   fromIdentity(identity: IdentityData): BirthInfo {
-    return { countryOfBirth: identity.countryOfBirth, cityOfBirth: identity.cityOfBirth };
+    return { countryOfBirth: identity.countryOfBirth, cityOfBirth: identity.cityOfBirth, source: 'document' };
   }
 }
