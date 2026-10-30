@@ -1,0 +1,16 @@
+{
+  "name": "identity-profile-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "smoke": "tsx src/smoke.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "@types/node": "^24.0.0"
+  }
+}
