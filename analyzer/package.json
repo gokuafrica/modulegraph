@@ -3,11 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "bin": { "modulegraph": "src/cli.ts" },
+  "bin": {
+    "modulegraph": "src/cli.ts"
+  },
   "scripts": {
     "analyze": "tsx src/cli.ts",
     "demo": "tsx src/demo.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "schema": "tsx src/schema-gen.ts",
+    "validate": "tsx src/validate.ts"
   },
   "dependencies": {
     "diff": "^8.0.2",

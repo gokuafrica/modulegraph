@@ -1,0 +1,41 @@
+[
+  {
+    "id": "demo-birthinfo-consent",
+    "title": "BirthInfo: consented data wins over documents",
+    "mode": "branch",
+    "generatedAt": "2026-10-30T22:54:34.869Z",
+    "stats": {
+      "files": 7,
+      "linesAdded": 61,
+      "linesRemoved": 4,
+      "contractChanges": 5,
+      "entryPointsAffected": 22
+    }
+  },
+  {
+    "id": "snapshot-main",
+    "title": "Snapshot: identity-profile-service (main)",
+    "mode": "snapshot",
+    "generatedAt": "2026-10-30T22:54:30.014Z",
+    "stats": {
+      "files": 0,
+      "linesAdded": 0,
+      "linesRemoved": 0,
+      "contractChanges": 0,
+      "entryPointsAffected": 0
+    }
+  },
+  {
+    "id": "demo-uncommitted",
+    "title": "Uncommitted: PersonalDetails touches documents",
+    "mode": "uncommitted",
+    "generatedAt": "2026-10-30T22:53:21.441Z",
+    "stats": {
+      "files": 1,
+      "linesAdded": 2,
+      "linesRemoved": 0,
+      "contractChanges": 1,
+      "entryPointsAffected": 6
+    }
+  }
+]

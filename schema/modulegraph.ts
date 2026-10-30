@@ -171,6 +171,8 @@ export interface Finding {
   severity: 'error' | 'warning' | 'info';
   message: string;
   subject?: { type: 'module' | 'operation' | 'entry' | 'file'; id: string };
+  /** Other entities the finding applies to (e.g. every read-only entry point that now writes). */
+  related?: { type: 'module' | 'operation' | 'entry' | 'file'; id: string }[];
   /** True when the finding did not exist on the base revision. */
   isNew: boolean;
   hint?: string;

@@ -1,0 +1,6706 @@
+{
+  "schema": "modulegraph/v1",
+  "service": "identity-profile-service",
+  "generatedAt": "2026-10-30T22:54:30.014Z",
+  "generator": "modulegraph-analyzer/0.1 (ts-morph)",
+  "source": {
+    "mode": "snapshot",
+    "repo": ".",
+    "project": "sample-service",
+    "files": [],
+    "title": "Snapshot: identity-profile-service (main)"
+  },
+  "modules": {
+    "IdentityReviewModule": {
+      "id": "IdentityReviewModule",
+      "name": "IdentityReview",
+      "className": "IdentityReviewModule",
+      "file": "sample-service/src/modules/admin/IdentityReviewModule.ts",
+      "line": 11,
+      "summary": "back-office view of a user's identity evidence for manual review.",
+      "owner": "team-backoffice",
+      "declaredEffects": [
+        {
+          "kind": "db.read",
+          "target": "review_notes"
+        }
+      ],
+      "operations": [
+        "IdentityReviewModule.review"
+      ],
+      "change": "unchanged"
+    },
+    "BirthInfoModule": {
+      "id": "BirthInfoModule",
+      "name": "BirthInfo",
+      "className": "BirthInfoModule",
+      "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+      "line": 10,
+      "summary": "the user's country and city of birth.",
+      "owner": "team-identity",
+      "declaredEffects": [],
+      "operations": [
+        "BirthInfoModule.resolve"
+      ],
+      "change": "unchanged"
+    },
+    "DocumentBirthExtractor": {
+      "id": "DocumentBirthExtractor",
+      "name": "DocumentBirthExtractor",
+      "className": "DocumentBirthExtractor",
+      "file": "sample-service/src/modules/birth-info/DocumentBirthExtractor.ts",
+      "line": 9,
+      "summary": "Reads country and city of birth out of already-fetched identity data. Pure: no I/O.",
+      "owner": "team-identity",
+      "declaredEffects": [],
+      "operations": [
+        "DocumentBirthExtractor.fromIdentity"
+      ],
+      "change": "unchanged"
+    },
+    "ComplianceReportModule": {
+      "id": "ComplianceReportModule",
+      "name": "ComplianceReport",
+      "className": "ComplianceReportModule",
+      "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
+      "line": 12,
+      "summary": "monthly regulator report of KYC outcomes and tax residencies.",
+      "owner": "team-compliance",
+      "declaredEffects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results"
+        },
+        {
+          "kind": "http",
+          "target": "regulator-reporting"
+        }
+      ],
+      "operations": [
+        "ComplianceReportModule.generateMonthly"
+      ],
+      "change": "unchanged"
+    },
+    "DocumentExtractor": {
+      "id": "DocumentExtractor",
+      "name": "DocumentExtractor",
+      "className": "DocumentExtractor",
+      "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+      "line": 10,
+      "summary": "Extracts structured fields from document scans via the document-AI service.",
+      "owner": "team-identity",
+      "declaredEffects": [
+        {
+          "kind": "http",
+          "target": "document-ai"
+        }
+      ],
+      "operations": [
+        "DocumentExtractor.extract"
+      ],
+      "change": "unchanged"
+    },
+    "DocumentStore": {
+      "id": "DocumentStore",
+      "name": "DocumentStore",
+      "className": "DocumentStore",
+      "file": "sample-service/src/modules/identity/DocumentStore.ts",
+      "line": 10,
+      "summary": "Reads the user's uploaded identity documents.",
+      "owner": "team-identity",
+      "declaredEffects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents"
+        }
+      ],
+      "operations": [
+        "DocumentStore.latestDocuments"
+      ],
+      "change": "unchanged"
+    },
+    "IdentityModule": {
+      "id": "IdentityModule",
+      "name": "Identity",
+      "className": "IdentityModule",
+      "file": "sample-service/src/modules/identity/IdentityModule.ts",
+      "line": 11,
+      "summary": "what the user's documents say about them (nationality, country and city of birth, ...). Expensive (DB + document-AI call), so orchestrators fetch it once and pass it down.",
+      "owner": "team-identity",
+      "declaredEffects": [],
+      "operations": [
+        "IdentityModule.fetchIdentity"
+      ],
+      "change": "unchanged"
+    },
+    "KycModule": {
+      "id": "KycModule",
+      "name": "KycCheck",
+      "className": "KycModule",
+      "file": "sample-service/src/modules/kyc/KycModule.ts",
+      "line": 25,
+      "summary": "know-your-customer verification. Identity, birth info and nationality feed sanctions screening.",
+      "owner": "team-compliance",
+      "declaredEffects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results"
+        },
+        {
+          "kind": "db.write",
+          "target": "kyc_results"
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.completed"
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.overridden"
+        }
+      ],
+      "operations": [
+        "KycModule.runCheck",
+        "KycModule.getStatus",
+        "KycModule.override",
+        "KycModule.recheckExpired"
+      ],
+      "change": "unchanged"
+    },
+    "SanctionsScreening": {
+      "id": "SanctionsScreening",
+      "name": "SanctionsScreening",
+      "className": "SanctionsScreening",
+      "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
+      "line": 14,
+      "summary": "Screens a person against sanctions and PEP lists.",
+      "owner": "team-compliance",
+      "declaredEffects": [
+        {
+          "kind": "http",
+          "target": "sanctions-api"
+        }
+      ],
+      "operations": [
+        "SanctionsScreening.screen"
+      ],
+      "change": "unchanged"
+    },
+    "NationalityModule": {
+      "id": "NationalityModule",
+      "name": "Nationality",
+      "className": "NationalityModule",
+      "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+      "line": 16,
+      "summary": "normalises the document nationality to an ISO country record.",
+      "owner": "team-identity",
+      "declaredEffects": [
+        {
+          "kind": "db.read",
+          "target": "country_codes"
+        }
+      ],
+      "operations": [
+        "NationalityModule.resolve"
+      ],
+      "change": "unchanged"
+    },
+    "OnboardingModule": {
+      "id": "OnboardingModule",
+      "name": "Onboarding",
+      "className": "OnboardingModule",
+      "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
+      "line": 12,
+      "summary": "completes sign-up once KYC passes.",
+      "owner": "team-onboarding",
+      "declaredEffects": [
+        {
+          "kind": "db.write",
+          "target": "users"
+        },
+        {
+          "kind": "kafka",
+          "target": "user.onboarded"
+        }
+      ],
+      "operations": [
+        "OnboardingModule.complete"
+      ],
+      "change": "unchanged"
+    },
+    "PersonalDetailsModule": {
+      "id": "PersonalDetailsModule",
+      "name": "PersonalDetails",
+      "className": "PersonalDetailsModule",
+      "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
+      "line": 16,
+      "summary": "legal name and date of birth from documents, preferred name from the user's profile.",
+      "owner": "team-profile",
+      "declaredEffects": [
+        {
+          "kind": "db.read",
+          "target": "user_profiles"
+        }
+      ],
+      "operations": [
+        "PersonalDetailsModule.resolve"
+      ],
+      "change": "unchanged"
+    },
+    "ProfileService": {
+      "id": "ProfileService",
+      "name": "ProfileAssembler",
+      "className": "ProfileService",
+      "file": "sample-service/src/modules/profile/ProfileService.ts",
+      "line": 17,
+      "summary": "builds the user profile. Fetches Identity once and shares it with every sub-module.",
+      "owner": "team-profile",
+      "declaredEffects": [
+        {
+          "kind": "db.write",
+          "target": "gdpr_exports"
+        },
+        {
+          "kind": "db.write",
+          "target": "user_profiles"
+        },
+        {
+          "kind": "db.write",
+          "target": "user_documents"
+        },
+        {
+          "kind": "kafka",
+          "target": "privacy.export.ready"
+        }
+      ],
+      "operations": [
+        "ProfileService.getProfile",
+        "ProfileService.getSummary",
+        "ProfileService.getNationality",
+        "ProfileService.getBirthInfo",
+        "ProfileService.exportProfile",
+        "ProfileService.purge"
+      ],
+      "change": "unchanged"
+    },
+    "TaxResidencyModule": {
+      "id": "TaxResidencyModule",
+      "name": "TaxResidency",
+      "className": "TaxResidencyModule",
+      "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+      "line": 21,
+      "summary": "works out tax residencies (incl. US-person status from place of birth).",
+      "owner": "team-compliance",
+      "declaredEffects": [
+        {
+          "kind": "db.read",
+          "target": "tax_declarations"
+        },
+        {
+          "kind": "db.write",
+          "target": "tax_declarations"
+        },
+        {
+          "kind": "db.read",
+          "target": "tax_residency_assessments"
+        },
+        {
+          "kind": "db.write",
+          "target": "tax_residency_assessments"
+        }
+      ],
+      "operations": [
+        "TaxResidencyModule.assess",
+        "TaxResidencyModule.recordDeclaration",
+        "TaxResidencyModule.weeklySweep"
+      ],
+      "change": "unchanged"
+    },
+    "TravelEligibilityModule": {
+      "id": "TravelEligibilityModule",
+      "name": "TravelEligibility",
+      "className": "TravelEligibilityModule",
+      "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
+      "line": 15,
+      "summary": "visa eligibility checks and passport application prefill.",
+      "owner": "team-travel",
+      "declaredEffects": [
+        {
+          "kind": "http",
+          "target": "visa-rules-service"
+        },
+        {
+          "kind": "db.write",
+          "target": "passport_prefills"
+        }
+      ],
+      "operations": [
+        "TravelEligibilityModule.checkVisa",
+        "TravelEligibilityModule.prefillPassport"
+      ],
+      "change": "unchanged"
+    }
+  },
+  "operations": {
+    "IdentityReviewModule.review": {
+      "id": "IdentityReviewModule.review",
+      "moduleId": "IdentityReviewModule",
+      "name": "review",
+      "file": "sample-service/src/modules/admin/IdentityReviewModule.ts",
+      "line": 18,
+      "endLine": 23,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ identity: IdentityData; birth: BirthInfo; notes: Row[]; }",
+        "fields": [
+          {
+            "name": "identity",
+            "type": "IdentityData"
+          },
+          {
+            "name": "birth",
+            "type": "BirthInfo"
+          },
+          {
+            "name": "notes",
+            "type": "Row[]"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "review_notes",
+          "file": "sample-service/src/modules/admin/IdentityReviewModule.ts",
+          "line": 21
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "review_notes",
+          "file": "sample-service/src/modules/admin/IdentityReviewModule.ts",
+          "line": 21
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        }
+      ],
+      "calls": [
+        "IdentityModule.fetchIdentity",
+        "BirthInfoModule.resolve"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async review(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  const birth = await this.birthInfo.resolve(identity);\n  const notes = await this.db.select('review_notes', { userId });\n  return { identity, birth, notes };\n}"
+    },
+    "BirthInfoModule.resolve": {
+      "id": "BirthInfoModule.resolve",
+      "moduleId": "BirthInfoModule",
+      "name": "resolve",
+      "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+      "line": 13,
+      "endLine": 15,
+      "params": [
+        {
+          "name": "identity",
+          "type": "IdentityData"
+        }
+      ],
+      "returns": {
+        "type": "BirthInfo",
+        "fields": [
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "cityOfBirth",
+            "type": "string"
+          }
+        ]
+      },
+      "directEffects": [],
+      "effects": [],
+      "calls": [
+        "DocumentBirthExtractor.fromIdentity"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async resolve(identity: IdentityData): Promise<BirthInfo> {\n  return this.documentBirth.fromIdentity(identity);\n}"
+    },
+    "DocumentBirthExtractor.fromIdentity": {
+      "id": "DocumentBirthExtractor.fromIdentity",
+      "moduleId": "DocumentBirthExtractor",
+      "name": "fromIdentity",
+      "file": "sample-service/src/modules/birth-info/DocumentBirthExtractor.ts",
+      "line": 10,
+      "endLine": 12,
+      "params": [
+        {
+          "name": "identity",
+          "type": "IdentityData"
+        }
+      ],
+      "returns": {
+        "type": "BirthInfo",
+        "fields": [
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "cityOfBirth",
+            "type": "string"
+          }
+        ]
+      },
+      "directEffects": [],
+      "effects": [],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "fromIdentity(identity: IdentityData): BirthInfo {\n  return { countryOfBirth: identity.countryOfBirth, cityOfBirth: identity.cityOfBirth };\n}"
+    },
+    "ComplianceReportModule.generateMonthly": {
+      "id": "ComplianceReportModule.generateMonthly",
+      "moduleId": "ComplianceReportModule",
+      "name": "generateMonthly",
+      "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
+      "line": 19,
+      "endLine": 24,
+      "params": [],
+      "returns": {
+        "type": "void"
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "http",
+          "target": "regulator-reporting",
+          "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
+          "line": 23
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "http",
+          "target": "regulator-reporting",
+          "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
+          "line": 23
+        },
+        {
+          "kind": "db.read",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 33
+        },
+        {
+          "kind": "db.write",
+          "target": "tax_residency_assessments",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 36
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "calls": [
+        "TaxResidencyModule.assess"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async generateMonthly(): Promise<void> {\n  const results = await this.db.select('kyc_results', {});\n  const residencies: TaxResidency[] = [];\n  for (const row of results) residencies.push(await this.tax.assess(row.userId as string));\n  await this.http.post('regulator-reporting', '/v1/reports', { results, residencies });\n}"
+    },
+    "DocumentExtractor.extract": {
+      "id": "DocumentExtractor.extract",
+      "moduleId": "DocumentExtractor",
+      "name": "extract",
+      "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+      "line": 13,
+      "endLine": 16,
+      "params": [
+        {
+          "name": "documents",
+          "type": "IdentityDocument[]"
+        }
+      ],
+      "returns": {
+        "type": "ExtractedFields",
+        "fields": [
+          {
+            "name": "fullName",
+            "type": "string"
+          },
+          {
+            "name": "dateOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "nationality",
+            "type": "string"
+          },
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "cityOfBirth",
+            "type": "string"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        }
+      ],
+      "effects": [
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async extract(documents: IdentityDocument[]): Promise<ExtractedFields> {\n  if (documents.length === 0) throw new Error('no identity documents on file');\n  return this.http.post<ExtractedFields>('document-ai', '/v2/extract', { fileRefs: documents.map((d) => d.fileRef) });\n}"
+    },
+    "DocumentStore.latestDocuments": {
+      "id": "DocumentStore.latestDocuments",
+      "moduleId": "DocumentStore",
+      "name": "latestDocuments",
+      "file": "sample-service/src/modules/identity/DocumentStore.ts",
+      "line": 13,
+      "endLine": 16,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "IdentityDocument[]"
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async latestDocuments(userId: string): Promise<IdentityDocument[]> {\n  const docs = await this.db.select<IdentityDocument & Record<string, unknown>>('user_documents', { userId });\n  return docs.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));\n}"
+    },
+    "IdentityModule.fetchIdentity": {
+      "id": "IdentityModule.fetchIdentity",
+      "moduleId": "IdentityModule",
+      "name": "fetchIdentity",
+      "file": "sample-service/src/modules/identity/IdentityModule.ts",
+      "line": 17,
+      "endLine": 21,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "IdentityData",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "documentIds",
+            "type": "string[]"
+          },
+          {
+            "name": "extractedAt",
+            "type": "string"
+          },
+          {
+            "name": "fullName",
+            "type": "string"
+          },
+          {
+            "name": "dateOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "nationality",
+            "type": "string"
+          },
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "cityOfBirth",
+            "type": "string"
+          }
+        ]
+      },
+      "directEffects": [],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        }
+      ],
+      "calls": [
+        "DocumentStore.latestDocuments",
+        "DocumentExtractor.extract"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async fetchIdentity(userId: string): Promise<IdentityData> {\n  const docs = await this.documents.latestDocuments(userId);\n  const fields = await this.extractor.extract(docs);\n  return { ...fields, userId, documentIds: docs.map((d) => d.id), extractedAt: new Date().toISOString() };\n}"
+    },
+    "KycModule.runCheck": {
+      "id": "KycModule.runCheck",
+      "moduleId": "KycModule",
+      "name": "runCheck",
+      "file": "sample-service/src/modules/kyc/KycModule.ts",
+      "line": 35,
+      "endLine": 47,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "KycResult",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "KycStatus"
+          },
+          {
+            "name": "checkedAt",
+            "type": "string"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 44
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.completed",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 45
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 44
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.completed",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 45
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "http",
+          "target": "sanctions-api",
+          "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
+          "line": 18
+        }
+      ],
+      "calls": [
+        "IdentityModule.fetchIdentity",
+        "BirthInfoModule.resolve",
+        "NationalityModule.resolve",
+        "SanctionsScreening.screen"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async runCheck(userId: string): Promise<KycResult> {\n  const identity = await this.identity.fetchIdentity(userId);\n  const [birth, nationality] = await Promise.all([this.birthInfo.resolve(identity), this.nationality.resolve(identity)]);\n  const screening = await this.sanctions.screen({\n    name: identity.fullName,\n    countryOfBirth: birth.countryOfBirth,\n    nationality: nationality.alpha3,\n  });\n  const result: KycResult = { userId, status: screening.hit ? 'failed' : 'passed', checkedAt: new Date().toISOString() };\n  await this.db.insert('kyc_results', { ...result });\n  await this.outbox.enqueue('kyc.completed', { ...result });\n  return result;\n}"
+    },
+    "KycModule.getStatus": {
+      "id": "KycModule.getStatus",
+      "moduleId": "KycModule",
+      "name": "getStatus",
+      "file": "sample-service/src/modules/kyc/KycModule.ts",
+      "line": 49,
+      "endLine": 52,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "KycResult | undefined",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "KycStatus"
+          },
+          {
+            "name": "checkedAt",
+            "type": "string"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 50
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 50
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async getStatus(userId: string): Promise<KycResult | undefined> {\n  const [latest] = await this.db.select<KycResult & Record<string, unknown>>('kyc_results', { userId });\n  return latest;\n}"
+    },
+    "KycModule.override": {
+      "id": "KycModule.override",
+      "moduleId": "KycModule",
+      "name": "override",
+      "file": "sample-service/src/modules/kyc/KycModule.ts",
+      "line": 54,
+      "endLine": 58,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "type": "KycStatus"
+        },
+        {
+          "name": "reviewer",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ userId: string; status: KycStatus; }",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "KycStatus"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 55
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.overridden",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 56
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 55
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.overridden",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 56
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async override(userId: string, status: KycStatus, reviewer: string) {\n  await this.db.update('kyc_results', { userId }, { status, overriddenBy: reviewer });\n  await this.outbox.enqueue('kyc.overridden', { userId, status, reviewer });\n  return { userId, status };\n}"
+    },
+    "KycModule.recheckExpired": {
+      "id": "KycModule.recheckExpired",
+      "moduleId": "KycModule",
+      "name": "recheckExpired",
+      "file": "sample-service/src/modules/kyc/KycModule.ts",
+      "line": 60,
+      "endLine": 64,
+      "params": [],
+      "returns": {
+        "type": "number"
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 61
+        },
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 44
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.completed",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 45
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 61
+        },
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 44
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.completed",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 45
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "http",
+          "target": "sanctions-api",
+          "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
+          "line": 18
+        }
+      ],
+      "calls": [
+        "IdentityModule.fetchIdentity",
+        "BirthInfoModule.resolve",
+        "NationalityModule.resolve",
+        "SanctionsScreening.screen"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async recheckExpired(): Promise<number> {\n  const expired = await this.db.select<KycResult & Record<string, unknown>>('kyc_results', { status: 'expired' });\n  for (const row of expired) await this.runCheck(row.userId);\n  return expired.length;\n}"
+    },
+    "SanctionsScreening.screen": {
+      "id": "SanctionsScreening.screen",
+      "moduleId": "SanctionsScreening",
+      "name": "screen",
+      "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
+      "line": 17,
+      "endLine": 19,
+      "params": [
+        {
+          "name": "person",
+          "type": "{ name: string; countryOfBirth: string; nationality: string; }"
+        }
+      ],
+      "returns": {
+        "type": "ScreeningResult",
+        "fields": [
+          {
+            "name": "hit",
+            "type": "boolean"
+          },
+          {
+            "name": "listVersion",
+            "type": "string"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "http",
+          "target": "sanctions-api",
+          "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
+          "line": 18
+        }
+      ],
+      "effects": [
+        {
+          "kind": "http",
+          "target": "sanctions-api",
+          "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
+          "line": 18
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async screen(person: { name: string; countryOfBirth: string; nationality: string }): Promise<ScreeningResult> {\n  return this.http.post<ScreeningResult>('sanctions-api', '/v1/screen', person);\n}"
+    },
+    "NationalityModule.resolve": {
+      "id": "NationalityModule.resolve",
+      "moduleId": "NationalityModule",
+      "name": "resolve",
+      "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+      "line": 19,
+      "endLine": 22,
+      "params": [
+        {
+          "name": "identity",
+          "type": "IdentityData"
+        }
+      ],
+      "returns": {
+        "type": "Nationality",
+        "fields": [
+          {
+            "name": "alpha3",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "isEu",
+            "type": "boolean"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async resolve(identity: IdentityData): Promise<Nationality> {\n  const [country] = await this.db.select<Nationality & Record<string, unknown>>('country_codes', { alpha3: identity.nationality });\n  return country ?? { alpha3: identity.nationality, name: identity.nationality, isEu: false };\n}"
+    },
+    "OnboardingModule.complete": {
+      "id": "OnboardingModule.complete",
+      "moduleId": "OnboardingModule",
+      "name": "complete",
+      "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
+      "line": 19,
+      "endLine": 25,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ userId: string; onboarded: boolean; }",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "onboarded",
+            "type": "boolean"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.write",
+          "target": "users",
+          "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "kafka",
+          "target": "user.onboarded",
+          "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
+          "line": 23
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "users",
+          "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "kafka",
+          "target": "user.onboarded",
+          "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
+          "line": 23
+        },
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 44
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.completed",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 45
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "http",
+          "target": "sanctions-api",
+          "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
+          "line": 18
+        }
+      ],
+      "calls": [
+        "KycModule.runCheck"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async complete(userId: string) {\n  const kyc = await this.kyc.runCheck(userId);\n  if (kyc.status !== 'passed') return { userId, onboarded: false };\n  await this.db.update('users', { userId }, { status: 'active' });\n  await this.kafka.produce('user.onboarded', { userId });\n  return { userId, onboarded: true };\n}"
+    },
+    "PersonalDetailsModule.resolve": {
+      "id": "PersonalDetailsModule.resolve",
+      "moduleId": "PersonalDetailsModule",
+      "name": "resolve",
+      "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
+      "line": 19,
+      "endLine": 26,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "identity",
+          "type": "IdentityData"
+        }
+      ],
+      "returns": {
+        "type": "PersonalDetails",
+        "fields": [
+          {
+            "name": "legalName",
+            "type": "string"
+          },
+          {
+            "name": "preferredName",
+            "type": "string"
+          },
+          {
+            "name": "dateOfBirth",
+            "type": "string"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "user_profiles",
+          "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
+          "line": 20
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_profiles",
+          "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
+          "line": 20
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async resolve(userId: string, identity: IdentityData): Promise<PersonalDetails> {\n  const [profile] = await this.db.select('user_profiles', { userId });\n  return {\n    legalName: identity.fullName,\n    preferredName: (profile?.preferredName as string | undefined) ?? identity.fullName,\n    dateOfBirth: identity.dateOfBirth,\n  };\n}"
+    },
+    "ProfileService.getProfile": {
+      "id": "ProfileService.getProfile",
+      "moduleId": "ProfileService",
+      "name": "getProfile",
+      "file": "sample-service/src/modules/profile/ProfileService.ts",
+      "line": 27,
+      "endLine": 35,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ userId: string; nationality: Nationality; personal: PersonalDetails; birth: BirthInfo; }",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "nationality",
+            "type": "Nationality"
+          },
+          {
+            "name": "personal",
+            "type": "PersonalDetails"
+          },
+          {
+            "name": "birth",
+            "type": "BirthInfo"
+          }
+        ]
+      },
+      "directEffects": [],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "user_profiles",
+          "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
+          "line": 20
+        }
+      ],
+      "calls": [
+        "IdentityModule.fetchIdentity",
+        "NationalityModule.resolve",
+        "PersonalDetailsModule.resolve",
+        "BirthInfoModule.resolve"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async getProfile(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  const [nationality, personal, birth] = await Promise.all([\n    this.nationality.resolve(identity),\n    this.personalDetails.resolve(userId, identity),\n    this.birthInfo.resolve(identity),\n  ]);\n  return { userId, nationality, personal, birth };\n}"
+    },
+    "ProfileService.getSummary": {
+      "id": "ProfileService.getSummary",
+      "moduleId": "ProfileService",
+      "name": "getSummary",
+      "file": "sample-service/src/modules/profile/ProfileService.ts",
+      "line": 37,
+      "endLine": 41,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ userId: string; name: string; }",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          }
+        ]
+      },
+      "directEffects": [],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "user_profiles",
+          "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
+          "line": 20
+        }
+      ],
+      "calls": [
+        "IdentityModule.fetchIdentity",
+        "PersonalDetailsModule.resolve"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async getSummary(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  const personal = await this.personalDetails.resolve(userId, identity);\n  return { userId, name: personal.preferredName };\n}"
+    },
+    "ProfileService.getNationality": {
+      "id": "ProfileService.getNationality",
+      "moduleId": "ProfileService",
+      "name": "getNationality",
+      "file": "sample-service/src/modules/profile/ProfileService.ts",
+      "line": 43,
+      "endLine": 46,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Nationality",
+        "fields": [
+          {
+            "name": "alpha3",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "isEu",
+            "type": "boolean"
+          }
+        ]
+      },
+      "directEffects": [],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "calls": [
+        "IdentityModule.fetchIdentity",
+        "NationalityModule.resolve"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async getNationality(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  return this.nationality.resolve(identity);\n}"
+    },
+    "ProfileService.getBirthInfo": {
+      "id": "ProfileService.getBirthInfo",
+      "moduleId": "ProfileService",
+      "name": "getBirthInfo",
+      "file": "sample-service/src/modules/profile/ProfileService.ts",
+      "line": 48,
+      "endLine": 51,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "BirthInfo",
+        "fields": [
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "cityOfBirth",
+            "type": "string"
+          }
+        ]
+      },
+      "directEffects": [],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        }
+      ],
+      "calls": [
+        "IdentityModule.fetchIdentity",
+        "BirthInfoModule.resolve"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async getBirthInfo(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  return this.birthInfo.resolve(identity);\n}"
+    },
+    "ProfileService.exportProfile": {
+      "id": "ProfileService.exportProfile",
+      "moduleId": "ProfileService",
+      "name": "exportProfile",
+      "file": "sample-service/src/modules/profile/ProfileService.ts",
+      "line": 53,
+      "endLine": 58,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ status: string; }",
+        "fields": [
+          {
+            "name": "status",
+            "type": "string"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.write",
+          "target": "gdpr_exports",
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "line": 55
+        },
+        {
+          "kind": "kafka",
+          "target": "privacy.export.ready",
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "line": 56
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "gdpr_exports",
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "line": 55
+        },
+        {
+          "kind": "kafka",
+          "target": "privacy.export.ready",
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "line": 56
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "user_profiles",
+          "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
+          "line": 20
+        }
+      ],
+      "calls": [
+        "IdentityModule.fetchIdentity",
+        "NationalityModule.resolve",
+        "PersonalDetailsModule.resolve",
+        "BirthInfoModule.resolve"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async exportProfile(userId: string) {\n  const profile = await this.getProfile(userId);\n  await this.db.insert('gdpr_exports', { userId, profile, exportedAt: new Date().toISOString() });\n  await this.kafka.produce('privacy.export.ready', { userId });\n  return { status: 'queued' };\n}"
+    },
+    "ProfileService.purge": {
+      "id": "ProfileService.purge",
+      "moduleId": "ProfileService",
+      "name": "purge",
+      "file": "sample-service/src/modules/profile/ProfileService.ts",
+      "line": 60,
+      "endLine": 64,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ purged: boolean; }",
+        "fields": [
+          {
+            "name": "purged",
+            "type": "boolean"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.write",
+          "target": "user_profiles",
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "line": 61
+        },
+        {
+          "kind": "db.write",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "line": 62
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "user_profiles",
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "line": 61
+        },
+        {
+          "kind": "db.write",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "line": 62
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async purge(userId: string) {\n  await this.db.delete('user_profiles', { userId });\n  await this.db.delete('user_documents', { userId });\n  return { purged: true };\n}"
+    },
+    "TaxResidencyModule.assess": {
+      "id": "TaxResidencyModule.assess",
+      "moduleId": "TaxResidencyModule",
+      "name": "assess",
+      "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+      "line": 29,
+      "endLine": 38,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "TaxResidency",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "residencies",
+            "type": "string[]"
+          },
+          {
+            "name": "usPerson",
+            "type": "boolean"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 33
+        },
+        {
+          "kind": "db.write",
+          "target": "tax_residency_assessments",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 36
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 33
+        },
+        {
+          "kind": "db.write",
+          "target": "tax_residency_assessments",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 36
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "calls": [
+        "IdentityModule.fetchIdentity",
+        "BirthInfoModule.resolve",
+        "NationalityModule.resolve"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async assess(userId: string): Promise<TaxResidency> {\n  const identity = await this.identity.fetchIdentity(userId);\n  const birth = await this.birthInfo.resolve(identity);\n  const nationality = await this.nationality.resolve(identity);\n  const declarations = await this.db.select('tax_declarations', { userId });\n  const residencies = [...new Set([nationality.alpha3, ...declarations.map((d) => d.country as string)])];\n  const assessment = { userId, residencies, usPerson: birth.countryOfBirth === 'USA' || nationality.alpha3 === 'USA' };\n  await this.db.insert('tax_residency_assessments', { ...assessment, assessedAt: new Date().toISOString() });\n  return assessment;\n}"
+    },
+    "TaxResidencyModule.recordDeclaration": {
+      "id": "TaxResidencyModule.recordDeclaration",
+      "moduleId": "TaxResidencyModule",
+      "name": "recordDeclaration",
+      "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+      "line": 40,
+      "endLine": 43,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "country",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "TaxResidency",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "residencies",
+            "type": "string[]"
+          },
+          {
+            "name": "usPerson",
+            "type": "boolean"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.write",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 41
+        },
+        {
+          "kind": "db.read",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 33
+        },
+        {
+          "kind": "db.write",
+          "target": "tax_residency_assessments",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 36
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 41
+        },
+        {
+          "kind": "db.read",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 33
+        },
+        {
+          "kind": "db.write",
+          "target": "tax_residency_assessments",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 36
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "calls": [
+        "IdentityModule.fetchIdentity",
+        "BirthInfoModule.resolve",
+        "NationalityModule.resolve"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async recordDeclaration(userId: string, country: string) {\n  await this.db.insert('tax_declarations', { userId, country });\n  return this.assess(userId);\n}"
+    },
+    "TaxResidencyModule.weeklySweep": {
+      "id": "TaxResidencyModule.weeklySweep",
+      "moduleId": "TaxResidencyModule",
+      "name": "weeklySweep",
+      "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+      "line": 45,
+      "endLine": 48,
+      "params": [],
+      "returns": {
+        "type": "void"
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "tax_residency_assessments",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 46
+        },
+        {
+          "kind": "db.read",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 33
+        },
+        {
+          "kind": "db.write",
+          "target": "tax_residency_assessments",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 36
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "tax_residency_assessments",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 46
+        },
+        {
+          "kind": "db.read",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 33
+        },
+        {
+          "kind": "db.write",
+          "target": "tax_residency_assessments",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 36
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "calls": [
+        "IdentityModule.fetchIdentity",
+        "BirthInfoModule.resolve",
+        "NationalityModule.resolve"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async weeklySweep(): Promise<void> {\n  const users = await this.db.select('tax_residency_assessments', {});\n  for (const user of users) await this.assess(user.userId as string);\n}"
+    },
+    "TravelEligibilityModule.checkVisa": {
+      "id": "TravelEligibilityModule.checkVisa",
+      "moduleId": "TravelEligibilityModule",
+      "name": "checkVisa",
+      "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
+      "line": 25,
+      "endLine": 31,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "destination",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ destination: string; visaRequired: boolean; }",
+        "fields": [
+          {
+            "name": "destination",
+            "type": "string"
+          },
+          {
+            "name": "visaRequired",
+            "type": "boolean"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "http",
+          "target": "visa-rules-service",
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
+          "line": 29
+        }
+      ],
+      "effects": [
+        {
+          "kind": "http",
+          "target": "visa-rules-service",
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
+          "line": 29
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "calls": [
+        "IdentityModule.fetchIdentity",
+        "NationalityModule.resolve",
+        "BirthInfoModule.resolve"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async checkVisa(userId: string, destination: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  const [nationality, birth] = await Promise.all([this.nationality.resolve(identity), this.birthInfo.resolve(identity)]);\n  const path = `/v1/rules?from=${nationality.alpha3}&born=${birth.countryOfBirth}&to=${destination}`;\n  const rules = await this.http.get<{ visaRequired: boolean }>('visa-rules-service', path);\n  return { destination, visaRequired: rules.visaRequired };\n}"
+    },
+    "TravelEligibilityModule.prefillPassport": {
+      "id": "TravelEligibilityModule.prefillPassport",
+      "moduleId": "TravelEligibilityModule",
+      "name": "prefillPassport",
+      "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
+      "line": 33,
+      "endLine": 43,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; legalName: string; preferredName: string;…",
+        "fields": [
+          {
+            "name": "nationality",
+            "type": "string"
+          },
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "cityOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "legalName",
+            "type": "string"
+          },
+          {
+            "name": "preferredName",
+            "type": "string"
+          },
+          {
+            "name": "dateOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "type": "string"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.write",
+          "target": "passport_prefills",
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
+          "line": 41
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "passport_prefills",
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
+          "line": 41
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "user_profiles",
+          "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "calls": [
+        "IdentityModule.fetchIdentity",
+        "PersonalDetailsModule.resolve",
+        "BirthInfoModule.resolve",
+        "NationalityModule.resolve"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async prefillPassport(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  const [personal, birth, nationality] = await Promise.all([\n    this.personalDetails.resolve(userId, identity),\n    this.birthInfo.resolve(identity),\n    this.nationality.resolve(identity),\n  ]);\n  const prefill = { userId, ...personal, ...birth, nationality: nationality.alpha3 };\n  await this.db.insert('passport_prefills', prefill);\n  return prefill;\n}"
+    }
+  },
+  "entryPoints": {
+    "consumer:topic user.documents.uploaded": {
+      "id": "consumer:topic user.documents.uploaded",
+      "kind": "consumer",
+      "label": "topic user.documents.uploaded",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/consumers.ts",
+      "line": 5,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 44
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.completed",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 45
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "http",
+          "target": "sanctions-api",
+          "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
+          "line": 18
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "consumer:topic user.profile.changed": {
+      "id": "consumer:topic user.profile.changed",
+      "kind": "consumer",
+      "label": "topic user.profile.changed",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/consumers.ts",
+      "line": 9,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "user_profiles",
+          "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "kafka",
+          "target": "profile.snapshot.v1",
+          "file": "sample-service/src/entrypoints/consumers.ts",
+          "line": 11
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "consumer:topic tax.year.closed": {
+      "id": "consumer:topic tax.year.closed",
+      "kind": "consumer",
+      "label": "topic tax.year.closed",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/consumers.ts",
+      "line": 14,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 33
+        },
+        {
+          "kind": "db.write",
+          "target": "tax_residency_assessments",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 36
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "consumer:topic travel.booking.created": {
+      "id": "consumer:topic travel.booking.created",
+      "kind": "consumer",
+      "label": "topic travel.booking.created",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/consumers.ts",
+      "line": 18,
+      "effects": [
+        {
+          "kind": "http",
+          "target": "visa-rules-service",
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
+          "line": 29
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "consumer:topic user.deleted": {
+      "id": "consumer:topic user.deleted",
+      "kind": "consumer",
+      "label": "topic user.deleted",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/consumers.ts",
+      "line": 22,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "user_profiles",
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "line": 61
+        },
+        {
+          "kind": "db.write",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "line": 62
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "cron:cron kyc-nightly-rescreen (0 2 * * *)": {
+      "id": "cron:cron kyc-nightly-rescreen (0 2 * * *)",
+      "kind": "cron",
+      "label": "cron kyc-nightly-rescreen (0 2 * * *)",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/cron.ts",
+      "line": 5,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 61
+        },
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 44
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.completed",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 45
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "http",
+          "target": "sanctions-api",
+          "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
+          "line": 18
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "cron:cron tax-weekly-sweep (0 4 * * 1)": {
+      "id": "cron:cron tax-weekly-sweep (0 4 * * 1)",
+      "kind": "cron",
+      "label": "cron tax-weekly-sweep (0 4 * * 1)",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/cron.ts",
+      "line": 9,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "tax_residency_assessments",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 46
+        },
+        {
+          "kind": "db.read",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 33
+        },
+        {
+          "kind": "db.write",
+          "target": "tax_residency_assessments",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 36
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "cron:cron compliance-monthly-report (0 6 1 * *)": {
+      "id": "cron:cron compliance-monthly-report (0 6 1 * *)",
+      "kind": "cron",
+      "label": "cron compliance-monthly-report (0 6 1 * *)",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/cron.ts",
+      "line": 13,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "http",
+          "target": "regulator-reporting",
+          "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
+          "line": 23
+        },
+        {
+          "kind": "db.read",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 33
+        },
+        {
+          "kind": "db.write",
+          "target": "tax_residency_assessments",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 36
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "grpc:gRPC identity.v1.ProfileService/GetProfile": {
+      "id": "grpc:gRPC identity.v1.ProfileService/GetProfile",
+      "kind": "grpc",
+      "label": "gRPC identity.v1.ProfileService/GetProfile",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/grpc.ts",
+      "line": 5,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "user_profiles",
+          "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
+          "line": 20
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "grpc:gRPC identity.v1.ProfileService/GetBirthInfo": {
+      "id": "grpc:gRPC identity.v1.ProfileService/GetBirthInfo",
+      "kind": "grpc",
+      "label": "gRPC identity.v1.ProfileService/GetBirthInfo",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/grpc.ts",
+      "line": 6,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "grpc:gRPC kyc.v1.KycService/RunCheck": {
+      "id": "grpc:gRPC kyc.v1.KycService/RunCheck",
+      "kind": "grpc",
+      "label": "gRPC kyc.v1.KycService/RunCheck",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/grpc.ts",
+      "line": 7,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 44
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.completed",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 45
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "http",
+          "target": "sanctions-api",
+          "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
+          "line": 18
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "grpc:gRPC travel.v1.TravelService/CheckVisa": {
+      "id": "grpc:gRPC travel.v1.TravelService/CheckVisa",
+      "kind": "grpc",
+      "label": "gRPC travel.v1.TravelService/CheckVisa",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/grpc.ts",
+      "line": 8,
+      "effects": [
+        {
+          "kind": "http",
+          "target": "visa-rules-service",
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
+          "line": 29
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "api:GET /admin/v1/users/:userId/identity-review": {
+      "id": "api:GET /admin/v1/users/:userId/identity-review",
+      "kind": "api",
+      "label": "GET /admin/v1/users/:userId/identity-review",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/adminRoutes.ts",
+      "line": 5,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "review_notes",
+          "file": "sample-service/src/modules/admin/IdentityReviewModule.ts",
+          "line": 21
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "api:POST /admin/v1/users/:userId/kyc-override": {
+      "id": "api:POST /admin/v1/users/:userId/kyc-override",
+      "kind": "api",
+      "label": "POST /admin/v1/users/:userId/kyc-override",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/adminRoutes.ts",
+      "line": 6,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 55
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.overridden",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 56
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "api:POST /v1/kyc/:userId/check": {
+      "id": "api:POST /v1/kyc/:userId/check",
+      "kind": "api",
+      "label": "POST /v1/kyc/:userId/check",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 5,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 44
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.completed",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 45
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "http",
+          "target": "sanctions-api",
+          "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
+          "line": 18
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "api:GET /v1/kyc/:userId/status": {
+      "id": "api:GET /v1/kyc/:userId/status",
+      "kind": "api",
+      "label": "GET /v1/kyc/:userId/status",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 6,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 50
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "api:POST /v1/onboarding/:userId/complete": {
+      "id": "api:POST /v1/onboarding/:userId/complete",
+      "kind": "api",
+      "label": "POST /v1/onboarding/:userId/complete",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 7,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "users",
+          "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "kafka",
+          "target": "user.onboarded",
+          "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
+          "line": 23
+        },
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 44
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.completed",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 45
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "http",
+          "target": "sanctions-api",
+          "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
+          "line": 18
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "api:GET /v1/tax/:userId/residency": {
+      "id": "api:GET /v1/tax/:userId/residency",
+      "kind": "api",
+      "label": "GET /v1/tax/:userId/residency",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 8,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 33
+        },
+        {
+          "kind": "db.write",
+          "target": "tax_residency_assessments",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 36
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "api:POST /v1/tax/:userId/declarations": {
+      "id": "api:POST /v1/tax/:userId/declarations",
+      "kind": "api",
+      "label": "POST /v1/tax/:userId/declarations",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 9,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 41
+        },
+        {
+          "kind": "db.read",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 33
+        },
+        {
+          "kind": "db.write",
+          "target": "tax_residency_assessments",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 36
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "api:GET /v1/travel/:userId/visa-eligibility": {
+      "id": "api:GET /v1/travel/:userId/visa-eligibility",
+      "kind": "api",
+      "label": "GET /v1/travel/:userId/visa-eligibility",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 10,
+      "effects": [
+        {
+          "kind": "http",
+          "target": "visa-rules-service",
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
+          "line": 29
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "api:POST /v1/travel/:userId/passport-prefill": {
+      "id": "api:POST /v1/travel/:userId/passport-prefill",
+      "kind": "api",
+      "label": "POST /v1/travel/:userId/passport-prefill",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 11,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "passport_prefills",
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
+          "line": 41
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "user_profiles",
+          "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "api:GET /v1/users/:userId/profile": {
+      "id": "api:GET /v1/users/:userId/profile",
+      "kind": "api",
+      "label": "GET /v1/users/:userId/profile",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 5,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "user_profiles",
+          "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
+          "line": 20
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "api:GET /v1/users/:userId/profile/summary": {
+      "id": "api:GET /v1/users/:userId/profile/summary",
+      "kind": "api",
+      "label": "GET /v1/users/:userId/profile/summary",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 6,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "user_profiles",
+          "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
+          "line": 20
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "api:GET /v1/users/:userId/nationality": {
+      "id": "api:GET /v1/users/:userId/nationality",
+      "kind": "api",
+      "label": "GET /v1/users/:userId/nationality",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 7,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "api:GET /v1/users/:userId/birth-info": {
+      "id": "api:GET /v1/users/:userId/birth-info",
+      "kind": "api",
+      "label": "GET /v1/users/:userId/birth-info",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 8,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "api:POST /v1/users/:userId/export": {
+      "id": "api:POST /v1/users/:userId/export",
+      "kind": "api",
+      "label": "POST /v1/users/:userId/export",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 9,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "gdpr_exports",
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "line": 55
+        },
+        {
+          "kind": "kafka",
+          "target": "privacy.export.ready",
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "line": 56
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 14
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 15
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "user_profiles",
+          "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
+          "line": 20
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    },
+    "api:DELETE /v1/users/:userId": {
+      "id": "api:DELETE /v1/users/:userId",
+      "kind": "api",
+      "label": "DELETE /v1/users/:userId",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 10,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "user_profiles",
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "line": 61
+        },
+        {
+          "kind": "db.write",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "line": 62
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false
+    }
+  },
+  "scopes": {
+    "IdentityReviewModule.review": {
+      "id": "IdentityReviewModule.review",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ identity: IdentityData; birth: BirthInfo; notes: Row[]; }",
+        "fields": [
+          {
+            "name": "identity",
+            "type": "IdentityData"
+          },
+          {
+            "name": "birth",
+            "type": "BirthInfo"
+          },
+          {
+            "name": "notes",
+            "type": "Row[]"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "IdentityModule.fetchIdentity",
+          "line": 19,
+          "file": "sample-service/src/modules/admin/IdentityReviewModule.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "BirthInfoModule.resolve",
+          "line": 20,
+          "file": "sample-service/src/modules/admin/IdentityReviewModule.ts"
+        },
+        {
+          "id": "s3",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "review_notes",
+            "file": "sample-service/src/modules/admin/IdentityReviewModule.ts",
+            "line": 21
+          },
+          "line": 21,
+          "file": "sample-service/src/modules/admin/IdentityReviewModule.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "entry",
+          "to": "s3",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "data",
+          "label": "birth"
+        },
+        {
+          "from": "s3",
+          "to": "exit",
+          "kind": "data",
+          "label": "notes"
+        }
+      ]
+    },
+    "BirthInfoModule.resolve": {
+      "id": "BirthInfoModule.resolve",
+      "params": [
+        {
+          "name": "identity",
+          "type": "IdentityData"
+        }
+      ],
+      "returns": {
+        "type": "BirthInfo",
+        "fields": [
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "cityOfBirth",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "DocumentBirthExtractor.fromIdentity",
+          "line": 14,
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "DocumentBirthExtractor.fromIdentity": {
+      "id": "DocumentBirthExtractor.fromIdentity",
+      "params": [
+        {
+          "name": "identity",
+          "type": "IdentityData"
+        }
+      ],
+      "returns": {
+        "type": "BirthInfo",
+        "fields": [
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "cityOfBirth",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [],
+      "edges": []
+    },
+    "ComplianceReportModule.generateMonthly": {
+      "id": "ComplianceReportModule.generateMonthly",
+      "params": [],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "kyc_results",
+            "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
+            "line": 20
+          },
+          "line": 20,
+          "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "TaxResidencyModule.assess",
+          "line": 22,
+          "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
+          "loop": true
+        },
+        {
+          "id": "s3",
+          "kind": "effect",
+          "effect": {
+            "kind": "http",
+            "target": "regulator-reporting",
+            "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
+            "line": 23
+          },
+          "line": 23,
+          "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "row"
+        },
+        {
+          "from": "s1",
+          "to": "s3",
+          "kind": "data",
+          "label": "results"
+        },
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "control"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s3",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "DocumentExtractor.extract": {
+      "id": "DocumentExtractor.extract",
+      "params": [
+        {
+          "name": "documents",
+          "type": "IdentityDocument[]"
+        }
+      ],
+      "returns": {
+        "type": "ExtractedFields",
+        "fields": [
+          {
+            "name": "fullName",
+            "type": "string"
+          },
+          {
+            "name": "dateOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "nationality",
+            "type": "string"
+          },
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "cityOfBirth",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "http",
+            "target": "document-ai",
+            "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+            "line": 15
+          },
+          "line": 15,
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "condition": "unless (documents.length === 0)"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "documents.map"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "DocumentStore.latestDocuments": {
+      "id": "DocumentStore.latestDocuments",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "IdentityDocument[]"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "user_documents",
+            "file": "sample-service/src/modules/identity/DocumentStore.ts",
+            "line": 14
+          },
+          "line": 14,
+          "file": "sample-service/src/modules/identity/DocumentStore.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "docs"
+        }
+      ]
+    },
+    "IdentityModule.fetchIdentity": {
+      "id": "IdentityModule.fetchIdentity",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "IdentityData",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "documentIds",
+            "type": "string[]"
+          },
+          {
+            "name": "extractedAt",
+            "type": "string"
+          },
+          {
+            "name": "fullName",
+            "type": "string"
+          },
+          {
+            "name": "dateOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "nationality",
+            "type": "string"
+          },
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "cityOfBirth",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "DocumentStore.latestDocuments",
+          "line": 18,
+          "file": "sample-service/src/modules/identity/IdentityModule.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "DocumentExtractor.extract",
+          "line": 19,
+          "file": "sample-service/src/modules/identity/IdentityModule.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "docs"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "data",
+          "label": "fields"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "docs"
+        }
+      ]
+    },
+    "KycModule.runCheck": {
+      "id": "KycModule.runCheck",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "KycResult",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "KycStatus"
+          },
+          {
+            "name": "checkedAt",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "IdentityModule.fetchIdentity",
+          "line": 36,
+          "file": "sample-service/src/modules/kyc/KycModule.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "BirthInfoModule.resolve",
+          "line": 37,
+          "file": "sample-service/src/modules/kyc/KycModule.ts"
+        },
+        {
+          "id": "s3",
+          "kind": "call",
+          "target": "NationalityModule.resolve",
+          "line": 37,
+          "file": "sample-service/src/modules/kyc/KycModule.ts"
+        },
+        {
+          "id": "s4",
+          "kind": "call",
+          "target": "SanctionsScreening.screen",
+          "line": 38,
+          "file": "sample-service/src/modules/kyc/KycModule.ts"
+        },
+        {
+          "id": "s5",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "kyc_results",
+            "file": "sample-service/src/modules/kyc/KycModule.ts",
+            "line": 44
+          },
+          "line": 44,
+          "file": "sample-service/src/modules/kyc/KycModule.ts"
+        },
+        {
+          "id": "s6",
+          "kind": "effect",
+          "effect": {
+            "kind": "outbox",
+            "target": "kyc.completed",
+            "file": "sample-service/src/modules/kyc/KycModule.ts",
+            "line": 45
+          },
+          "line": 45,
+          "file": "sample-service/src/modules/kyc/KycModule.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s1",
+          "to": "s3",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s1",
+          "to": "s4",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s2",
+          "to": "s4",
+          "kind": "data",
+          "label": "birth"
+        },
+        {
+          "from": "s3",
+          "to": "s4",
+          "kind": "data",
+          "label": "nationality"
+        },
+        {
+          "from": "entry",
+          "to": "s5",
+          "kind": "data",
+          "label": "result"
+        },
+        {
+          "from": "s4",
+          "to": "s5",
+          "kind": "data",
+          "label": "result"
+        },
+        {
+          "from": "entry",
+          "to": "s6",
+          "kind": "data",
+          "label": "result"
+        },
+        {
+          "from": "s4",
+          "to": "s6",
+          "kind": "data",
+          "label": "result"
+        },
+        {
+          "from": "s4",
+          "to": "exit",
+          "kind": "data",
+          "label": "result"
+        },
+        {
+          "from": "s5",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s6",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "KycModule.getStatus": {
+      "id": "KycModule.getStatus",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "KycResult | undefined",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "KycStatus"
+          },
+          {
+            "name": "checkedAt",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "kyc_results",
+            "file": "sample-service/src/modules/kyc/KycModule.ts",
+            "line": 50
+          },
+          "line": 50,
+          "file": "sample-service/src/modules/kyc/KycModule.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "latest"
+        }
+      ]
+    },
+    "KycModule.override": {
+      "id": "KycModule.override",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "status",
+          "type": "KycStatus"
+        },
+        {
+          "name": "reviewer",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ userId: string; status: KycStatus; }",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "KycStatus"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "kyc_results",
+            "file": "sample-service/src/modules/kyc/KycModule.ts",
+            "line": 55
+          },
+          "line": 55,
+          "file": "sample-service/src/modules/kyc/KycModule.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "effect",
+          "effect": {
+            "kind": "outbox",
+            "target": "kyc.overridden",
+            "file": "sample-service/src/modules/kyc/KycModule.ts",
+            "line": 56
+          },
+          "line": 56,
+          "file": "sample-service/src/modules/kyc/KycModule.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId, status, reviewer"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "userId, status, reviewer"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "KycModule.recheckExpired": {
+      "id": "KycModule.recheckExpired",
+      "params": [],
+      "returns": {
+        "type": "number"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "kyc_results",
+            "file": "sample-service/src/modules/kyc/KycModule.ts",
+            "line": 61
+          },
+          "line": 61,
+          "file": "sample-service/src/modules/kyc/KycModule.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "IdentityModule.fetchIdentity",
+          "line": 36,
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "loop": true,
+          "via": "KycModule.runCheck"
+        },
+        {
+          "id": "s3",
+          "kind": "call",
+          "target": "BirthInfoModule.resolve",
+          "line": 37,
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "loop": true,
+          "via": "KycModule.runCheck"
+        },
+        {
+          "id": "s4",
+          "kind": "call",
+          "target": "NationalityModule.resolve",
+          "line": 37,
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "loop": true,
+          "via": "KycModule.runCheck"
+        },
+        {
+          "id": "s5",
+          "kind": "call",
+          "target": "SanctionsScreening.screen",
+          "line": 38,
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "loop": true,
+          "via": "KycModule.runCheck"
+        },
+        {
+          "id": "s6",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "kyc_results",
+            "file": "sample-service/src/modules/kyc/KycModule.ts",
+            "line": 44
+          },
+          "line": 44,
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "loop": true,
+          "via": "KycModule.runCheck"
+        },
+        {
+          "id": "s7",
+          "kind": "effect",
+          "effect": {
+            "kind": "outbox",
+            "target": "kyc.completed",
+            "file": "sample-service/src/modules/kyc/KycModule.ts",
+            "line": 45
+          },
+          "line": 45,
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "loop": true,
+          "via": "KycModule.runCheck"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "row"
+        },
+        {
+          "from": "s2",
+          "to": "s3",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s2",
+          "to": "s4",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s2",
+          "to": "s5",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s3",
+          "to": "s5",
+          "kind": "data",
+          "label": "birth"
+        },
+        {
+          "from": "s4",
+          "to": "s5",
+          "kind": "data",
+          "label": "nationality"
+        },
+        {
+          "from": "s1",
+          "to": "s6",
+          "kind": "data",
+          "label": "row"
+        },
+        {
+          "from": "s5",
+          "to": "s6",
+          "kind": "data",
+          "label": "result"
+        },
+        {
+          "from": "s1",
+          "to": "s7",
+          "kind": "data",
+          "label": "row"
+        },
+        {
+          "from": "s5",
+          "to": "s7",
+          "kind": "data",
+          "label": "result"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "expired"
+        },
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "control"
+        },
+        {
+          "from": "s6",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s7",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "SanctionsScreening.screen": {
+      "id": "SanctionsScreening.screen",
+      "params": [
+        {
+          "name": "person",
+          "type": "{ name: string; countryOfBirth: string; nationality: string; }"
+        }
+      ],
+      "returns": {
+        "type": "ScreeningResult",
+        "fields": [
+          {
+            "name": "hit",
+            "type": "boolean"
+          },
+          {
+            "name": "listVersion",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "http",
+            "target": "sanctions-api",
+            "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
+            "line": 18
+          },
+          "line": 18,
+          "file": "sample-service/src/modules/kyc/SanctionsScreening.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "person"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "NationalityModule.resolve": {
+      "id": "NationalityModule.resolve",
+      "params": [
+        {
+          "name": "identity",
+          "type": "IdentityData"
+        }
+      ],
+      "returns": {
+        "type": "Nationality",
+        "fields": [
+          {
+            "name": "alpha3",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "isEu",
+            "type": "boolean"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "country_codes",
+            "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+            "line": 20
+          },
+          "line": 20,
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "identity.nationality"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "country"
+        }
+      ]
+    },
+    "OnboardingModule.complete": {
+      "id": "OnboardingModule.complete",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ userId: string; onboarded: boolean; }",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "onboarded",
+            "type": "boolean"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "KycModule.runCheck",
+          "line": 20,
+          "file": "sample-service/src/modules/onboarding/OnboardingModule.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "users",
+            "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
+            "line": 22
+          },
+          "line": 22,
+          "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
+          "condition": "unless (kyc.status !== 'passed')"
+        },
+        {
+          "id": "s3",
+          "kind": "effect",
+          "effect": {
+            "kind": "kafka",
+            "target": "user.onboarded",
+            "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
+            "line": 23
+          },
+          "line": 23,
+          "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
+          "condition": "unless (kyc.status !== 'passed')"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "entry",
+          "to": "s3",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "s3",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s3",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "PersonalDetailsModule.resolve": {
+      "id": "PersonalDetailsModule.resolve",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "identity",
+          "type": "IdentityData"
+        }
+      ],
+      "returns": {
+        "type": "PersonalDetails",
+        "fields": [
+          {
+            "name": "legalName",
+            "type": "string"
+          },
+          {
+            "name": "preferredName",
+            "type": "string"
+          },
+          {
+            "name": "dateOfBirth",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "user_profiles",
+            "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
+            "line": 20
+          },
+          "line": 20,
+          "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "profile"
+        }
+      ]
+    },
+    "ProfileService.getProfile": {
+      "id": "ProfileService.getProfile",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ userId: string; nationality: Nationality; personal: PersonalDetails; birth: BirthInfo; }",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "nationality",
+            "type": "Nationality"
+          },
+          {
+            "name": "personal",
+            "type": "PersonalDetails"
+          },
+          {
+            "name": "birth",
+            "type": "BirthInfo"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "IdentityModule.fetchIdentity",
+          "line": 28,
+          "file": "sample-service/src/modules/profile/ProfileService.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "NationalityModule.resolve",
+          "line": 30,
+          "file": "sample-service/src/modules/profile/ProfileService.ts"
+        },
+        {
+          "id": "s3",
+          "kind": "call",
+          "target": "PersonalDetailsModule.resolve",
+          "line": 31,
+          "file": "sample-service/src/modules/profile/ProfileService.ts"
+        },
+        {
+          "id": "s4",
+          "kind": "call",
+          "target": "BirthInfoModule.resolve",
+          "line": 32,
+          "file": "sample-service/src/modules/profile/ProfileService.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "entry",
+          "to": "s3",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "s3",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s1",
+          "to": "s4",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "data",
+          "label": "nationality"
+        },
+        {
+          "from": "s3",
+          "to": "exit",
+          "kind": "data",
+          "label": "personal"
+        },
+        {
+          "from": "s4",
+          "to": "exit",
+          "kind": "data",
+          "label": "birth"
+        }
+      ]
+    },
+    "ProfileService.getSummary": {
+      "id": "ProfileService.getSummary",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ userId: string; name: string; }",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "IdentityModule.fetchIdentity",
+          "line": 38,
+          "file": "sample-service/src/modules/profile/ProfileService.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "PersonalDetailsModule.resolve",
+          "line": 39,
+          "file": "sample-service/src/modules/profile/ProfileService.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "data",
+          "label": "personal"
+        }
+      ]
+    },
+    "ProfileService.getNationality": {
+      "id": "ProfileService.getNationality",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Nationality",
+        "fields": [
+          {
+            "name": "alpha3",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "isEu",
+            "type": "boolean"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "IdentityModule.fetchIdentity",
+          "line": 44,
+          "file": "sample-service/src/modules/profile/ProfileService.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "NationalityModule.resolve",
+          "line": 45,
+          "file": "sample-service/src/modules/profile/ProfileService.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "ProfileService.getBirthInfo": {
+      "id": "ProfileService.getBirthInfo",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "BirthInfo",
+        "fields": [
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "cityOfBirth",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "IdentityModule.fetchIdentity",
+          "line": 49,
+          "file": "sample-service/src/modules/profile/ProfileService.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "BirthInfoModule.resolve",
+          "line": 50,
+          "file": "sample-service/src/modules/profile/ProfileService.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "ProfileService.exportProfile": {
+      "id": "ProfileService.exportProfile",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ status: string; }",
+        "fields": [
+          {
+            "name": "status",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "IdentityModule.fetchIdentity",
+          "line": 28,
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "via": "ProfileService.getProfile"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "NationalityModule.resolve",
+          "line": 30,
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "via": "ProfileService.getProfile"
+        },
+        {
+          "id": "s3",
+          "kind": "call",
+          "target": "PersonalDetailsModule.resolve",
+          "line": 31,
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "via": "ProfileService.getProfile"
+        },
+        {
+          "id": "s4",
+          "kind": "call",
+          "target": "BirthInfoModule.resolve",
+          "line": 32,
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "via": "ProfileService.getProfile"
+        },
+        {
+          "id": "s5",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "gdpr_exports",
+            "file": "sample-service/src/modules/profile/ProfileService.ts",
+            "line": 55
+          },
+          "line": 55,
+          "file": "sample-service/src/modules/profile/ProfileService.ts"
+        },
+        {
+          "id": "s6",
+          "kind": "effect",
+          "effect": {
+            "kind": "kafka",
+            "target": "privacy.export.ready",
+            "file": "sample-service/src/modules/profile/ProfileService.ts",
+            "line": 56
+          },
+          "line": 56,
+          "file": "sample-service/src/modules/profile/ProfileService.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "entry",
+          "to": "s3",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "s3",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s1",
+          "to": "s4",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "entry",
+          "to": "s5",
+          "kind": "data",
+          "label": "userId, profile"
+        },
+        {
+          "from": "s2",
+          "to": "s5",
+          "kind": "data",
+          "label": "profile"
+        },
+        {
+          "from": "s3",
+          "to": "s5",
+          "kind": "data",
+          "label": "profile"
+        },
+        {
+          "from": "s4",
+          "to": "s5",
+          "kind": "data",
+          "label": "profile"
+        },
+        {
+          "from": "entry",
+          "to": "s6",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s5",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s6",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "ProfileService.purge": {
+      "id": "ProfileService.purge",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ purged: boolean; }",
+        "fields": [
+          {
+            "name": "purged",
+            "type": "boolean"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "user_profiles",
+            "file": "sample-service/src/modules/profile/ProfileService.ts",
+            "line": 61
+          },
+          "line": 61,
+          "file": "sample-service/src/modules/profile/ProfileService.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "user_documents",
+            "file": "sample-service/src/modules/profile/ProfileService.ts",
+            "line": 62
+          },
+          "line": 62,
+          "file": "sample-service/src/modules/profile/ProfileService.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "TaxResidencyModule.assess": {
+      "id": "TaxResidencyModule.assess",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "TaxResidency",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "residencies",
+            "type": "string[]"
+          },
+          {
+            "name": "usPerson",
+            "type": "boolean"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "IdentityModule.fetchIdentity",
+          "line": 30,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "BirthInfoModule.resolve",
+          "line": 31,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts"
+        },
+        {
+          "id": "s3",
+          "kind": "call",
+          "target": "NationalityModule.resolve",
+          "line": 32,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts"
+        },
+        {
+          "id": "s4",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "tax_declarations",
+            "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+            "line": 33
+          },
+          "line": 33,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts"
+        },
+        {
+          "id": "s5",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "tax_residency_assessments",
+            "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+            "line": 36
+          },
+          "line": 36,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s1",
+          "to": "s3",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "entry",
+          "to": "s4",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "entry",
+          "to": "s5",
+          "kind": "data",
+          "label": "assessment"
+        },
+        {
+          "from": "s3",
+          "to": "s5",
+          "kind": "data",
+          "label": "assessment"
+        },
+        {
+          "from": "s4",
+          "to": "s5",
+          "kind": "data",
+          "label": "assessment"
+        },
+        {
+          "from": "s2",
+          "to": "s5",
+          "kind": "data",
+          "label": "assessment"
+        },
+        {
+          "from": "s3",
+          "to": "exit",
+          "kind": "data",
+          "label": "assessment"
+        },
+        {
+          "from": "s4",
+          "to": "exit",
+          "kind": "data",
+          "label": "assessment"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "data",
+          "label": "assessment"
+        },
+        {
+          "from": "s5",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "TaxResidencyModule.recordDeclaration": {
+      "id": "TaxResidencyModule.recordDeclaration",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "country",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "TaxResidency",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "residencies",
+            "type": "string[]"
+          },
+          {
+            "name": "usPerson",
+            "type": "boolean"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "tax_declarations",
+            "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+            "line": 41
+          },
+          "line": 41,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "IdentityModule.fetchIdentity",
+          "line": 30,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "via": "TaxResidencyModule.assess"
+        },
+        {
+          "id": "s3",
+          "kind": "call",
+          "target": "BirthInfoModule.resolve",
+          "line": 31,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "via": "TaxResidencyModule.assess"
+        },
+        {
+          "id": "s4",
+          "kind": "call",
+          "target": "NationalityModule.resolve",
+          "line": 32,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "via": "TaxResidencyModule.assess"
+        },
+        {
+          "id": "s5",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "tax_declarations",
+            "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+            "line": 33
+          },
+          "line": 33,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "via": "TaxResidencyModule.assess"
+        },
+        {
+          "id": "s6",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "tax_residency_assessments",
+            "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+            "line": 36
+          },
+          "line": 36,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "via": "TaxResidencyModule.assess"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId, country"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s2",
+          "to": "s3",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s2",
+          "to": "s4",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "entry",
+          "to": "s5",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "entry",
+          "to": "s6",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s4",
+          "to": "s6",
+          "kind": "data",
+          "label": "assessment"
+        },
+        {
+          "from": "s5",
+          "to": "s6",
+          "kind": "data",
+          "label": "assessment"
+        },
+        {
+          "from": "s3",
+          "to": "s6",
+          "kind": "data",
+          "label": "assessment"
+        },
+        {
+          "from": "s4",
+          "to": "exit",
+          "kind": "data",
+          "label": "assessment"
+        },
+        {
+          "from": "s5",
+          "to": "exit",
+          "kind": "data",
+          "label": "assessment"
+        },
+        {
+          "from": "s3",
+          "to": "exit",
+          "kind": "data",
+          "label": "assessment"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s6",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "TaxResidencyModule.weeklySweep": {
+      "id": "TaxResidencyModule.weeklySweep",
+      "params": [],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "tax_residency_assessments",
+            "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+            "line": 46
+          },
+          "line": 46,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "IdentityModule.fetchIdentity",
+          "line": 30,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "loop": true,
+          "via": "TaxResidencyModule.assess"
+        },
+        {
+          "id": "s3",
+          "kind": "call",
+          "target": "BirthInfoModule.resolve",
+          "line": 31,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "loop": true,
+          "via": "TaxResidencyModule.assess"
+        },
+        {
+          "id": "s4",
+          "kind": "call",
+          "target": "NationalityModule.resolve",
+          "line": 32,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "loop": true,
+          "via": "TaxResidencyModule.assess"
+        },
+        {
+          "id": "s5",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "tax_declarations",
+            "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+            "line": 33
+          },
+          "line": 33,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "loop": true,
+          "via": "TaxResidencyModule.assess"
+        },
+        {
+          "id": "s6",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "tax_residency_assessments",
+            "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+            "line": 36
+          },
+          "line": 36,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "loop": true,
+          "via": "TaxResidencyModule.assess"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "user"
+        },
+        {
+          "from": "s2",
+          "to": "s3",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s2",
+          "to": "s4",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s1",
+          "to": "s5",
+          "kind": "data",
+          "label": "user"
+        },
+        {
+          "from": "s1",
+          "to": "s6",
+          "kind": "data",
+          "label": "user"
+        },
+        {
+          "from": "s4",
+          "to": "s6",
+          "kind": "data",
+          "label": "assessment"
+        },
+        {
+          "from": "s5",
+          "to": "s6",
+          "kind": "data",
+          "label": "assessment"
+        },
+        {
+          "from": "s3",
+          "to": "s6",
+          "kind": "data",
+          "label": "assessment"
+        },
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "control"
+        },
+        {
+          "from": "s6",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "TravelEligibilityModule.checkVisa": {
+      "id": "TravelEligibilityModule.checkVisa",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "destination",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ destination: string; visaRequired: boolean; }",
+        "fields": [
+          {
+            "name": "destination",
+            "type": "string"
+          },
+          {
+            "name": "visaRequired",
+            "type": "boolean"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "IdentityModule.fetchIdentity",
+          "line": 26,
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "NationalityModule.resolve",
+          "line": 27,
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
+        },
+        {
+          "id": "s3",
+          "kind": "call",
+          "target": "BirthInfoModule.resolve",
+          "line": 27,
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
+        },
+        {
+          "id": "s4",
+          "kind": "effect",
+          "effect": {
+            "kind": "http",
+            "target": "visa-rules-service",
+            "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
+            "line": 29
+          },
+          "line": 29,
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s1",
+          "to": "s3",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s2",
+          "to": "s4",
+          "kind": "data",
+          "label": "path"
+        },
+        {
+          "from": "s3",
+          "to": "s4",
+          "kind": "data",
+          "label": "path"
+        },
+        {
+          "from": "entry",
+          "to": "s4",
+          "kind": "data",
+          "label": "path"
+        },
+        {
+          "from": "s4",
+          "to": "exit",
+          "kind": "data",
+          "label": "rules"
+        }
+      ]
+    },
+    "TravelEligibilityModule.prefillPassport": {
+      "id": "TravelEligibilityModule.prefillPassport",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; legalName: string; preferredName: string;…",
+        "fields": [
+          {
+            "name": "nationality",
+            "type": "string"
+          },
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "cityOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "legalName",
+            "type": "string"
+          },
+          {
+            "name": "preferredName",
+            "type": "string"
+          },
+          {
+            "name": "dateOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "IdentityModule.fetchIdentity",
+          "line": 34,
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "PersonalDetailsModule.resolve",
+          "line": 36,
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
+        },
+        {
+          "id": "s3",
+          "kind": "call",
+          "target": "BirthInfoModule.resolve",
+          "line": 37,
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
+        },
+        {
+          "id": "s4",
+          "kind": "call",
+          "target": "NationalityModule.resolve",
+          "line": 38,
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
+        },
+        {
+          "id": "s5",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "passport_prefills",
+            "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
+            "line": 41
+          },
+          "line": 41,
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s1",
+          "to": "s3",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "s1",
+          "to": "s4",
+          "kind": "data",
+          "label": "identity"
+        },
+        {
+          "from": "entry",
+          "to": "s5",
+          "kind": "data",
+          "label": "prefill"
+        },
+        {
+          "from": "s2",
+          "to": "s5",
+          "kind": "data",
+          "label": "prefill"
+        },
+        {
+          "from": "s3",
+          "to": "s5",
+          "kind": "data",
+          "label": "prefill"
+        },
+        {
+          "from": "s4",
+          "to": "s5",
+          "kind": "data",
+          "label": "prefill"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "data",
+          "label": "prefill"
+        },
+        {
+          "from": "s3",
+          "to": "exit",
+          "kind": "data",
+          "label": "prefill"
+        },
+        {
+          "from": "s4",
+          "to": "exit",
+          "kind": "data",
+          "label": "prefill"
+        },
+        {
+          "from": "s5",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "consumer:topic user.documents.uploaded": {
+      "id": "consumer:topic user.documents.uploaded",
+      "params": [
+        {
+          "name": "msg",
+          "type": "Message"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "KycModule.runCheck",
+          "line": 6,
+          "file": "sample-service/src/entrypoints/consumers.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "msg.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "consumer:topic user.profile.changed": {
+      "id": "consumer:topic user.profile.changed",
+      "params": [
+        {
+          "name": "msg",
+          "type": "Message"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "ProfileService.getProfile",
+          "line": 10,
+          "file": "sample-service/src/entrypoints/consumers.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "effect",
+          "effect": {
+            "kind": "kafka",
+            "target": "profile.snapshot.v1",
+            "file": "sample-service/src/entrypoints/consumers.ts",
+            "line": 11
+          },
+          "line": 11,
+          "file": "sample-service/src/entrypoints/consumers.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "msg.userId"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "profile"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "consumer:topic tax.year.closed": {
+      "id": "consumer:topic tax.year.closed",
+      "params": [
+        {
+          "name": "msg",
+          "type": "Message"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "TaxResidencyModule.assess",
+          "line": 15,
+          "file": "sample-service/src/entrypoints/consumers.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "msg.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "consumer:topic travel.booking.created": {
+      "id": "consumer:topic travel.booking.created",
+      "params": [
+        {
+          "name": "msg",
+          "type": "Message"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "TravelEligibilityModule.checkVisa",
+          "line": 19,
+          "file": "sample-service/src/entrypoints/consumers.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "msg.userId, msg.destination"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "consumer:topic user.deleted": {
+      "id": "consumer:topic user.deleted",
+      "params": [
+        {
+          "name": "msg",
+          "type": "Message"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "ProfileService.purge",
+          "line": 23,
+          "file": "sample-service/src/entrypoints/consumers.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "msg.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "cron:cron kyc-nightly-rescreen (0 2 * * *)": {
+      "id": "cron:cron kyc-nightly-rescreen (0 2 * * *)",
+      "params": [],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "KycModule.recheckExpired",
+          "line": 6,
+          "file": "sample-service/src/entrypoints/cron.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "control"
+        }
+      ]
+    },
+    "cron:cron tax-weekly-sweep (0 4 * * 1)": {
+      "id": "cron:cron tax-weekly-sweep (0 4 * * 1)",
+      "params": [],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "TaxResidencyModule.weeklySweep",
+          "line": 10,
+          "file": "sample-service/src/entrypoints/cron.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "control"
+        }
+      ]
+    },
+    "cron:cron compliance-monthly-report (0 6 1 * *)": {
+      "id": "cron:cron compliance-monthly-report (0 6 1 * *)",
+      "params": [],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "ComplianceReportModule.generateMonthly",
+          "line": 14,
+          "file": "sample-service/src/entrypoints/cron.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "control"
+        }
+      ]
+    },
+    "grpc:gRPC identity.v1.ProfileService/GetProfile": {
+      "id": "grpc:gRPC identity.v1.ProfileService/GetProfile",
+      "params": [
+        {
+          "name": "req",
+          "type": "any"
+        }
+      ],
+      "returns": {
+        "type": "{ userId: string; nationality: Nationality; personal: PersonalDetails; birth: BirthInfo; }",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "nationality",
+            "type": "Nationality"
+          },
+          {
+            "name": "personal",
+            "type": "PersonalDetails"
+          },
+          {
+            "name": "birth",
+            "type": "BirthInfo"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "ProfileService.getProfile",
+          "line": 5,
+          "file": "sample-service/src/entrypoints/grpc.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "grpc:gRPC identity.v1.ProfileService/GetBirthInfo": {
+      "id": "grpc:gRPC identity.v1.ProfileService/GetBirthInfo",
+      "params": [
+        {
+          "name": "req",
+          "type": "any"
+        }
+      ],
+      "returns": {
+        "type": "BirthInfo",
+        "fields": [
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "cityOfBirth",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "ProfileService.getBirthInfo",
+          "line": 6,
+          "file": "sample-service/src/entrypoints/grpc.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "grpc:gRPC kyc.v1.KycService/RunCheck": {
+      "id": "grpc:gRPC kyc.v1.KycService/RunCheck",
+      "params": [
+        {
+          "name": "req",
+          "type": "any"
+        }
+      ],
+      "returns": {
+        "type": "KycResult",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "KycStatus"
+          },
+          {
+            "name": "checkedAt",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "KycModule.runCheck",
+          "line": 7,
+          "file": "sample-service/src/entrypoints/grpc.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "grpc:gRPC travel.v1.TravelService/CheckVisa": {
+      "id": "grpc:gRPC travel.v1.TravelService/CheckVisa",
+      "params": [
+        {
+          "name": "req",
+          "type": "any"
+        }
+      ],
+      "returns": {
+        "type": "{ destination: string; visaRequired: boolean; }",
+        "fields": [
+          {
+            "name": "destination",
+            "type": "string"
+          },
+          {
+            "name": "visaRequired",
+            "type": "boolean"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "TravelEligibilityModule.checkVisa",
+          "line": 8,
+          "file": "sample-service/src/entrypoints/grpc.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.userId, req.destination"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:GET /admin/v1/users/:userId/identity-review": {
+      "id": "api:GET /admin/v1/users/:userId/identity-review",
+      "params": [
+        {
+          "name": "req",
+          "type": "Request"
+        }
+      ],
+      "returns": {
+        "type": "{ identity: IdentityData; birth: BirthInfo; notes: Row[]; }",
+        "fields": [
+          {
+            "name": "identity",
+            "type": "IdentityData"
+          },
+          {
+            "name": "birth",
+            "type": "BirthInfo"
+          },
+          {
+            "name": "notes",
+            "type": "Row[]"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "IdentityReviewModule.review",
+          "line": 5,
+          "file": "sample-service/src/entrypoints/http/adminRoutes.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.params.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:POST /admin/v1/users/:userId/kyc-override": {
+      "id": "api:POST /admin/v1/users/:userId/kyc-override",
+      "params": [
+        {
+          "name": "req",
+          "type": "Request"
+        }
+      ],
+      "returns": {
+        "type": "{ userId: string; status: KycStatus; }",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "KycStatus"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "KycModule.override",
+          "line": 6,
+          "file": "sample-service/src/entrypoints/http/adminRoutes.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.params.userId, req.body.status, req.body.reviewer"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:POST /v1/kyc/:userId/check": {
+      "id": "api:POST /v1/kyc/:userId/check",
+      "params": [
+        {
+          "name": "req",
+          "type": "Request"
+        }
+      ],
+      "returns": {
+        "type": "KycResult",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "KycStatus"
+          },
+          {
+            "name": "checkedAt",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "KycModule.runCheck",
+          "line": 5,
+          "file": "sample-service/src/entrypoints/http/complianceRoutes.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.params.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:GET /v1/kyc/:userId/status": {
+      "id": "api:GET /v1/kyc/:userId/status",
+      "params": [
+        {
+          "name": "req",
+          "type": "Request"
+        }
+      ],
+      "returns": {
+        "type": "KycResult | undefined",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "KycStatus"
+          },
+          {
+            "name": "checkedAt",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "KycModule.getStatus",
+          "line": 6,
+          "file": "sample-service/src/entrypoints/http/complianceRoutes.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.params.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:POST /v1/onboarding/:userId/complete": {
+      "id": "api:POST /v1/onboarding/:userId/complete",
+      "params": [
+        {
+          "name": "req",
+          "type": "Request"
+        }
+      ],
+      "returns": {
+        "type": "{ userId: string; onboarded: boolean; }",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "onboarded",
+            "type": "boolean"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "OnboardingModule.complete",
+          "line": 7,
+          "file": "sample-service/src/entrypoints/http/complianceRoutes.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.params.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:GET /v1/tax/:userId/residency": {
+      "id": "api:GET /v1/tax/:userId/residency",
+      "params": [
+        {
+          "name": "req",
+          "type": "Request"
+        }
+      ],
+      "returns": {
+        "type": "TaxResidency",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "residencies",
+            "type": "string[]"
+          },
+          {
+            "name": "usPerson",
+            "type": "boolean"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "TaxResidencyModule.assess",
+          "line": 8,
+          "file": "sample-service/src/entrypoints/http/complianceRoutes.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.params.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:POST /v1/tax/:userId/declarations": {
+      "id": "api:POST /v1/tax/:userId/declarations",
+      "params": [
+        {
+          "name": "req",
+          "type": "Request"
+        }
+      ],
+      "returns": {
+        "type": "TaxResidency",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "residencies",
+            "type": "string[]"
+          },
+          {
+            "name": "usPerson",
+            "type": "boolean"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "TaxResidencyModule.recordDeclaration",
+          "line": 9,
+          "file": "sample-service/src/entrypoints/http/complianceRoutes.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.params.userId, req.body.country"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:GET /v1/travel/:userId/visa-eligibility": {
+      "id": "api:GET /v1/travel/:userId/visa-eligibility",
+      "params": [
+        {
+          "name": "req",
+          "type": "Request"
+        }
+      ],
+      "returns": {
+        "type": "{ destination: string; visaRequired: boolean; }",
+        "fields": [
+          {
+            "name": "destination",
+            "type": "string"
+          },
+          {
+            "name": "visaRequired",
+            "type": "boolean"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "TravelEligibilityModule.checkVisa",
+          "line": 10,
+          "file": "sample-service/src/entrypoints/http/complianceRoutes.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.params.userId, req.query.destination"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:POST /v1/travel/:userId/passport-prefill": {
+      "id": "api:POST /v1/travel/:userId/passport-prefill",
+      "params": [
+        {
+          "name": "req",
+          "type": "Request"
+        }
+      ],
+      "returns": {
+        "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; legalName: string; preferredName: string;…",
+        "fields": [
+          {
+            "name": "nationality",
+            "type": "string"
+          },
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "cityOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "legalName",
+            "type": "string"
+          },
+          {
+            "name": "preferredName",
+            "type": "string"
+          },
+          {
+            "name": "dateOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "userId",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "TravelEligibilityModule.prefillPassport",
+          "line": 11,
+          "file": "sample-service/src/entrypoints/http/complianceRoutes.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.params.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:GET /v1/users/:userId/profile": {
+      "id": "api:GET /v1/users/:userId/profile",
+      "params": [
+        {
+          "name": "req",
+          "type": "Request"
+        }
+      ],
+      "returns": {
+        "type": "{ userId: string; nationality: Nationality; personal: PersonalDetails; birth: BirthInfo; }",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "nationality",
+            "type": "Nationality"
+          },
+          {
+            "name": "personal",
+            "type": "PersonalDetails"
+          },
+          {
+            "name": "birth",
+            "type": "BirthInfo"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "ProfileService.getProfile",
+          "line": 5,
+          "file": "sample-service/src/entrypoints/http/profileRoutes.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.params.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:GET /v1/users/:userId/profile/summary": {
+      "id": "api:GET /v1/users/:userId/profile/summary",
+      "params": [
+        {
+          "name": "req",
+          "type": "Request"
+        }
+      ],
+      "returns": {
+        "type": "{ userId: string; name: string; }",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "ProfileService.getSummary",
+          "line": 6,
+          "file": "sample-service/src/entrypoints/http/profileRoutes.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.params.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:GET /v1/users/:userId/nationality": {
+      "id": "api:GET /v1/users/:userId/nationality",
+      "params": [
+        {
+          "name": "req",
+          "type": "Request"
+        }
+      ],
+      "returns": {
+        "type": "Nationality",
+        "fields": [
+          {
+            "name": "alpha3",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "isEu",
+            "type": "boolean"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "ProfileService.getNationality",
+          "line": 7,
+          "file": "sample-service/src/entrypoints/http/profileRoutes.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.params.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:GET /v1/users/:userId/birth-info": {
+      "id": "api:GET /v1/users/:userId/birth-info",
+      "params": [
+        {
+          "name": "req",
+          "type": "Request"
+        }
+      ],
+      "returns": {
+        "type": "BirthInfo",
+        "fields": [
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "cityOfBirth",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "ProfileService.getBirthInfo",
+          "line": 8,
+          "file": "sample-service/src/entrypoints/http/profileRoutes.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.params.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:POST /v1/users/:userId/export": {
+      "id": "api:POST /v1/users/:userId/export",
+      "params": [
+        {
+          "name": "req",
+          "type": "Request"
+        }
+      ],
+      "returns": {
+        "type": "{ status: string; }",
+        "fields": [
+          {
+            "name": "status",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "ProfileService.exportProfile",
+          "line": 9,
+          "file": "sample-service/src/entrypoints/http/profileRoutes.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.params.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:DELETE /v1/users/:userId": {
+      "id": "api:DELETE /v1/users/:userId",
+      "params": [
+        {
+          "name": "req",
+          "type": "Request"
+        }
+      ],
+      "returns": {
+        "type": "{ purged: boolean; }",
+        "fields": [
+          {
+            "name": "purged",
+            "type": "boolean"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "ProfileService.purge",
+          "line": 10,
+          "file": "sample-service/src/entrypoints/http/profileRoutes.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "req.params.userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    }
+  },
+  "findings": [
+    {
+      "rule": "table-ownership",
+      "severity": "error",
+      "message": "ProfileAssembler.purge writes `user_profiles`, which is owned by PersonalDetails",
+      "subject": {
+        "type": "operation",
+        "id": "ProfileService.purge"
+      },
+      "isNew": false,
+      "hint": "Call PersonalDetails instead of writing its table directly."
+    },
+    {
+      "rule": "table-ownership",
+      "severity": "error",
+      "message": "ProfileAssembler.purge writes `user_documents`, which is owned by DocumentStore",
+      "subject": {
+        "type": "operation",
+        "id": "ProfileService.purge"
+      },
+      "isNew": false,
+      "hint": "Call DocumentStore instead of writing its table directly."
+    },
+    {
+      "rule": "read-path-writes",
+      "severity": "warning",
+      "message": "db.write `tax_residency_assessments` runs on 1 read-only entry point: GET /v1/tax/:userId/residency",
+      "subject": {
+        "type": "entry",
+        "id": "api:GET /v1/tax/:userId/residency"
+      },
+      "related": [
+        {
+          "type": "entry",
+          "id": "api:GET /v1/tax/:userId/residency"
+        }
+      ],
+      "isNew": false,
+      "hint": "Reads that write break caching, retries and replica routing. Move the write to a command path or make it explicit in the API contract."
+    }
+  ],
+  "review": {
+    "changedModules": [],
+    "changedOperations": [],
+    "queue": [],
+    "reviewers": [],
+    "stats": {
+      "files": 0,
+      "linesAdded": 0,
+      "linesRemoved": 0,
+      "contractChanges": 0,
+      "entryPointsAffected": 0
+    }
+  }
+}

@@ -1,0 +1,845 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://modulegraph.dev/schema/modulegraph-v1.json",
+  "title": "modulegraph/v1",
+  "description": "Module-level review graph: modules, operations, entry points, scopes (flows), findings. Generated from schema/modulegraph.ts.",
+  "$ref": "#/definitions/ModuleGraph",
+  "definitions": {
+    "EffectKind": {
+      "type": "string",
+      "enum": [
+        "db.read",
+        "db.write",
+        "outbox",
+        "kafka",
+        "http"
+      ]
+    },
+    "ChangeStatus": {
+      "type": "string",
+      "enum": [
+        "added",
+        "modified",
+        "removed",
+        "unchanged"
+      ]
+    },
+    "EntryKind": {
+      "type": "string",
+      "enum": [
+        "api",
+        "grpc",
+        "consumer",
+        "cron"
+      ]
+    },
+    "Risk": {
+      "type": "string",
+      "enum": [
+        "high",
+        "medium",
+        "low",
+        "none"
+      ]
+    },
+    "Effect": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/EffectKind"
+        },
+        "target": {
+          "type": "string",
+          "description": "Table name, outbox event type, Kafka topic or external service name."
+        },
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "kind",
+        "target"
+      ],
+      "additionalProperties": false
+    },
+    "Param": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "TypeShape": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Param"
+          },
+          "description": "One level of fields when the type is an object."
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    "ModuleGraph": {
+      "type": "object",
+      "properties": {
+        "schema": {
+          "const": "modulegraph/v1"
+        },
+        "service": {
+          "type": "string"
+        },
+        "generatedAt": {
+          "type": "string"
+        },
+        "generator": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/definitions/Source"
+        },
+        "modules": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/ModuleInfo"
+          }
+        },
+        "operations": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Operation"
+          }
+        },
+        "entryPoints": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/EntryPoint"
+          }
+        },
+        "scopes": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/Scope"
+          },
+          "description": "Keyed by operation id or entry point id."
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Finding"
+          }
+        },
+        "review": {
+          "$ref": "#/definitions/ReviewSummary"
+        }
+      },
+      "required": [
+        "schema",
+        "service",
+        "generatedAt",
+        "generator",
+        "source",
+        "modules",
+        "operations",
+        "entryPoints",
+        "scopes",
+        "findings",
+        "review"
+      ],
+      "additionalProperties": false
+    },
+    "Source": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "snapshot",
+            "uncommitted",
+            "branch",
+            "pr"
+          ]
+        },
+        "repo": {
+          "type": "string"
+        },
+        "project": {
+          "type": "string"
+        },
+        "base": {
+          "type": "string"
+        },
+        "head": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "intent": {
+          "type": "string",
+          "description": "Stated intent (PR description). Used to flag undisclosed side effects."
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FileChange"
+          }
+        }
+      },
+      "required": [
+        "mode",
+        "repo",
+        "project",
+        "files"
+      ],
+      "additionalProperties": false
+    },
+    "FileChange": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "added",
+            "modified",
+            "deleted",
+            "renamed"
+          ]
+        },
+        "added": {
+          "type": "number"
+        },
+        "removed": {
+          "type": "number"
+        },
+        "modules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Modules whose code lives in this file. Empty = change not attributed to any module."
+        }
+      },
+      "required": [
+        "path",
+        "status",
+        "added",
+        "removed",
+        "modules"
+      ],
+      "additionalProperties": false
+    },
+    "ModuleInfo": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name, e.g. \"BirthInfo\"."
+        },
+        "className": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "number"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "owner": {
+          "type": "string"
+        },
+        "declaredEffects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Effect"
+          },
+          "description": "Side effects the module declares in its contract (`@effect` tags)."
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "change": {
+          "$ref": "#/definitions/ChangeStatus"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "className",
+        "file",
+        "line",
+        "summary",
+        "declaredEffects",
+        "operations",
+        "change"
+      ],
+      "additionalProperties": false
+    },
+    "Operation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "moduleId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "number"
+        },
+        "endLine": {
+          "type": "number"
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Param"
+          }
+        },
+        "returns": {
+          "$ref": "#/definitions/TypeShape"
+        },
+        "directEffects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Effect"
+          },
+          "description": "Effects performed by this operation itself (incl. inlined non-module helpers)."
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Effect"
+          },
+          "description": "Direct + everything reachable through called operations."
+        },
+        "calls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Operation ids called directly."
+        },
+        "change": {
+          "$ref": "#/definitions/ChangeStatus"
+        },
+        "containsChanges": {
+          "type": "boolean",
+          "description": "True when this op or anything it reaches changed. Tells the reviewer to drill in."
+        },
+        "delta": {
+          "$ref": "#/definitions/ContractDelta"
+        },
+        "diff": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DiffLine"
+          },
+          "description": "Line diff of this operation (base vs head), when changed."
+        },
+        "source": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "moduleId",
+        "name",
+        "file",
+        "line",
+        "endLine",
+        "params",
+        "returns",
+        "directEffects",
+        "effects",
+        "calls",
+        "change",
+        "containsChanges",
+        "source"
+      ],
+      "additionalProperties": false
+    },
+    "DiffLine": {
+      "type": "object",
+      "properties": {
+        "t": {
+          "type": "string",
+          "enum": [
+            "+",
+            "-",
+            " "
+          ]
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "t",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    "ContractDelta": {
+      "type": "object",
+      "properties": {
+        "risk": {
+          "$ref": "#/definitions/Risk"
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "before": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Param"
+              }
+            },
+            "after": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Param"
+              }
+            }
+          },
+          "required": [
+            "before",
+            "after"
+          ],
+          "additionalProperties": false
+        },
+        "returns": {
+          "type": "object",
+          "properties": {
+            "before": {
+              "$ref": "#/definitions/TypeShape"
+            },
+            "after": {
+              "$ref": "#/definitions/TypeShape"
+            }
+          },
+          "required": [
+            "before",
+            "after"
+          ],
+          "additionalProperties": false
+        },
+        "effectsAdded": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Effect"
+          }
+        },
+        "effectsRemoved": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Effect"
+          }
+        },
+        "callsAdded": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "callsRemoved": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "implementationOnly": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "risk",
+        "effectsAdded",
+        "effectsRemoved",
+        "callsAdded",
+        "callsRemoved",
+        "implementationOnly"
+      ],
+      "additionalProperties": false
+    },
+    "EntryPoint": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/EntryKind"
+        },
+        "label": {
+          "type": "string",
+          "description": "e.g. \"GET /v1/users/:userId/profile\", \"topic user.deleted\", \"cron kyc-nightly-rescreen\"."
+        },
+        "readOnly": {
+          "type": "boolean",
+          "description": "Read-only by protocol semantics (HTTP GET, gRPC Get*). Used by the read-path-writes rule."
+        },
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "number"
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Effect"
+          }
+        },
+        "change": {
+          "$ref": "#/definitions/ChangeStatus"
+        },
+        "containsChanges": {
+          "type": "boolean"
+        },
+        "effectsAdded": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Effect"
+          }
+        },
+        "effectsRemoved": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Effect"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "label",
+        "readOnly",
+        "file",
+        "line",
+        "effects",
+        "change",
+        "containsChanges"
+      ],
+      "additionalProperties": false
+    },
+    "Scope": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Param"
+          }
+        },
+        "returns": {
+          "$ref": "#/definitions/TypeShape"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Step"
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Edge"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "params",
+        "steps",
+        "edges"
+      ],
+      "additionalProperties": false
+    },
+    "Step": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "call",
+            "effect"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "description": "Operation id, for kind = call."
+        },
+        "effect": {
+          "$ref": "#/definitions/Effect"
+        },
+        "line": {
+          "type": "number"
+        },
+        "file": {
+          "type": "string"
+        },
+        "condition": {
+          "type": "string",
+          "description": "Guard under which the step runs, e.g. \"if (consented)\" or \"unless (consented)\"."
+        },
+        "loop": {
+          "type": "boolean"
+        },
+        "via": {
+          "type": "string",
+          "description": "Non-module helper the step was inlined from."
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "line",
+        "file"
+      ],
+      "additionalProperties": false
+    },
+    "Edge": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "type": "string",
+          "description": "Step id, or \"entry\"."
+        },
+        "to": {
+          "type": "string",
+          "description": "Step id, or \"exit\"."
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "data",
+            "control"
+          ]
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "from",
+        "to",
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "Finding": {
+      "type": "object",
+      "properties": {
+        "rule": {
+          "type": "string"
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "error",
+            "warning",
+            "info"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "module",
+                "operation",
+                "entry",
+                "file"
+              ]
+            },
+            "id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "related": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "module",
+                  "operation",
+                  "entry",
+                  "file"
+                ]
+              },
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Other entities the finding applies to (e.g. every read-only entry point that now writes)."
+        },
+        "isNew": {
+          "type": "boolean",
+          "description": "True when the finding did not exist on the base revision."
+        },
+        "hint": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule",
+        "severity",
+        "message",
+        "isNew"
+      ],
+      "additionalProperties": false
+    },
+    "ReviewSummary": {
+      "type": "object",
+      "properties": {
+        "changedModules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "changedOperations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "queue": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "operation": {
+                "type": "string"
+              },
+              "risk": {
+                "$ref": "#/definitions/Risk"
+              },
+              "reason": {
+                "type": "string"
+              },
+              "reach": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "operation",
+              "risk",
+              "reason",
+              "reach"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Changed ops sorted by contract risk: what the reviewer should look at first."
+        },
+        "reviewers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Owners whose modules' contracts changed."
+        },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "files": {
+              "type": "number"
+            },
+            "linesAdded": {
+              "type": "number"
+            },
+            "linesRemoved": {
+              "type": "number"
+            },
+            "contractChanges": {
+              "type": "number"
+            },
+            "entryPointsAffected": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "files",
+            "linesAdded",
+            "linesRemoved",
+            "contractChanges",
+            "entryPointsAffected"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "changedModules",
+        "changedOperations",
+        "queue",
+        "reviewers",
+        "stats"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

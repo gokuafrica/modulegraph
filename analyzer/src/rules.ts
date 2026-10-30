@@ -84,6 +84,52 @@ export function architectureFindings(g: Graphish, config: Config): Finding[] {
     }
   }
 
+  // R6: module dependency graph must be acyclic.
+  const deps = new Map<string, Set<string>>();
+  for (const op of live) {
+    for (const callee of op.calls) {
+      const to = g.operations[callee]?.moduleId;
+      if (to && to !== op.moduleId) deps.set(op.moduleId, new Set([...(deps.get(op.moduleId) ?? []), to]));
+    }
+  }
+  const reported = new Set<string>();
+  const visit = (mod: string, path: string[]) => {
+    for (const next of deps.get(mod) ?? []) {
+      const at = path.indexOf(next);
+      if (at >= 0) {
+        const cycle = [...path.slice(at), next].map((m) => g.modules[m]?.name ?? m);
+        const key = [...cycle.slice(0, -1)].sort().join('|');
+        if (!reported.has(key)) {
+          reported.add(key);
+          findings.push({ rule: 'module-cycle', severity: 'error', message: `Module cycle: ${cycle.join(' → ')}`, subject: { type: 'module', id: next }, isNew: false });
+        }
+      } else if (path.length < 20) visit(next, [...path, next]);
+    }
+  };
+  for (const mod of deps.keys()) visit(mod, [mod]);
+
+  // The same read twice in one operation is redundant I/O (a common pattern in generated code).
+  for (const op of live) {
+    const counts = new Map<string, number>();
+    for (const step of g.scopes[op.id]?.steps ?? []) {
+      if (!step.effect || step.loop || (step.effect.kind !== 'db.read' && step.effect.kind !== 'http')) continue;
+      const key = effectKey(step.effect);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    for (const [key, n] of counts) {
+      if (n > 1) {
+        findings.push({
+          rule: 'duplicate-read',
+          severity: 'warning',
+          message: `${opLabel(g, op.id)} performs ${key} ${n}× in one call`,
+          subject: { type: 'operation', id: op.id },
+          isNew: false,
+          hint: 'Read once and reuse the value.',
+        });
+      }
+    }
+  }
+
   // Shared expensive fetches must happen once per flow (e.g. Identity is fetched by the orchestrator and passed down).
   for (const entry of Object.values(g.entryPoints)) {
     if (entry.change === 'removed') continue;
@@ -112,19 +158,27 @@ export function architectureFindings(g: Graphish, config: Config): Finding[] {
     }
   }
 
-  // Read-only entry points (GET, gRPC Get*) should not write.
+  // Read-only entry points (GET, gRPC Get*) should not write. One finding per write, listing every entry it leaks into.
+  const readPathWrites = new Map<string, { effect: Effect; entries: string[] }>();
   for (const entry of Object.values(g.entryPoints)) {
     if (!entry.readOnly || entry.change === 'removed') continue;
-    const writes = entry.effects.filter((e) => e.kind !== 'db.read' && e.kind !== 'http');
-    if (writes.length) {
-      findings.push({
-        rule: 'read-path-writes',
-        severity: 'warning',
-        message: `${entry.label} is read-only by protocol but performs ${writes.map(fmt).join(', ')}`,
-        subject: { type: 'entry', id: entry.id },
-        isNew: false,
-      });
+    for (const effect of entry.effects.filter((e) => e.kind !== 'db.read' && e.kind !== 'http')) {
+      const slot = readPathWrites.get(effectKey(effect)) ?? { effect, entries: [] };
+      slot.entries.push(entry.id);
+      readPathWrites.set(effectKey(effect), slot);
     }
+  }
+  for (const { effect, entries } of readPathWrites.values()) {
+    const labels = entries.map((id) => g.entryPoints[id].label);
+    findings.push({
+      rule: 'read-path-writes',
+      severity: 'warning',
+      message: `${fmt(effect)} runs on ${entries.length} read-only entry point${entries.length > 1 ? 's' : ''}: ${labels.slice(0, 3).join(', ')}${labels.length > 3 ? ', …' : ''}`,
+      subject: { type: 'entry', id: entries[0] },
+      related: entries.map((id) => ({ type: 'entry' as const, id })),
+      isNew: false,
+      hint: 'Reads that write break caching, retries and replica routing. Move the write to a command path or make it explicit in the API contract.',
+    });
   }
   return findings;
 }
@@ -167,13 +221,16 @@ export function changeFindings(g: Graphish, diff: RawDiff, config: Config, inten
   for (const file of diff.files.filter((f) => f.status === 'deleted' && /\.(test|spec)\.tsx?$/.test(f.path))) {
     findings.push({ rule: 'guardrail-weakened', severity: 'error', message: `Test file deleted: ${file.path}`, isNew: true, subject: { type: 'file', id: file.path } });
   }
-  for (const file of diff.files.filter((f) => f.modules.length === 0 && /\.tsx?$/.test(f.path))) {
+  const entryFiles = new Set(Object.values(g.entryPoints).map((e) => e.file));
+  const outside = diff.files.filter((f) => f.modules.length === 0 && !entryFiles.has(f.path) && /\.tsx?$/.test(f.path));
+  if (outside.length) {
     findings.push({
       rule: 'unattributed-change',
       severity: 'info',
-      message: `${file.path} changed but belongs to no module. It may still affect module contracts through shared types`,
-      subject: { type: 'file', id: file.path },
+      message: `${outside.length} changed file${outside.length > 1 ? 's' : ''} outside any module: ${outside.map((f) => f.path.split('/').slice(-2).join('/')).join(', ')}`,
+      related: outside.map((f) => ({ type: 'file' as const, id: f.path })),
       isNew: true,
+      hint: 'Wiring, shared types and dev tooling. Contract effects of shared types already show up as output-shape changes on the modules.',
     });
   }
 
