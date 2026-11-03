@@ -3,9 +3,6 @@ import type { ExtractedFields, IdentityDocument } from './types.ts';
 
 /**
  * Extracts structured fields from document scans via the document-AI service.
- * @module
- * @owner team-identity
- * @effect http document-ai
  */
 export class DocumentExtractor {
   constructor(private readonly http: HttpClient) {}

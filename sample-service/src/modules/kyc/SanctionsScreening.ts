@@ -7,9 +7,6 @@ export interface ScreeningResult {
 
 /**
  * Screens a person against sanctions and PEP lists.
- * @module
- * @owner team-compliance
- * @effect http sanctions-api
  */
 export class SanctionsScreening {
   constructor(private readonly http: HttpClient) {}

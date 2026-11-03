@@ -3,9 +3,7 @@ import { DocumentBirthExtractor } from './DocumentBirthExtractor.ts';
 import type { BirthInfo } from './types.ts';
 
 /**
- * BirthInfo: the user's country and city of birth.
- * @module
- * @owner team-identity
+ * The user's country and city of birth.
  */
 export class BirthInfoModule {
   constructor(private readonly documentBirth: DocumentBirthExtractor) {}

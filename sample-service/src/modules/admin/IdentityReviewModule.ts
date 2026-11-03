@@ -3,10 +3,7 @@ import { BirthInfoModule } from '../birth-info/BirthInfoModule.ts';
 import { IdentityModule } from '../identity/IdentityModule.ts';
 
 /**
- * IdentityReview: back-office view of a user's identity evidence for manual review.
- * @module
- * @owner team-backoffice
- * @effect db.read review_notes
+ * Back-office view of a user's identity evidence for manual review.
  */
 export class IdentityReviewModule {
   constructor(

@@ -74,8 +74,10 @@ export interface ModuleInfo {
   line: number;
   summary: string;
   owner?: string;
-  /** Side effects the module declares in its contract (`@effect` tags). */
+  /** Side effects declared for the module (external config, or opt-in `@effect` tags). Empty when none are declared. */
   declaredEffects: Effect[];
+  /** Where declarations came from. Absent = nothing declared, so the undeclared-effect rule doesn't apply. */
+  contractSource?: 'config' | 'tags';
   operations: string[];
   change: ChangeStatus;
 }

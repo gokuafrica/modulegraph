@@ -3,11 +3,7 @@ import { HttpClient } from '../../platform/http.ts';
 import { TaxResidencyModule, type TaxResidency } from '../tax/TaxResidencyModule.ts';
 
 /**
- * ComplianceReport: monthly regulator report of KYC outcomes and tax residencies.
- * @module
- * @owner team-compliance
- * @effect db.read kyc_results
- * @effect http regulator-reporting
+ * Monthly regulator report of KYC outcomes and tax residencies.
  */
 export class ComplianceReportModule {
   constructor(

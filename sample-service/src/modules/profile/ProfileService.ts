@@ -6,13 +6,7 @@ import { NationalityModule } from '../nationality/NationalityModule.ts';
 import { PersonalDetailsModule } from '../personal-details/PersonalDetailsModule.ts';
 
 /**
- * ProfileAssembler: builds the user profile. Fetches Identity once and shares it with every sub-module.
- * @module
- * @owner team-profile
- * @effect db.write gdpr_exports
- * @effect db.write user_profiles
- * @effect db.write user_documents
- * @effect kafka privacy.export.ready
+ * Builds the user profile. Fetches Identity once and shares it with every sub-module.
  */
 export class ProfileService {
   constructor(

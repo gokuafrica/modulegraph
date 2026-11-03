@@ -8,10 +8,7 @@ export interface PersonalDetails {
 }
 
 /**
- * PersonalDetails: legal name and date of birth from documents, preferred name from the user's profile.
- * @module
- * @owner team-profile
- * @effect db.read user_profiles
+ * Legal name and date of birth from documents, preferred name from the user's profile.
  */
 export class PersonalDetailsModule {
   constructor(private readonly db: Db) {}

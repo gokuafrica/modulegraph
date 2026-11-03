@@ -3,10 +3,8 @@ import { DocumentStore } from './DocumentStore.ts';
 import type { IdentityData } from './types.ts';
 
 /**
- * Identity: what the user's documents say about them (nationality, country and city of birth, ...).
+ * What the user's documents say about them (nationality, country and city of birth, ...).
  * Expensive (DB + document-AI call), so orchestrators fetch it once and pass it down.
- * @module
- * @owner team-identity
  */
 export class IdentityModule {
   constructor(

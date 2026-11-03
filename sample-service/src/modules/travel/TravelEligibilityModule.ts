@@ -6,11 +6,7 @@ import { NationalityModule } from '../nationality/NationalityModule.ts';
 import { PersonalDetailsModule } from '../personal-details/PersonalDetailsModule.ts';
 
 /**
- * TravelEligibility: visa eligibility checks and passport application prefill.
- * @module
- * @owner team-travel
- * @effect http visa-rules-service
- * @effect db.write passport_prefills
+ * Visa eligibility checks and passport application prefill.
  */
 export class TravelEligibilityModule {
   constructor(

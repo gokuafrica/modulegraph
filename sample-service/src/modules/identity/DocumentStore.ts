@@ -3,9 +3,6 @@ import type { IdentityDocument } from './types.ts';
 
 /**
  * Reads the user's uploaded identity documents.
- * @module
- * @owner team-identity
- * @effect db.read user_documents
  */
 export class DocumentStore {
   constructor(private readonly db: Db) {}

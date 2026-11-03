@@ -14,13 +14,7 @@ export interface KycResult {
 }
 
 /**
- * KycCheck: know-your-customer verification. Identity, birth info and nationality feed sanctions screening.
- * @module
- * @owner team-compliance
- * @effect db.read kyc_results
- * @effect db.write kyc_results
- * @effect outbox kyc.completed
- * @effect outbox kyc.overridden
+ * Know-your-customer verification. Identity, birth info and nationality feed sanctions screening.
  */
 export class KycModule {
   constructor(

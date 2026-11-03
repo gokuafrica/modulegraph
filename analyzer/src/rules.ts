@@ -38,10 +38,10 @@ export function architectureFindings(g: Graphish, config: Config): Finding[] {
   const findings: Finding[] = [];
   const live = Object.values(g.operations).filter((op) => op.change !== 'removed');
 
-  // R3: a module's real direct side effects must match its declared contract.
+  // R3: where a contract is declared (external config, or opt-in tags), real direct effects must match it.
   if (config.rules.requireDeclaredEffects) {
     for (const mod of Object.values(g.modules)) {
-      if (mod.change === 'removed') continue;
+      if (mod.change === 'removed' || !mod.contractSource) continue;
       const actual = dedupeEffects(live.filter((op) => op.moduleId === mod.id).flatMap((op) => op.directEffects));
       const declared = new Set(mod.declaredEffects.map(effectKey));
       for (const effect of actual.filter((e) => !declared.has(effectKey(e)))) {
@@ -51,7 +51,7 @@ export function architectureFindings(g: Graphish, config: Config): Finding[] {
           message: `${mod.name} performs ${fmt(effect)} but its contract does not declare it`,
           subject: { type: 'module', id: mod.id },
           isNew: false,
-          hint: `Declare it with \`@effect ${effect.kind} ${effect.target}\` on ${mod.className}, or move the side effect to the module that owns it.`,
+          hint: `Add "${effect.kind} ${effect.target}" to ${mod.className}'s effects in the modulegraph config, or move the side effect to the module that owns it.`,
         });
       }
       const actualKeys = new Set(actual.map(effectKey));
@@ -204,6 +204,23 @@ export function changeFindings(g: Graphish, diff: RawDiff, config: Config, inten
       isNew: true,
       hint: 'Split into a stack: one PR per contract change, each reviewable as its own graph diff.',
     });
+  }
+
+  // R3 without declarations: the base revision is the contract. Any direct side effect a change adds is surfaced.
+  for (const op of Object.values(g.operations)) {
+    if (op.change === 'removed' || !op.delta) continue;
+    const direct = new Set(op.directEffects.map(effectKey));
+    for (const effect of op.delta.effectsAdded.filter((e) => direct.has(effectKey(e)))) {
+      const writes = effect.kind !== 'db.read' && effect.kind !== 'http';
+      findings.push({
+        rule: 'new-side-effect',
+        severity: writes ? 'warning' : 'info',
+        message: `${opLabel(g, op.id)} now performs ${fmt(effect)}${op.change === 'added' ? ' (new operation)' : ''}`,
+        subject: { type: 'operation', id: op.id },
+        isNew: true,
+        hint: writes ? 'A new write runs on every flow that reaches this module. Check the zoom-out view.' : undefined,
+      });
+    }
   }
 
   // R8: AI-written-code risk signals in added lines.

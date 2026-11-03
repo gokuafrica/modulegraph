@@ -3,11 +3,7 @@ import { KafkaProducer } from '../../platform/kafka.ts';
 import { KycModule } from '../kyc/KycModule.ts';
 
 /**
- * Onboarding: completes sign-up once KYC passes.
- * @module
- * @owner team-onboarding
- * @effect db.write users
- * @effect kafka user.onboarded
+ * Completes sign-up once KYC passes.
  */
 export class OnboardingModule {
   constructor(

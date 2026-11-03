@@ -20,11 +20,35 @@ export interface EntryRule {
   readOnly?: boolean;
 }
 
+/** Per-module facts an agent (or a person) supplies from outside the repo. All optional. */
+export interface ModuleOverride {
+  /** Display name, e.g. "BirthInfo". Default: class name without a Module/Service suffix. */
+  name?: string;
+  owner?: string;
+  summary?: string;
+  /** Declared direct side effects, e.g. "outbox birth_info.source_resolved". Enables the undeclared-effect rule. */
+  effects?: string[];
+}
+
+/**
+ * Lives outside the analyzed repo (pass --config). The analyzed code is never modified: modules are found from its
+ * structure, and everything the code doesn't say explicitly (which classes talk to the DB/Kafka/HTTP, who owns what)
+ * is described here.
+ */
 export interface Config {
   service: string;
   tsconfig: string;
-  /** JSDoc tag that marks a class as a module. */
+  /** Optional opt-in for teams that do want in-code markers: a JSDoc tag that forces a class to be a module. */
   moduleTag: string;
+  modules: {
+    /** Force these classes in, even if discovery misses them. */
+    include: string[];
+    /** Keep these classes out (DTOs, utilities that discovery picked up). */
+    exclude: string[];
+    overrides: Record<string, ModuleOverride>;
+  };
+  /** Path glob (repo-relative) -> owner. CODEOWNERS in the repo, if any, is read as a fallback. */
+  owners: Record<string, string>;
   sinks: SinkRule[];
   entryPoints: EntryRule[];
   rules: {
@@ -45,6 +69,8 @@ export const defaultConfig: Config = {
   service: 'service',
   tsconfig: 'tsconfig.json',
   moduleTag: 'module',
+  modules: { include: [], exclude: [], overrides: {} },
+  owners: {},
   sinks: [
     { class: 'Db', method: 'select', kind: 'db.read', targetArg: 0 },
     { class: 'Db', method: 'insert', kind: 'db.write', targetArg: 0 },
@@ -72,13 +98,22 @@ export const defaultConfig: Config = {
   },
 };
 
-export function loadConfig(projectDir: string): Config {
-  const file = join(projectDir, 'modulegraph.config.json');
-  if (!existsSync(file)) return defaultConfig;
+/** `configPath` (outside the repo) wins; an in-repo modulegraph.config.json is only an opt-in fallback. */
+export function loadConfig(projectDir: string, configPath?: string): Config {
+  const file = configPath ?? join(projectDir, 'modulegraph.config.json');
+  const pkg = join(projectDir, 'package.json');
+  const service = existsSync(pkg) ? (JSON.parse(readFileSync(pkg, 'utf8')).name as string) : defaultConfig.service;
+  if (!existsSync(file)) {
+    if (configPath) throw new Error(`config not found: ${configPath}`);
+    return { ...defaultConfig, service };
+  }
   const user = JSON.parse(readFileSync(file, 'utf8')) as Partial<Config>;
   return {
     ...defaultConfig,
+    service,
     ...user,
+    modules: { ...defaultConfig.modules, ...user.modules },
+    owners: user.owners ?? {},
     sinks: user.sinks ?? defaultConfig.sinks,
     entryPoints: user.entryPoints ?? defaultConfig.entryPoints,
     rules: { ...defaultConfig.rules, ...user.rules, budget: { ...defaultConfig.rules.budget, ...user.rules?.budget } },

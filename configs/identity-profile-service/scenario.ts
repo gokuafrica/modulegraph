@@ -1,11 +1,16 @@
-import { buildApp } from '../app.ts';
-import { seed } from './seed.ts';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 /**
- * A realistic tour of the service, used by `modulegraph --examples` to record real inputs/outputs.
+ * Tour of identity-profile-service, run by `modulegraph --examples` to record real module inputs/outputs.
+ * Lives outside the service repo: it loads the service from `projectRoot`, which is the revision under review
+ * (a temporary worktree for branches/PRs).
  * u-1 has only identity documents; u-2 has documents and (from the consent feature on) consented birth data.
  */
-export default async function scenario(): Promise<void> {
+export default async function scenario(projectRoot: string): Promise<void> {
+  const load = (path: string) => import(pathToFileURL(join(projectRoot, path)).href);
+  const { buildApp } = await load('src/app.ts');
+  const { seed } = await load('src/dev/seed.ts');
   const app = buildApp();
   await seed(app);
   const call = (method: string, url: string, body?: unknown) => app.router.dispatch(method, url, body);
@@ -27,14 +32,14 @@ export default async function scenario(): Promise<void> {
   await call('POST', '/v1/users/u-1/export');
   await call('POST', '/admin/v1/users/u-2/kyc-override', { status: 'passed', reviewer: 'ops-17' });
 
-  for (const [method, request] of app.grpc.methods) {
+  for (const [method, request] of app.grpc.methods as Map<string, (req: unknown) => Promise<unknown>>) {
     if (method.endsWith('CheckVisa')) await request({ userId: 'u-2', destination: 'JPN' });
     else await request({ userId: 'u-1' });
   }
   await app.kafka.produce('user.profile.changed', { userId: 'u-2' });
   await app.kafka.produce('travel.booking.created', { userId: 'u-1', destination: 'CAN' });
-  for (const { job } of app.scheduler.jobs) await job();
+  for (const { job } of app.scheduler.jobs as { job: () => Promise<void> }[]) await job();
 
-  // Exists from the consent feature on (404 before it): u-1 gives consent last so earlier calls stay document-based.
+  // Exists from the consent feature on (404 before it): u-1 consents last so earlier calls stay document-based.
   await call('PUT', '/v1/users/u-1/birth-info/consent', { countryOfBirth: 'PRT', cityOfBirth: 'Lisbon' });
 }

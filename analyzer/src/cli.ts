@@ -24,7 +24,9 @@ modes (default: --uncommitted)
 
 options
   --intent <text>          what the change is supposed to do (enables undisclosed-effect rule)
-  --examples <file>        scenario (relative to --project) to run on the head revision; records real
+  --config <file>          modulegraph config kept OUTSIDE the analyzed repo (platform classes, owners,
+                           module names/contracts). The analyzed code is never modified
+  --examples <file>        scenario script (outside the repo) run against the head revision; records real
                            inputs/outputs per operation. Branches/PRs run in a temporary git worktree
   --title <text>           label shown in the UI
   --name <id>              output id (default derived from mode)
@@ -43,6 +45,7 @@ const { values: args } = parseArgs({
     snapshot: { type: 'boolean' },
     intent: { type: 'string' },
     examples: { type: 'string' },
+    config: { type: 'string' },
     title: { type: 'string' },
     name: { type: 'string' },
     out: { type: 'string' },
@@ -60,7 +63,7 @@ const started = Date.now();
 const projectDir = resolve(args.project!).replace(/\\/g, '/');
 const repo = (args.repo ? resolve(args.repo) : repoRootOf(projectDir)).replace(/\\/g, '/');
 const projectRel = relative(repo, projectDir).replace(/\\/g, '/') || '.';
-const config = loadConfig(projectDir);
+const config = loadConfig(projectDir, args.config ? resolve(args.config) : undefined);
 const tsconfig = join(projectDir, config.tsconfig);
 
 function snapshotOf(files?: Map<string, string>): Snapshot {
@@ -192,18 +195,19 @@ function captureExamples(scenarioRel: string): void {
     codeRoot = worktree;
   }
   try {
-    const scenario = join(codeRoot, projectRel, scenarioRel);
-    if (!existsSync(scenario)) throw new Error(`scenario not found at head revision: ${join(projectRel, scenarioRel)}`);
+    const scenario = resolve(scenarioRel);
+    if (!existsSync(scenario)) throw new Error(`scenario not found: ${scenarioRel}`);
+    const projectRoot = join(codeRoot, projectRel).replace(/\\/g, '/');
     const out = join(tmp, 'examples.json');
     const spec = join(tmp, 'examples-spec.json');
     const targets = Object.values(graph.operations)
       .filter((op) => op.change !== 'removed')
       .map((op) => ({ opId: op.id, file: join(codeRoot, op.file), className: graph.modules[op.moduleId].className, method: op.name, params: op.params.map((p) => p.name) }));
-    writeFileSync(spec, JSON.stringify({ scenario, out, targets }));
+    writeFileSync(spec, JSON.stringify({ scenario, projectRoot, out, targets }));
     execFileSync(process.execPath, ['--import', 'tsx', join(here, 'examples-runner.ts'), spec], { cwd: resolve(here, '..'), stdio: 'inherit' });
     const recorded = JSON.parse(readFileSync(out, 'utf8')) as Record<string, NonNullable<ModuleGraph['operations'][string]['examples']>>;
     for (const [opId, examples] of Object.entries(recorded)) if (graph.operations[opId]) graph.operations[opId].examples = examples;
-    source.examples = { scenario: join(projectRel, scenarioRel).replace(/\\/g, '/'), operationsCovered: Object.keys(recorded).length };
+    source.examples = { scenario: relative(resolve(here, '../..'), scenario).replace(/\\/g, '/'), operationsCovered: Object.keys(recorded).length };
     rmSync(out, { force: true });
     rmSync(spec, { force: true });
   } finally {

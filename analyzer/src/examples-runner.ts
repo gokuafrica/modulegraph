@@ -2,7 +2,8 @@
  * Runs a scenario against a checked-out revision and records real inputs/outputs of every module operation.
  * Spawned by cli.ts (`--examples`) in its own process so module instances are fresh.
  * usage: node --import tsx examples-runner.ts <spec.json>
- *   spec: { scenario, out, targets: [{ opId, file, className, method, params }] }
+ *   spec: { scenario, projectRoot, out, targets: [{ opId, file, className, method, params }] }
+ * The scenario lives outside the analyzed repo and exports `default (projectRoot: string) => Promise<void>`.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
@@ -17,7 +18,7 @@ interface Target {
 }
 
 const MAX_EXAMPLES = 3;
-const spec = JSON.parse(readFileSync(process.argv[2], 'utf8')) as { scenario: string; out: string; targets: Target[] };
+const spec = JSON.parse(readFileSync(process.argv[2], 'utf8')) as { scenario: string; projectRoot: string; out: string; targets: Target[] };
 const recorded = new Map<string, Example[]>();
 const seen = new Set<string>();
 
@@ -71,8 +72,8 @@ for (const target of spec.targets) {
   };
 }
 
-const scenario = (await import(pathToFileURL(spec.scenario).href)) as { default?: () => Promise<void> };
-if (typeof scenario.default === 'function') await scenario.default();
+const scenario = (await import(pathToFileURL(spec.scenario).href)) as { default?: (projectRoot: string) => Promise<void> };
+if (typeof scenario.default === 'function') await scenario.default(spec.projectRoot);
 
 writeFileSync(spec.out, JSON.stringify(Object.fromEntries(recorded)));
 console.log(`examples: ${recorded.size} operations covered`);

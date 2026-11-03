@@ -1,4 +1,5 @@
-import { relative } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import {
   Node,
   Project,
@@ -63,7 +64,7 @@ class Extractor {
 
   run(): Snapshot {
     const files = this.project.getSourceFiles().filter((f) => this.isProjectFile(f.getFilePath()));
-    for (const file of files) for (const cls of file.getClasses()) this.registerModule(cls);
+    for (const cls of this.discoverModules(files.flatMap((f) => f.getClasses()))) this.registerModule(cls);
     for (const [cls, moduleId] of this.moduleIds) this.extractOperations(cls, moduleId);
     for (const file of files) for (const call of file.getDescendantsOfKind(SyntaxKind.CallExpression)) this.extractEntry(call);
     this.computeTransitiveEffects();
@@ -72,29 +73,62 @@ class Extractor {
 
   // ---------- modules & operations ----------
 
+  /**
+   * Finds modules from code structure alone, so the analyzed repo needs no changes: a class is a module when it has
+   * public methods and takes part in dependency injection (it is injected into another class, or injects collaborators
+   * itself). Platform classes named by sink/entry rules are infrastructure, not modules. Config include/exclude and an
+   * optional opt-in JSDoc tag adjust the result.
+   */
+  private discoverModules(classes: ClassDeclaration[]): ClassDeclaration[] {
+    const key = (c: ClassDeclaration) => `${c.getSourceFile().getFilePath()}#${c.getName()}`;
+    const platform = new Set([...this.config.sinks.map((s) => s.class), ...this.config.entryPoints.map((e) => e.class)]);
+    const injected = new Set<string>();
+    const injects = new Set<string>();
+    for (const cls of classes) {
+      for (const param of cls.getConstructors()[0]?.getParameters() ?? []) {
+        const decl = param.getType().getSymbol()?.getDeclarations()[0];
+        if (!decl || !(Node.isClassDeclaration(decl) || Node.isInterfaceDeclaration(decl))) continue;
+        injects.add(key(cls));
+        if (Node.isClassDeclaration(decl)) injected.add(key(decl));
+      }
+    }
+    const { include, exclude } = this.config.modules;
+    return classes.filter((cls) => {
+      const name = cls.getName();
+      if (!name || platform.has(name) || exclude.includes(name)) return false;
+      const tagged = cls.getJsDocs().some((d) => d.getTags().some((t) => t.getTagName() === this.config.moduleTag));
+      if (include.includes(name) || tagged) return true;
+      const hasPublicMethods = cls.getMethods().some((m) => m.getScope() === MemberScope.Public && !m.isStatic());
+      return hasPublicMethods && (injected.has(key(cls)) || injects.has(key(cls)));
+    });
+  }
+
   private registerModule(cls: ClassDeclaration): void {
     const docs = cls.getJsDocs();
     const tags = docs.flatMap((d) => d.getTags());
-    if (!tags.some((t) => t.getTagName() === this.config.moduleTag)) return;
     const className = cls.getName() ?? 'Anonymous';
+    const override = this.config.modules.overrides[className] ?? {};
     const id = this.snapshot.modules[className] ? `${className}@${this.rel(cls.getSourceFile().getFilePath())}` : className;
     const description = docs.map((d) => d.getDescription().trim()).join(' ').trim();
     const named = /^([A-Z][\w]*):\s*(.*)$/s.exec(description);
-    const declaredEffects: Effect[] = tags
-      .filter((t) => t.getTagName() === 'effect')
-      .map((t) => (t.getCommentText() ?? '').trim().split(/\s+/))
-      .filter(([kind, target]) => kind && target)
-      .map(([kind, target]) => ({ kind: kind as Effect['kind'], target }));
+    const parse = (text: string): Effect => {
+      const [kind, target] = text.trim().split(/\s+/);
+      return { kind: kind as Effect['kind'], target };
+    };
+    const tagEffects = tags.filter((t) => t.getTagName() === 'effect').map((t) => parse(t.getCommentText() ?? ''));
+    const declaredEffects = override.effects ? override.effects.map(parse) : tagEffects;
+    const file = this.rel(cls.getSourceFile().getFilePath());
     this.moduleIds.set(cls, id);
     this.snapshot.modules[id] = {
       id,
-      name: named ? named[1] : className.replace(/(Module|Service)$/, '') || className,
+      name: override.name ?? (named ? named[1] : className.replace(/(Module|Service)$/, '') || className),
       className,
-      file: this.rel(cls.getSourceFile().getFilePath()),
+      file,
       line: cls.getStartLineNumber(),
-      summary: (named ? named[2] : description).replace(/\s+/g, ' '),
-      owner: tags.find((t) => t.getTagName() === 'owner')?.getCommentText()?.trim(),
+      summary: (override.summary ?? (named ? named[2] : description)).replace(/\s+/g, ' '),
+      owner: override.owner ?? this.ownerOf(file) ?? tags.find((t) => t.getTagName() === 'owner')?.getCommentText()?.trim(),
       declaredEffects,
+      ...(override.effects ? { contractSource: 'config' as const } : tagEffects.length ? { contractSource: 'tags' as const } : {}),
       operations: [],
       change: 'unchanged',
     };
@@ -397,6 +431,27 @@ class Extractor {
 
   // ---------- helpers ----------
 
+  private codeowners?: [RegExp, string][];
+
+  /** Config `owners` globs first, then the repo's CODEOWNERS (read-only). Last matching pattern wins, like GitHub. */
+  private ownerOf(file: string): string | undefined {
+    const fromConfig = Object.entries(this.config.owners).filter(([glob]) => globToRegex(glob).test(file)).at(-1)?.[1];
+    if (fromConfig) return fromConfig;
+    if (!this.codeowners) {
+      const path = ['CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'].map((p) => join(this.repoRoot, p)).find(existsSync);
+      this.codeowners = (path ? readFileSync(path, 'utf8') : '')
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l && !l.startsWith('#'))
+        .map((l) => {
+          const [pattern, ...owners] = l.split(/\s+/);
+          const anchored = pattern.startsWith('/') ? pattern.slice(1) : pattern.includes('/') ? pattern : `**/${pattern}`;
+          return [globToRegex(anchored.endsWith('/') ? `${anchored}**` : anchored), owners.join(' ')] as [RegExp, string];
+        });
+    }
+    return this.codeowners.filter(([re]) => re.test(file)).at(-1)?.[1];
+  }
+
   private literal(arg: Node | undefined): string {
     if (!arg) return '?';
     if (Node.isStringLiteral(arg) || Node.isNoSubstitutionTemplateLiteral(arg)) return arg.getLiteralValue();
@@ -590,4 +645,15 @@ function dedent(text: string): string {
   const lines = text.split(/\r?\n/);
   const indent = Math.min(...lines.slice(1).filter((l) => l.trim()).map((l) => l.match(/^\s*/)![0].length));
   return [lines[0], ...lines.slice(1).map((l) => l.slice(Number.isFinite(indent) ? indent : 0))].join('\n');
+}
+
+function globToRegex(glob: string): RegExp {
+  const re = glob
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*\*\//g, '\u0001')
+    .replace(/\*\*/g, '\u0002')
+    .replace(/\*/g, '[^/]*')
+    .replace(/\u0001/g, '(.*/)?')
+    .replace(/\u0002/g, '.*');
+  return new RegExp(`^${re}(/.*)?$`);
 }

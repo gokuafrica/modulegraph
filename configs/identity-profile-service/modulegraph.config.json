@@ -1,0 +1,56 @@
+{
+  "$comment": "Kept outside the analyzed repo. Written by an agent (see .claude/skills/module-review) after reading the code; the service itself is not modified.",
+  "service": "identity-profile-service",
+  "tsconfig": "tsconfig.json",
+  "sinks": [
+    { "class": "Db", "method": "select", "kind": "db.read", "targetArg": 0 },
+    { "class": "Db", "method": "insert", "kind": "db.write", "targetArg": 0 },
+    { "class": "Db", "method": "update", "kind": "db.write", "targetArg": 0 },
+    { "class": "Db", "method": "delete", "kind": "db.write", "targetArg": 0 },
+    { "class": "Outbox", "method": "enqueue", "kind": "outbox", "targetArg": 0 },
+    { "class": "KafkaProducer", "method": "produce", "kind": "kafka", "targetArg": 0 },
+    { "class": "HttpClient", "method": "get", "kind": "http", "targetArg": 0 },
+    { "class": "HttpClient", "method": "post", "kind": "http", "targetArg": 0 }
+  ],
+  "entryPoints": [
+    { "class": "HttpRouter", "method": "get", "kind": "api", "label": "GET {0}", "handlerArg": 1, "readOnly": true },
+    { "class": "HttpRouter", "method": "post", "kind": "api", "label": "POST {0}", "handlerArg": 1 },
+    { "class": "HttpRouter", "method": "put", "kind": "api", "label": "PUT {0}", "handlerArg": 1 },
+    { "class": "HttpRouter", "method": "delete", "kind": "api", "label": "DELETE {0}", "handlerArg": 1 },
+    { "class": "GrpcServer", "method": "unary", "kind": "grpc", "label": "gRPC {0}", "handlerArg": 1 },
+    { "class": "KafkaConsumer", "method": "subscribe", "kind": "consumer", "label": "topic {0}", "handlerArg": 1 },
+    { "class": "Scheduler", "method": "cron", "kind": "cron", "label": "cron {0} ({1})", "handlerArg": 2 }
+  ],
+  "modules": {
+    "include": [],
+    "exclude": [],
+    "overrides": {
+      "ProfileService": { "name": "ProfileAssembler", "summary": "Builds the user profile. Fetches Identity once and shares it with every sub-module." },
+      "KycModule": { "name": "KycCheck" }
+    }
+  },
+  "owners": {
+    "sample-service/src/modules/identity/**": "team-identity",
+    "sample-service/src/modules/nationality/**": "team-identity",
+    "sample-service/src/modules/birth-info/**": "team-identity",
+    "sample-service/src/modules/personal-details/**": "team-profile",
+    "sample-service/src/modules/profile/**": "team-profile",
+    "sample-service/src/modules/kyc/**": "team-compliance",
+    "sample-service/src/modules/tax/**": "team-compliance",
+    "sample-service/src/modules/compliance/**": "team-compliance",
+    "sample-service/src/modules/travel/**": "team-travel",
+    "sample-service/src/modules/onboarding/**": "team-onboarding",
+    "sample-service/src/modules/admin/**": "team-backoffice"
+  },
+  "rules": {
+    "fetchOnce": ["IdentityModule.fetchIdentity"],
+    "tableOwners": {
+      "user_documents": "DocumentStore",
+      "user_profiles": "PersonalDetailsModule",
+      "kyc_results": "KycModule",
+      "tax_declarations": "TaxResidencyModule",
+      "tax_residency_assessments": "TaxResidencyModule",
+      "birth_info_consents": "BirthConsentStore"
+    }
+  }
+}

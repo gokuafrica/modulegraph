@@ -10,13 +10,7 @@ export interface TaxResidency {
 }
 
 /**
- * TaxResidency: works out tax residencies (incl. US-person status from place of birth).
- * @module
- * @owner team-compliance
- * @effect db.read tax_declarations
- * @effect db.write tax_declarations
- * @effect db.read tax_residency_assessments
- * @effect db.write tax_residency_assessments
+ * Works out tax residencies (incl. US-person status from place of birth).
  */
 export class TaxResidencyModule {
   constructor(

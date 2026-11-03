@@ -8,10 +8,7 @@ export interface Nationality {
 }
 
 /**
- * Nationality: normalises the document nationality to an ISO country record.
- * @module
- * @owner team-identity
- * @effect db.read country_codes
+ * Normalises the document nationality to an ISO country record.
  */
 export class NationalityModule {
   constructor(private readonly db: Db) {}
