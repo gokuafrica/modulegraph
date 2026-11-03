@@ -72,10 +72,8 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('modulegraph-theme') as Theme) ?? 'dark');
   const [exampleIndex, setExampleIndex] = useState(0);
   const exampleCtx = useMemo(() => ({ index: exampleIndex, setIndex: setExampleIndex }), [exampleIndex]);
-  const [panels, setPanels] = useState<{ left: boolean; right: boolean }>(() =>
-    JSON.parse(localStorage.getItem('modulegraph-panels') ?? '{"left":true,"right":true}'),
-  );
-  useEffect(() => localStorage.setItem('modulegraph-panels', JSON.stringify(panels)), [panels]);
+  const [railOpen, setRailOpen] = useState(() => localStorage.getItem('modulegraph-rail') !== 'closed');
+  useEffect(() => localStorage.setItem('modulegraph-rail', railOpen ? 'open' : 'closed'), [railOpen]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -104,17 +102,14 @@ export default function App() {
         if (h.g === graphId && h.v === 'flow' && h.t) {
           const trail = h.t.split('|');
           setView({ mode: 'flow', trail, focus: h.f });
-          setSelection(data.entryPoints[trail.at(-1)!] ? { type: 'entry', id: trail.at(-1)! } : { type: 'op', id: trail.at(-1)! });
         }
         else if (h.g === graphId && h.v === 'impact' && h.op) {
           setView({ mode: 'impact', op: h.op, depth: Number(h.d ?? 1) });
-          setSelection({ type: 'op', id: h.op });
         }
         else {
           const top = data.review.queue.find((q) => data.operations[q.operation]?.change === 'modified') ?? data.review.queue[0];
           if (top) {
             setView({ mode: 'impact', op: top.operation, depth: 1 });
-            setSelection({ type: 'op', id: top.operation });
           } else {
             setView({ mode: 'flow', trail: [Object.keys(data.entryPoints)[0]] });
           }
@@ -161,13 +156,11 @@ export default function App() {
     () => ({
       drill: (opId) => {
         const cur = viewRef.current;
-        setSelection({ type: 'op', id: opId });
         const trail = cur?.mode === 'flow' ? [...cur.trail.slice(0, -1), ...(chainRef.current ?? cur.trail.slice(-1))] : [];
         navigate({ mode: 'flow', trail: [...trail.filter((t) => t !== opId), opId], focus: cur?.mode === 'flow' ? cur.focus : undefined });
       },
       zoomOut: (opId) => {
         const cur = viewRef.current;
-        setSelection({ type: 'op', id: opId });
         // Already zoomed out from this module: go one more level up instead of re-opening the same view.
         if (cur?.mode === 'impact' && cur.op === opId) {
           setView({ ...cur, depth: Math.min(cur.depth + 1, maxDepthRef.current ?? cur.depth + 1) });
@@ -177,7 +170,6 @@ export default function App() {
       },
       openEntry: (entryId) => {
         const cur = viewRef.current;
-        setSelection({ type: 'entry', id: entryId });
         navigate({ mode: 'flow', trail: [entryId], focus: cur?.mode === 'impact' ? cur.op : cur?.mode === 'flow' ? cur.focus : undefined });
       },
       expandGroup: (gid) => setExpandedGroups((s) => new Set([...s, gid])),
@@ -206,7 +198,7 @@ export default function App() {
   return (
     <ActionsContext.Provider value={actions}>
      <ExampleContext.Provider value={exampleCtx}>
-      <div className={`app ${panels.left ? '' : 'no-left'} ${panels.right ? '' : 'no-right'}`}>
+      <div className={`app ${railOpen ? '' : 'no-left'} ${selection ? '' : 'no-right'}`}>
         <header className="topbar">
           <div className="brand">◇ modulegraph <span className="muted">module-level review</span></div>
           <select value={graphId} onChange={(e) => { setGraphId(e.target.value); history.replaceState(null, '', '#'); }}>
@@ -214,15 +206,14 @@ export default function App() {
           </select>
           <span className="muted small">{g.service} · {Object.keys(g.modules).length} modules · {Object.keys(g.entryPoints).length} entry points</span>
           <div className="spacer" />
-          <button className={`panel-toggle ${panels.left ? 'on' : ''}`} onClick={() => setPanels({ ...panels, left: !panels.left })} title="Show or hide the review panel">◧ review</button>
-          <button className={`panel-toggle ${panels.right ? 'on' : ''}`} onClick={() => setPanels({ ...panels, right: !panels.right })} title="Show or hide the contract panel">◨ contract</button>
+          <button className={`panel-toggle ${railOpen ? 'on' : ''}`} onClick={() => setRailOpen(!railOpen)} title="Show or hide the review rail">◧ review</button>
           <label className="small"><input type="checkbox" checked={collapsePassthrough} onChange={(e) => setCollapse(e.target.checked)} /> skip pass-through wrappers</label>
           <label className="small"><input type="checkbox" checked={showResources} onChange={(e) => setShowResources(e.target.checked)} /> show data sources &amp; sinks</label>
           <button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} title="Toggle dark mode">
             {theme === 'dark' ? '☀ light' : '☾ dark'}
           </button>
         </header>
-        {panels.left && <Sidebar g={g} index={index} onSelect={setSelection} />}
+        {railOpen && <Sidebar g={g} />}
         <main className="canvas">
           <div className="crumbs">
             <button disabled={!back.length} onClick={() => { setView(back.at(-1)); setBack(back.slice(0, -1)); }}>← back</button>
@@ -273,6 +264,7 @@ export default function App() {
               nodesDraggable={false}
               onNodeClick={onNodeClick}
               onNodeDoubleClick={onNodeDoubleClick}
+              onPaneClick={() => setSelection(undefined)}
               fitView
               fitViewOptions={FIT}
               minZoom={0.15}
@@ -285,7 +277,7 @@ export default function App() {
           )}
           <Legend />
         </main>
-        {panels.right && <Inspector g={g} index={index} selection={selection} onSelect={setSelection} />}
+        {selection && <Inspector g={g} selection={selection} onClose={() => setSelection(undefined)} />}
       </div>
      </ExampleContext.Provider>
     </ActionsContext.Provider>

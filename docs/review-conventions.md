@@ -5,44 +5,43 @@ How this project turns [research-summary.md](research-summary.md) into practice.
 
 ## The reviewer's loop
 
-1. **Open the review queue** (left panel). Contract changes come first, sorted by risk, then by reach.
+1. **Start here** (left rail). Contract changes come first, sorted by risk, then by reach.
    Implementation-only changes rank last. *(R2)*
 2. **Zoom out** from the top item: start at the changed module and go up level by level to every API,
    consumer and cron that reaches it. With many entry points they are grouped (`/v1/users/*`, `gRPC`, `cron`),
    and each group shows how many read-only endpoints now write. *(R5)*
 3. **Open one flow** that matters (double-click an entry). Check the data path: is shared data fetched once
    and passed down? Does the new side effect belong here?
-4. **Drill in** only where the graph says *changes inside*. At a leaf the line diff is there if you need it.
-5. **Answer the review questions** in the inspector. They are the decisions a machine can't make. *(R12)*
-6. **Guardrails** list what the machine already found. Errors block the merge; you don't re-check them. *(R3, R6, R8)*
+4. **Drill in** only where the graph says *changes inside*. Check the example input and output at each end. At a
+   leaf the line diff is there if you need it.
+5. **Checks** list what the machine already found. Errors block the merge; you don't re-check them. *(R3, R6, R8)*
 
-## Module contract (what every module declares)
+## Module contract (derived, never written into the code)
 
-```ts
-/**
- * BirthInfo: the user's country and city of birth. Consented data wins; documents are the fallback.
- * @module
- * @owner team-identity
- * @effect db.read birth_info_consents
- * @effect outbox birth_info.source_resolved
- */
-export class BirthInfoModule { … }
-```
+The analyzed code is not modified. A contract is assembled from the code plus the service's external profile
+(`configs/<service>/modulegraph.config.json`).
 
 | Contract part | Source | Checked by |
 |---|---|---|
+| Module boundary | structure: classes taking part in constructor injection; profile `modules.include/exclude` | n/a |
 | Inputs / outputs | public method signatures (TypeScript types, one level of fields) | output-shape and signature deltas, high/medium risk |
-| Direct side effects | `@effect <kind> <target>` | `undeclared-effect` (error), `stale-declaration` (warning) |
-| Transitive side effects | computed from calls, never declared | shown as outlined chips and in entry-point totals |
-| Owner | `@owner` | owners of changed contracts listed as required reviewers *(R10)* |
-| Table ownership | `rules.tableOwners` in `modulegraph.config.json` | `table-ownership` (error) |
+| Example data | recorded by running the profile's `scenario.ts` against the head revision | shown on flow ends and in the contract card |
+| Direct side effects | calls to the profile's `sinks` (DB, outbox, Kafka, HTTP), with the table/topic/service | `new-side-effect` (vs. base); `undeclared-effect` where the profile declares a contract |
+| Transitive side effects | computed from calls | shown as outlined chips and in entry-point totals |
+| Owner | profile `owners` globs, else the repo's CODEOWNERS | owners of changed contracts listed as required reviewers *(R10)* |
+| Table ownership | profile `rules.tableOwners` | `table-ownership` (error) |
+
+**The base revision is the contract.** Nobody has to maintain declarations: whatever a module did on `main` is
+its contract, and a change that adds a side effect is reported as `new-side-effect`. Teams that want a stricter,
+reviewed contract can list effects per module in the profile (`modules.overrides.<Class>.effects`); then
+`undeclared-effect` fails CI on any mismatch.
 
 Effect kinds: `db.read`, `db.write`, `outbox`, `kafka`, `http`. Not yet modelled from R1: pre/postconditions,
-error types, idempotency, cache and file I/O. Add them as tags when a team needs them.
+error types, idempotency, cache and file I/O.
 
-Module = a class with one responsibility that owns its data. Orchestrators (e.g. ProfileAssembler, which
-fetches Identity once and fans out) are modules too. Helpers without their own data stay untagged; the
-analyzer inlines them, so internals stay hidden until you drill in.
+A module is a class with one responsibility that owns its data. Orchestrators (e.g. ProfileAssembler, which
+fetches Identity once and fans out) are modules too. Helpers outside dependency injection are inlined into their
+caller, so internals stay hidden until you drill in.
 
 ## PR rules
 
@@ -57,7 +56,8 @@ analyzer inlines them, so internals stay hidden until you drill in.
 
 | Guardrail | Rule id | Severity | Recommendation |
 |---|---|---|---|
-| Real effects match declared contract | `undeclared-effect`, `stale-declaration` | error / warning | R3 |
+| Side effect added by the change (base = contract) | `new-side-effect` | warning (writes) / info (reads) | R3 |
+| Real effects match a declared contract (if the profile declares one) | `undeclared-effect`, `stale-declaration` | error / warning | R3 |
 | Only the owner writes a table | `table-ownership` | error | R6 |
 | No module dependency cycles | `module-cycle` | error | R6 |
 | Shared expensive fetch happens once per flow (Identity) | `fetch-once` | error | R6 |
@@ -75,15 +75,15 @@ SAST stay in their usual CI jobs. Keep any checker below ~10% effective false po
 
 | | Recommendation | Status in the MVP |
 |---|---|---|
-| R1 | Module contract schema | Partial: inputs, outputs, typed side effects, owner. Pre/postconditions, errors, idempotency not yet |
+| R1 | Module contract schema | Partial: inputs, outputs, example data, typed side effects, owner, all derived without code changes. Pre/postconditions, errors, idempotency not yet |
 | R2 | Contract diffs first | Done: review queue by risk, `changes inside` markers, implementation-only ranked last |
-| R3 | Undeclared side effects block merge | Done: `undeclared-effect` + `--check` |
+| R3 | Undeclared side effects block merge | Done: `new-side-effect` against the base by default; `undeclared-effect` + `--check` when the profile declares a contract |
 | R4 | Size budget in modules | Done: `review-budget`; stacking itself is up to the team's tooling |
 | R5 | Impact view to entry points | Done: zoom-out view, entry grouping, reach counts. Ranking by history not yet |
 | R6 | Fitness functions | Done: table ownership, cycles, fetch-once, read-path writes. Red edges in graph not yet (findings link to subjects) |
 | R7 | Machine gate | Partial: the module-level gate is here; lint/type/SAST/mutation stay in standard CI |
 | R8 | AI risk signals | Partial: CI weakening, undisclosed effects, duplicate reads. Semantic-clone detection not yet |
 | R9 | Intent and evidence | Partial: intent vs. actual effects. "Test fails on old behaviour" not yet checked |
-| R10 | Route by ownership | Done: reviewers from `@owner`. CODEOWNERS sync and P75 metrics not yet |
-| R11 | Graph generated from code | Done: static extraction, contracts live in code, C4-like zoom (flow → module → sub-module → code) |
-| R12 | Human attention on design questions | Done: generated review questions per changed contract |
+| R10 | Route by ownership | Done: reviewers from the profile's `owners` globs or the repo's CODEOWNERS. P75 metrics not yet |
+| R11 | Graph generated from code | Done: static extraction with zero code changes, C4-like zoom (flow → module → sub-module → code) |
+| R12 | Human attention on design questions | Partial: the UI shows only contracts, flows and checks. Templated review questions were removed as noise |

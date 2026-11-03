@@ -16,7 +16,10 @@ The full diff is `git diff main...feature/birthinfo-consent -- sample-service`.
 
 ## Modules (what the boxes are)
 
-Each box in the graph is a class tagged `@module` in its JSDoc. Public methods are its operations.
+The service has no modulegraph markers: it is ordinary code. Each box in the graph is a class the analyzer found
+through constructor injection (see `src/app.ts`). Public methods are its operations. Display names, owners and
+which classes are the DB/Kafka/HTTP clients come from the external profile in
+[`configs/identity-profile-service/`](../configs/identity-profile-service).
 
 | Module (diagram name) | File | Direct side effects |
 |---|---|---|
@@ -28,8 +31,8 @@ Each box in the graph is a class tagged `@module` in its JSDoc. Public methods a
 | **BirthInfo** | `src/modules/birth-info/BirthInfoModule.ts` | head: emits outbox `birth_info.source_resolved` |
 | BirthConsentStore *(head only)* | `src/modules/birth-info/BirthConsentStore.ts` | reads/writes `birth_info_consents` |
 | DocumentBirthExtractor | `src/modules/birth-info/DocumentBirthExtractor.ts` | none (pure) |
-| ProfileAssembler | `src/modules/profile/ProfileService.ts` | writes `gdpr_exports`, produces `privacy.export.ready` |
-| KycCheck | `src/modules/kyc/KycModule.ts` | `kyc_results`, outbox `kyc.completed` |
+| ProfileAssembler (name from the profile) | `src/modules/profile/ProfileService.ts` | writes `gdpr_exports`, produces `privacy.export.ready` |
+| KycCheck (name from the profile) | `src/modules/kyc/KycModule.ts` | `kyc_results`, outbox `kyc.completed` |
 | SanctionsScreening | `src/modules/kyc/SanctionsScreening.ts` | calls `sanctions-api` |
 | TaxResidency | `src/modules/tax/TaxResidencyModule.ts` | `tax_declarations`, `tax_residency_assessments` |
 | TravelEligibility | `src/modules/travel/TravelEligibilityModule.ts` | calls `visa-rules-service`, writes `passport_prefills` |
@@ -63,5 +66,6 @@ npm run smoke --workspace sample-service     # u-1 gets document data, u-2 gets 
 npm start --workspace sample-service         # HTTP on http://localhost:3001/v1/users/u-1/profile
 ```
 
-`src/dev/scenario.ts` is the tour the analyzer runs with `--examples` to record the example inputs/outputs shown
-in the diagrams. `src/dev/seed.ts` has the two demo users.
+`configs/identity-profile-service/scenario.ts` (outside the service) is the tour the analyzer runs with
+`--examples` to record the example inputs/outputs shown in the diagrams. It uses the service's own
+`src/dev/seed.ts`, which has the two demo users.

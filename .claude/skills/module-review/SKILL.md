@@ -1,12 +1,15 @@
 ---
 name: module-review
-description: Module-level review of a PR, branch/worktree or uncommitted changes. Runs the modulegraph analyzer, opens the interactive graph at the riskiest change, and writes a short reviewer brief. For codebases without module conventions, groups code into modules (inputs, outputs, side effects) and emits modulegraph/v1 JSON the UI reads. Use when the user asks to review a change "at module level", "as a graph", or asks what a change affects.
+description: Module-level review of a PR, branch/worktree or uncommitted changes. Runs the modulegraph analyzer, opens the interactive graph at the riskiest change, and writes a short reviewer brief. For a service it has not seen, reads the code and writes the service's modulegraph profile (config + scenario) OUTSIDE the service repo; never edits the analyzed code. Use when the user asks to review a change "at module level", "as a graph", or asks what a change affects.
 ---
 
 # Module-level review
 
 The reviewer looks at **modules, contracts and flows**, not lines. Your job is to get the change into the
 graph quickly and point the reviewer at the 1–3 decisions only a human can make. Do not restate the line diff.
+
+**Hard rule: never modify the analyzed repository** (no tags, comments, config files or scripts in it).
+Everything modulegraph needs lives in the service's profile: `configs/<service>/` in the modulegraph repo.
 
 ## 1. Pick the target
 
@@ -16,23 +19,23 @@ graph quickly and point the reviewer at the 1–3 decisions only a human can mak
 | a branch or worktree name | `--head <branch> --base main` |
 | "my changes", nothing specific | `--uncommitted` (working tree + untracked vs HEAD) |
 
-## 2. Check the codebase declares modules
+## 2. Make sure the service has a profile
 
-Search for `@module` JSDoc tags in the service (`Grep "@module"`).
-- **Found** → go to step 3.
-- **Not found** → do step 5 first (extraction), then come back.
+Look for `configs/<service>/modulegraph.config.json`. If it is missing, write it (step 5) and come back.
 
 ## 3. Analyze and open
 
-From the repo root:
+From the modulegraph repo root:
 
 ```bash
-npm run analyze -- --project <service-dir> <mode flags> --title "<one-line goal>" --intent "<PR description or stated goal>"
+C=configs/<service>
+npm run analyze -- --project <path to service> --config $C/modulegraph.config.json <mode flags> \
+  --title "<one-line goal>" --intent "<PR description or stated goal>" [--examples $C/scenario.ts]
 npm run dev   # http://localhost:5173
 ```
 
 Always pass `--intent` when you know the goal: the `undisclosed-effect` rule flags side effects the
-description doesn't mention (a common sign of agent-added scope). In CI use `--check` (exit 1 on new errors).
+description doesn't mention (a common sign of agent-added scope). In CI add `--check` (exit 1 on new errors).
 
 ## 4. Write the brief (≤ 10 lines)
 
@@ -40,37 +43,32 @@ Read the generated JSON (`ui/public/graphs/<id>.json`): `review.queue`, `review.
 
 1. **Goal** in one sentence, and whether the contract changes match it.
 2. **Contract changes**, riskiest first: `Module.op: +outbox X, +db.read Y, output +field` with reach (entry points affected).
-3. **New guardrail findings** (errors first). Pre-existing findings are not this change's problem; mention their count only.
+3. **New findings** (errors first). Pre-existing findings are not this change's problem; give their count only.
 4. **Decisions for the human** (1–3): wrong owner for a side effect? Interface widened? Existing module reusable?
 5. **Request review from** the owners listed.
 6. A deep link to start: `http://localhost:5173/#g=<id>&v=impact&op=<top queue op>&d=1`.
 
-## 5. Extraction for codebases without conventions
+## 5. Writing a profile for a new service (read-only on the service)
 
-Goal: every module has a declared contract the analyzer can check (an "architecturally evident" codebase).
+Start from `configs/identity-profile-service/` as a template.
 
-1. **Find entry points**: HTTP/gRPC route registrations, Kafka/queue consumers, schedulers. Note the
-   framework classes and methods; add them to `entryPoints` in `<service>/modulegraph.config.json`.
-2. **Find side-effect sinks**: the DB client/repository base, outbox, Kafka producer, HTTP clients. Add each
-   method to `sinks` with the argument index that names the table/topic/service. If the table is not an
-   argument (ORM repositories), tag the repository class as a module and declare its tables with `@effect`.
-3. **Group code into modules**: one class per responsibility that owns its data. Signals: a constructor that
-   injects collaborators, a cohesive set of public methods, its own tables. Orchestrators (fetch once, fan out)
-   are modules too. Helpers without their own data stay untagged; the analyzer inlines them into the caller.
-4. **Tag each module class**:
-   ```ts
-   /**
-    * BirthInfo: the user's country and city of birth. Consented data wins; documents are the fallback.
-    * @module
-    * @owner team-identity
-    * @effect db.read birth_info_consents
-    * @effect outbox birth_info.source_resolved
-    */
-   ```
-   `@effect` lists the module's **direct** effects (kinds: `db.read`, `db.write`, `outbox`, `kafka`, `http`).
-   Effects of called modules are computed, never re-declared.
-5. Propose the tags as their **own PR** (no behaviour change), so later reviews diff contracts.
-6. Run `npm run analyze -- --project <dir> --snapshot` and fix `undeclared-effect` / `stale-declaration` findings.
+1. **Entry points**: find HTTP/gRPC route registrations, Kafka/queue consumers and schedulers. Add each
+   framework class + method to `entryPoints` (which argument is the handler, how to label it, whether it is read-only).
+2. **Side-effect sinks**: find the DB client or repository base, outbox, Kafka producer, HTTP clients. Add each
+   method to `sinks` with the argument index that names the table, topic or service.
+3. **Check module discovery**: run `npm run analyze -- --project <dir> --config <file> --snapshot` and look at the
+   module list. Discovery takes classes that take part in constructor injection. Fix it with `modules.exclude`
+   (DTOs, utilities) and `modules.include` (function-style modules it missed).
+4. **Names, owners, summaries**: `modules.overrides.<Class>.name/summary` where the class name is unclear;
+   `owners` path globs (CODEOWNERS is read automatically if the repo has one).
+5. **Rules**: `rules.tableOwners` (table → owning module), `rules.fetchOnce` (expensive fetches that must be
+   shared, not repeated). Only add what you saw in the code.
+6. **Scenario (optional, for example data)**: `scenario.ts` exports `default async (projectRoot) => …`, loads the
+   service from `projectRoot` (dynamic import), and drives realistic calls through its entry points with dev
+   data. Prefer reusing the service's own seed or fixtures over inventing data.
+
+Declared contracts (`modules.overrides.<Class>.effects`) are optional. Without them, the base revision is the
+contract and `new-side-effect` reports what a change adds.
 
 ### Non-TypeScript services
 

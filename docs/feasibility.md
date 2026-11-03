@@ -1,8 +1,9 @@
 # Feasibility: module-level review UI
 
 **Verdict: buildable now with off-the-shelf parts.** No piece needs research-grade work.
-The hard part is module extraction, and it becomes tractable once modules are *declared*
-(a one-line `@module` tag) instead of inferred from scratch.
+The hard part is module extraction. It is tractable without touching the code: modules are inferred from
+dependency-injection structure, and the few facts code doesn't state (which client is the DB, who owns a
+table) go in an external per-service profile that an agent writes.
 
 ## Decisions
 
@@ -16,7 +17,7 @@ The hard part is module extraction, and it becomes tractable once modules are *d
 
 ## Data model in one paragraph
 
-A **module** is a class tagged `@module`. Its public methods are **operations**. Every
+A **module** is a class that takes part in constructor injection (discovered, never tagged). Its public methods are **operations**. Every
 operation and every **entry point** (API route, gRPC method, Kafka consumer, cron job) is a
 **scope**: an ordered list of **steps**. A step is either a call to another module's operation
 or a direct **side effect** (DB read/write with table, outbox event, Kafka produce, external

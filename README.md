@@ -6,6 +6,9 @@ which flows feel it. modulegraph turns a diff (PR, branch/worktree, or uncommitt
 interactive graph of **entry point → modules → exit**, where every module shows only its inputs, outputs and
 side effects.
 
+**The analyzed code is never modified.** Modules are found from the code's own structure; everything else
+lives in a config file kept outside the repo, which an agent can write.
+
 - **Flow view**: an API / gRPC / Kafka consumer / cron entry point → the chain of modules → the response.
   Data edges show what is passed (`identity` fetched once, then shared by Nationality, PersonalDetails and BirthInfo).
 - **Drill in** on any module: its own entry, submodules and exit, recursively. A leaf shows its code diff.
@@ -13,8 +16,9 @@ side effects.
   grouped when there are many (the 50-APIs case).
 - **Changed modules highlighted**: modified / added / *changes inside*. Side-effect chips show
   `+outbox …` and `+db.read …` contract deltas on every node.
-- **Review queue and guardrails**: contract changes sorted by risk, plus machine-checked rules (undeclared
-  effects, table ownership, read endpoints that write, CI weakening, undisclosed effects).
+- **Review queue and checks**: contract changes sorted by risk, plus machine-checked rules (new side effects,
+  table ownership, read endpoints that write, CI weakening, side effects the PR description doesn't mention).
+- **Example data**: real inputs and outputs recorded by running a scenario against the code under review.
 
 Design background: [docs/feasibility.md](docs/feasibility.md) · research: [docs/research-summary.md](docs/research-summary.md) ·
 how it is applied: [docs/review-conventions.md](docs/review-conventions.md).
@@ -28,14 +32,15 @@ npm run demo        # regenerate demo graphs from this repo's git history, then 
 
 Open http://localhost:5173. `npm run dev` starts only the UI.
 
-Analyze your own change (any TypeScript service with `@module` tags, see below):
+Analyze a change in any TypeScript service. `--config` points at the service's profile, kept outside its repo:
 
 ```bash
-npm run analyze -- --project sample-service --uncommitted
-npm run analyze -- --project sample-service --head feature/birthinfo-consent --base main --intent "…"
-npm run analyze -- --project sample-service --pr 123          # needs gh
-npm run analyze -- --project sample-service --head my-branch --check   # CI gate: exit 1 on new errors
-npm run analyze -- --project sample-service --head my-branch --examples src/dev/scenario.ts   # record real example inputs/outputs
+C=configs/identity-profile-service
+npm run analyze -- --project sample-service --config $C/modulegraph.config.json --uncommitted
+npm run analyze -- --project sample-service --config $C/modulegraph.config.json --head feature/birthinfo-consent --base main --intent "…"
+npm run analyze -- --project sample-service --config $C/modulegraph.config.json --pr 123        # needs gh
+npm run analyze -- --project sample-service --config $C/modulegraph.config.json --head my-branch --check   # CI gate
+npm run analyze -- --project sample-service --config $C/modulegraph.config.json --head my-branch --examples $C/scenario.ts
 ```
 
 Each run writes `ui/public/graphs/<id>.json` and adds it to the UI's selector.
@@ -62,26 +67,27 @@ Things to try:
    `unless (consented)` document fallback. Drill into `DocumentBirthExtractor` to see the line diff.
 2. **BirthInfo used by many APIs**: click *BirthInfo.resolve* in the review queue. You start at the module;
    *zoom out +* adds one caller level at a time; *all entry points* shows all 21, grouped.
-3. **Guardrails**: the change fails `--check`. BirthInfo's outbox write is undeclared, leaks into 8
-   read-only endpoints, and isn't mentioned in the PR description.
+3. **Checks**: BirthInfo now performs an outbox write that runs on 8 read-only endpoints, and the PR
+   description never mentions it.
 
-## Declaring modules
+## Setting up a new service (no code changes)
 
-```ts
-/**
- * BirthInfo: the user's country and city of birth.   ← "Name: summary"
- * @module                                            ← this class is a module; public methods are its operations
- * @owner team-identity                               ← requested as reviewer when its contract changes
- * @effect db.read birth_info_consents                ← direct side effects (db.read|db.write|outbox|kafka|http)
- */
-```
+1. **Modules are discovered**: a class is a module when it has public methods and takes part in constructor
+   injection (it is injected somewhere, or injects collaborators). Its public methods are its operations.
+2. **A profile describes the rest**, in `configs/<service>/` in this repo (or anywhere outside the service):
+   - `modulegraph.config.json`:
+     - `sinks`: which client methods are DB reads/writes, outbox, Kafka or HTTP, and which argument names the table or topic;
+     - `entryPoints`: route, consumer and cron registrations;
+     - `modules`: include/exclude, display names, optional declared contracts;
+     - `owners`: path globs to teams (the repo's CODEOWNERS is also read);
+     - `rules`: `fetchOnce`, `tableOwners`, review `budget`.
 
-`<service>/modulegraph.config.json` maps your platform's classes to side effects and entry points
-(`sinks`, `entryPoints`) and sets rules (`fetchOnce`, `tableOwners`, review `budget`). Defaults are in
-[analyzer/src/config.ts](analyzer/src/config.ts). For codebases with no tags yet, or in other languages, the
-Claude Code skill [.claude/skills/module-review](.claude/skills/module-review/SKILL.md) groups code into modules
-and either proposes the tags or writes `modulegraph/v1` JSON directly
-([schema](schema/modulegraph.schema.json), validated by `npm run validate --workspace analyzer -- <file>`).
+     Defaults are in [analyzer/src/config.ts](analyzer/src/config.ts).
+   - `scenario.ts` (optional): drives the service, from whichever revision is under review, so real example
+     calls get recorded.
+3. **An agent writes the profile**: the Claude Code skill [.claude/skills/module-review](.claude/skills/module-review/SKILL.md)
+   reads the code and writes it. For other languages it writes `modulegraph/v1` JSON directly
+   ([schema](schema/modulegraph.schema.json), validated by `npm run validate --workspace analyzer -- <file>`).
 
 ## How it works
 
@@ -106,11 +112,14 @@ base + head sources        steps, data edges, side effects      modulegraph/v1  
 | `schema/` | `modulegraph.ts` (types) and generated `modulegraph.schema.json` |
 | `analyzer/` | CLI: `cli.ts`, `extract.ts` (ts-morph), `compare.ts` (base vs head), `rules.ts` (guardrails), `git.ts` |
 | `ui/` | Vite + React + `@xyflow/react` + `elkjs` |
-| `sample-service/` | demo microservice. Branch `feature/birthinfo-consent` holds the demo change |
+| `sample-service/` | demo microservice, an ordinary codebase with no modulegraph markers. Branch `feature/birthinfo-consent` holds the demo change |
+| `configs/` | per-service profiles (config + scenario), kept outside the analyzed code |
 | `docs/` | feasibility, research summary, review conventions |
 
 ## Limits of the MVP
 
 TypeScript only for static extraction (other languages through the agent path). Effects are found through
-configured sink methods, so raw SQL strings or ORMs need sink rules or `@effect` tags on repositories. Dynamic
-dispatch with several implementations is left unresolved. No persistence or auth: it is a local tool.
+configured sink methods, so ORMs or raw SQL need sink rules in the profile. Module discovery relies on
+constructor injection; codebases built from plain functions need `modules.include` in the profile. Dynamic
+dispatch with several implementations is left unresolved. Example data needs a runnable scenario. No
+persistence or auth: it is a local tool.

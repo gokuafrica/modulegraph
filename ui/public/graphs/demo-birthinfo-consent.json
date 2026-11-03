@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-03T21:58:04.852Z",
+  "generatedAt": "2026-11-03T22:11:07.306Z",
   "generator": "modulegraph-analyzer/0.1 (ts-morph)",
   "source": {
     "mode": "branch",
@@ -35,7 +35,7 @@
       {
         "path": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
         "status": "added",
-        "added": 23,
+        "added": 19,
         "removed": 0,
         "modules": [
           "BirthConsentStore"
@@ -69,7 +69,7 @@
     ],
     "intent": "BirthInfo: prefer user-consented birth data (birth_info_consents) over document data; add consent endpoint.",
     "examples": {
-      "scenario": "sample-service/src/dev/scenario.ts",
+      "scenario": "configs/identity-profile-service/scenario.ts",
       "operationsCovered": 28
     }
   },
@@ -79,15 +79,10 @@
       "name": "IdentityReview",
       "className": "IdentityReviewModule",
       "file": "sample-service/src/modules/admin/IdentityReviewModule.ts",
-      "line": 11,
-      "summary": "back-office view of a user's identity evidence for manual review.",
+      "line": 8,
+      "summary": "Back-office view of a user's identity evidence for manual review.",
       "owner": "team-backoffice",
-      "declaredEffects": [
-        {
-          "kind": "db.read",
-          "target": "review_notes"
-        }
-      ],
+      "declaredEffects": [],
       "operations": [
         "IdentityReviewModule.review"
       ],
@@ -98,19 +93,10 @@
       "name": "BirthConsentStore",
       "className": "BirthConsentStore",
       "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-      "line": 11,
+      "line": 7,
       "summary": "Stores birth data the user consented to share.",
       "owner": "team-identity",
-      "declaredEffects": [
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents"
-        },
-        {
-          "kind": "db.write",
-          "target": "birth_info_consents"
-        }
-      ],
+      "declaredEffects": [],
       "operations": [
         "BirthConsentStore.findActiveConsent",
         "BirthConsentStore.recordConsent"
@@ -122,8 +108,8 @@
       "name": "BirthInfo",
       "className": "BirthInfoModule",
       "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-      "line": 12,
-      "summary": "the user's country and city of birth. Consented user data wins; documents are the fallback.",
+      "line": 10,
+      "summary": "The user's country and city of birth. Consented user data wins; documents are the fallback.",
       "owner": "team-identity",
       "declaredEffects": [],
       "operations": [
@@ -137,7 +123,7 @@
       "name": "DocumentBirthExtractor",
       "className": "DocumentBirthExtractor",
       "file": "sample-service/src/modules/birth-info/DocumentBirthExtractor.ts",
-      "line": 9,
+      "line": 7,
       "summary": "Reads country and city of birth out of already-fetched identity data. Pure: no I/O.",
       "owner": "team-identity",
       "declaredEffects": [],
@@ -151,19 +137,10 @@
       "name": "ComplianceReport",
       "className": "ComplianceReportModule",
       "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
-      "line": 12,
-      "summary": "monthly regulator report of KYC outcomes and tax residencies.",
+      "line": 8,
+      "summary": "Monthly regulator report of KYC outcomes and tax residencies.",
       "owner": "team-compliance",
-      "declaredEffects": [
-        {
-          "kind": "db.read",
-          "target": "kyc_results"
-        },
-        {
-          "kind": "http",
-          "target": "regulator-reporting"
-        }
-      ],
+      "declaredEffects": [],
       "operations": [
         "ComplianceReportModule.generateMonthly"
       ],
@@ -174,15 +151,10 @@
       "name": "DocumentExtractor",
       "className": "DocumentExtractor",
       "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-      "line": 10,
+      "line": 7,
       "summary": "Extracts structured fields from document scans via the document-AI service.",
       "owner": "team-identity",
-      "declaredEffects": [
-        {
-          "kind": "http",
-          "target": "document-ai"
-        }
-      ],
+      "declaredEffects": [],
       "operations": [
         "DocumentExtractor.extract"
       ],
@@ -193,15 +165,10 @@
       "name": "DocumentStore",
       "className": "DocumentStore",
       "file": "sample-service/src/modules/identity/DocumentStore.ts",
-      "line": 10,
+      "line": 7,
       "summary": "Reads the user's uploaded identity documents.",
       "owner": "team-identity",
-      "declaredEffects": [
-        {
-          "kind": "db.read",
-          "target": "user_documents"
-        }
-      ],
+      "declaredEffects": [],
       "operations": [
         "DocumentStore.latestDocuments"
       ],
@@ -212,8 +179,8 @@
       "name": "Identity",
       "className": "IdentityModule",
       "file": "sample-service/src/modules/identity/IdentityModule.ts",
-      "line": 11,
-      "summary": "what the user's documents say about them (nationality, country and city of birth, ...). Expensive (DB + document-AI call), so orchestrators fetch it once and pass it down.",
+      "line": 9,
+      "summary": "What the user's documents say about them (nationality, country and city of birth, ...). Expensive (DB + document-AI call), so orchestrators fetch it once and pass it down.",
       "owner": "team-identity",
       "declaredEffects": [],
       "operations": [
@@ -226,27 +193,10 @@
       "name": "KycCheck",
       "className": "KycModule",
       "file": "sample-service/src/modules/kyc/KycModule.ts",
-      "line": 25,
-      "summary": "know-your-customer verification. Identity, birth info and nationality feed sanctions screening.",
+      "line": 19,
+      "summary": "Know-your-customer verification. Identity, birth info and nationality feed sanctions screening.",
       "owner": "team-compliance",
-      "declaredEffects": [
-        {
-          "kind": "db.read",
-          "target": "kyc_results"
-        },
-        {
-          "kind": "db.write",
-          "target": "kyc_results"
-        },
-        {
-          "kind": "outbox",
-          "target": "kyc.completed"
-        },
-        {
-          "kind": "outbox",
-          "target": "kyc.overridden"
-        }
-      ],
+      "declaredEffects": [],
       "operations": [
         "KycModule.runCheck",
         "KycModule.getStatus",
@@ -260,15 +210,10 @@
       "name": "SanctionsScreening",
       "className": "SanctionsScreening",
       "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
-      "line": 14,
+      "line": 11,
       "summary": "Screens a person against sanctions and PEP lists.",
       "owner": "team-compliance",
-      "declaredEffects": [
-        {
-          "kind": "http",
-          "target": "sanctions-api"
-        }
-      ],
+      "declaredEffects": [],
       "operations": [
         "SanctionsScreening.screen"
       ],
@@ -279,15 +224,10 @@
       "name": "Nationality",
       "className": "NationalityModule",
       "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-      "line": 16,
-      "summary": "normalises the document nationality to an ISO country record.",
+      "line": 13,
+      "summary": "Normalises the document nationality to an ISO country record.",
       "owner": "team-identity",
-      "declaredEffects": [
-        {
-          "kind": "db.read",
-          "target": "country_codes"
-        }
-      ],
+      "declaredEffects": [],
       "operations": [
         "NationalityModule.resolve"
       ],
@@ -298,19 +238,10 @@
       "name": "Onboarding",
       "className": "OnboardingModule",
       "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
-      "line": 12,
-      "summary": "completes sign-up once KYC passes.",
+      "line": 8,
+      "summary": "Completes sign-up once KYC passes.",
       "owner": "team-onboarding",
-      "declaredEffects": [
-        {
-          "kind": "db.write",
-          "target": "users"
-        },
-        {
-          "kind": "kafka",
-          "target": "user.onboarded"
-        }
-      ],
+      "declaredEffects": [],
       "operations": [
         "OnboardingModule.complete"
       ],
@@ -321,15 +252,10 @@
       "name": "PersonalDetails",
       "className": "PersonalDetailsModule",
       "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
-      "line": 16,
-      "summary": "legal name and date of birth from documents, preferred name from the user's profile.",
+      "line": 13,
+      "summary": "Legal name and date of birth from documents, preferred name from the user's profile.",
       "owner": "team-profile",
-      "declaredEffects": [
-        {
-          "kind": "db.read",
-          "target": "user_profiles"
-        }
-      ],
+      "declaredEffects": [],
       "operations": [
         "PersonalDetailsModule.resolve"
       ],
@@ -340,27 +266,10 @@
       "name": "ProfileAssembler",
       "className": "ProfileService",
       "file": "sample-service/src/modules/profile/ProfileService.ts",
-      "line": 17,
-      "summary": "builds the user profile. Fetches Identity once and shares it with every sub-module.",
+      "line": 11,
+      "summary": "Builds the user profile. Fetches Identity once and shares it with every sub-module.",
       "owner": "team-profile",
-      "declaredEffects": [
-        {
-          "kind": "db.write",
-          "target": "gdpr_exports"
-        },
-        {
-          "kind": "db.write",
-          "target": "user_profiles"
-        },
-        {
-          "kind": "db.write",
-          "target": "user_documents"
-        },
-        {
-          "kind": "kafka",
-          "target": "privacy.export.ready"
-        }
-      ],
+      "declaredEffects": [],
       "operations": [
         "ProfileService.getProfile",
         "ProfileService.getSummary",
@@ -376,27 +285,10 @@
       "name": "TaxResidency",
       "className": "TaxResidencyModule",
       "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-      "line": 21,
-      "summary": "works out tax residencies (incl. US-person status from place of birth).",
+      "line": 15,
+      "summary": "Works out tax residencies (incl. US-person status from place of birth).",
       "owner": "team-compliance",
-      "declaredEffects": [
-        {
-          "kind": "db.read",
-          "target": "tax_declarations"
-        },
-        {
-          "kind": "db.write",
-          "target": "tax_declarations"
-        },
-        {
-          "kind": "db.read",
-          "target": "tax_residency_assessments"
-        },
-        {
-          "kind": "db.write",
-          "target": "tax_residency_assessments"
-        }
-      ],
+      "declaredEffects": [],
       "operations": [
         "TaxResidencyModule.assess",
         "TaxResidencyModule.recordDeclaration",
@@ -409,19 +301,10 @@
       "name": "TravelEligibility",
       "className": "TravelEligibilityModule",
       "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
-      "line": 15,
-      "summary": "visa eligibility checks and passport application prefill.",
+      "line": 11,
+      "summary": "Visa eligibility checks and passport application prefill.",
       "owner": "team-travel",
-      "declaredEffects": [
-        {
-          "kind": "http",
-          "target": "visa-rules-service"
-        },
-        {
-          "kind": "db.write",
-          "target": "passport_prefills"
-        }
-      ],
+      "declaredEffects": [],
       "operations": [
         "TravelEligibilityModule.checkVisa",
         "TravelEligibilityModule.prefillPassport"
@@ -435,8 +318,8 @@
       "moduleId": "IdentityReviewModule",
       "name": "review",
       "file": "sample-service/src/modules/admin/IdentityReviewModule.ts",
-      "line": 18,
-      "endLine": 23,
+      "line": 15,
+      "endLine": 20,
       "params": [
         {
           "name": "userId",
@@ -465,7 +348,7 @@
           "kind": "db.read",
           "target": "review_notes",
           "file": "sample-service/src/modules/admin/IdentityReviewModule.ts",
-          "line": 21
+          "line": 18
         }
       ],
       "effects": [
@@ -473,31 +356,31 @@
           "kind": "db.read",
           "target": "review_notes",
           "file": "sample-service/src/modules/admin/IdentityReviewModule.ts",
-          "line": 21
+          "line": 18
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "calls": [
@@ -514,13 +397,13 @@
             "kind": "outbox",
             "target": "birth_info.source_resolved",
             "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-            "line": 24
+            "line": 22
           },
           {
             "kind": "db.read",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 15
+            "line": 11
           }
         ],
         "effectsRemoved": [],
@@ -544,7 +427,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-03T21:58:04.713Z"
+              "extractedAt": "2026-11-03T22:11:07.148Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -569,7 +452,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-03T21:58:04.714Z"
+              "extractedAt": "2026-11-03T22:11:07.149Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -586,8 +469,8 @@
       "moduleId": "BirthConsentStore",
       "name": "findActiveConsent",
       "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-      "line": 14,
-      "endLine": 17,
+      "line": 10,
+      "endLine": 13,
       "params": [
         {
           "name": "userId",
@@ -624,7 +507,7 @@
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effects": [
@@ -632,7 +515,7 @@
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "calls": [],
@@ -664,7 +547,7 @@
             "kind": "db.read",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 15
+            "line": 11
           }
         ],
         "effectsRemoved": [],
@@ -697,8 +580,8 @@
       "moduleId": "BirthConsentStore",
       "name": "recordConsent",
       "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-      "line": 19,
-      "endLine": 22,
+      "line": 15,
+      "endLine": 18,
       "params": [
         {
           "name": "userId",
@@ -721,7 +604,7 @@
           "kind": "db.write",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 20
+          "line": 16
         }
       ],
       "effects": [
@@ -729,7 +612,7 @@
           "kind": "db.write",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 20
+          "line": 16
         }
       ],
       "calls": [],
@@ -761,7 +644,7 @@
             "kind": "db.write",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 20
+            "line": 16
           }
         ],
         "effectsRemoved": [],
@@ -784,8 +667,8 @@
       "moduleId": "BirthInfoModule",
       "name": "resolve",
       "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-      "line": 19,
-      "endLine": 28,
+      "line": 17,
+      "endLine": 26,
       "params": [
         {
           "name": "identity",
@@ -814,7 +697,7 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         }
       ],
       "effects": [
@@ -822,13 +705,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "calls": [
@@ -919,13 +802,13 @@
             "kind": "outbox",
             "target": "birth_info.source_resolved",
             "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-            "line": 24
+            "line": 22
           },
           {
             "kind": "db.read",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 15
+            "line": 11
           }
         ],
         "effectsRemoved": [],
@@ -948,7 +831,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-03T21:58:04.711Z"
+              "extractedAt": "2026-11-03T22:11:07.144Z"
             }
           },
           "output": {
@@ -969,7 +852,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-03T21:58:04.713Z"
+              "extractedAt": "2026-11-03T22:11:07.148Z"
             }
           },
           "output": {
@@ -985,8 +868,8 @@
       "moduleId": "BirthInfoModule",
       "name": "recordConsent",
       "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-      "line": 30,
-      "endLine": 32,
+      "line": 28,
+      "endLine": 30,
       "params": [
         {
           "name": "userId",
@@ -1010,7 +893,7 @@
           "kind": "db.write",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 20
+          "line": 16
         }
       ],
       "calls": [
@@ -1040,7 +923,7 @@
             "kind": "db.write",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 20
+            "line": 16
           }
         ],
         "effectsRemoved": [],
@@ -1065,8 +948,8 @@
       "moduleId": "DocumentBirthExtractor",
       "name": "fromIdentity",
       "file": "sample-service/src/modules/birth-info/DocumentBirthExtractor.ts",
-      "line": 10,
-      "endLine": 12,
+      "line": 8,
+      "endLine": 10,
       "params": [
         {
           "name": "identity",
@@ -1167,7 +1050,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-03T21:58:04.711Z"
+              "extractedAt": "2026-11-03T22:11:07.144Z"
             }
           },
           "output": {
@@ -1183,8 +1066,8 @@
       "moduleId": "ComplianceReportModule",
       "name": "generateMonthly",
       "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
-      "line": 19,
-      "endLine": 24,
+      "line": 15,
+      "endLine": 20,
       "params": [],
       "returns": {
         "type": "void"
@@ -1194,13 +1077,13 @@
           "kind": "db.read",
           "target": "kyc_results",
           "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
-          "line": 20
+          "line": 16
         },
         {
           "kind": "http",
           "target": "regulator-reporting",
           "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
-          "line": 23
+          "line": 19
         }
       ],
       "effects": [
@@ -1208,55 +1091,55 @@
           "kind": "db.read",
           "target": "kyc_results",
           "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
-          "line": 20
+          "line": 16
         },
         {
           "kind": "http",
           "target": "regulator-reporting",
           "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
-          "line": 23
+          "line": 19
         },
         {
           "kind": "db.read",
           "target": "tax_declarations",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 33
+          "line": 27
         },
         {
           "kind": "db.write",
           "target": "tax_residency_assessments",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 36
+          "line": 30
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "calls": [
@@ -1272,13 +1155,13 @@
             "kind": "outbox",
             "target": "birth_info.source_resolved",
             "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-            "line": 24
+            "line": 22
           },
           {
             "kind": "db.read",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 15
+            "line": 11
           }
         ],
         "effectsRemoved": [],
@@ -1297,8 +1180,8 @@
       "moduleId": "DocumentExtractor",
       "name": "extract",
       "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-      "line": 13,
-      "endLine": 16,
+      "line": 10,
+      "endLine": 13,
       "params": [
         {
           "name": "documents",
@@ -1335,7 +1218,7 @@
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         }
       ],
       "effects": [
@@ -1343,7 +1226,7 @@
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         }
       ],
       "calls": [],
@@ -1398,8 +1281,8 @@
       "moduleId": "DocumentStore",
       "name": "latestDocuments",
       "file": "sample-service/src/modules/identity/DocumentStore.ts",
-      "line": 13,
-      "endLine": 16,
+      "line": 10,
+      "endLine": 13,
       "params": [
         {
           "name": "userId",
@@ -1414,7 +1297,7 @@
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         }
       ],
       "effects": [
@@ -1422,7 +1305,7 @@
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         }
       ],
       "calls": [],
@@ -1465,8 +1348,8 @@
       "moduleId": "IdentityModule",
       "name": "fetchIdentity",
       "file": "sample-service/src/modules/identity/IdentityModule.ts",
-      "line": 17,
-      "endLine": 21,
+      "line": 15,
+      "endLine": 19,
       "params": [
         {
           "name": "userId",
@@ -1516,13 +1399,13 @@
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         }
       ],
       "calls": [
@@ -1547,7 +1430,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-03T21:58:04.711Z"
+            "extractedAt": "2026-11-03T22:11:07.144Z"
           }
         },
         {
@@ -1564,7 +1447,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-03T21:58:04.713Z"
+            "extractedAt": "2026-11-03T22:11:07.148Z"
           }
         }
       ]
@@ -1574,8 +1457,8 @@
       "moduleId": "KycModule",
       "name": "runCheck",
       "file": "sample-service/src/modules/kyc/KycModule.ts",
-      "line": 35,
-      "endLine": 47,
+      "line": 29,
+      "endLine": 41,
       "params": [
         {
           "name": "userId",
@@ -1604,13 +1487,13 @@
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 44
+          "line": 38
         },
         {
           "kind": "outbox",
           "target": "kyc.completed",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 45
+          "line": 39
         }
       ],
       "effects": [
@@ -1618,49 +1501,49 @@
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 44
+          "line": 38
         },
         {
           "kind": "outbox",
           "target": "kyc.completed",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 45
+          "line": 39
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "http",
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
-          "line": 18
+          "line": 15
         }
       ],
       "calls": [
@@ -1679,13 +1562,13 @@
             "kind": "outbox",
             "target": "birth_info.source_resolved",
             "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-            "line": 24
+            "line": 22
           },
           {
             "kind": "db.read",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 15
+            "line": 11
           }
         ],
         "effectsRemoved": [],
@@ -1701,7 +1584,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-03T21:58:04.712Z"
+            "checkedAt": "2026-11-03T22:11:07.147Z"
           }
         },
         {
@@ -1711,7 +1594,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-03T21:58:04.714Z"
+            "checkedAt": "2026-11-03T22:11:07.149Z"
           }
         }
       ]
@@ -1721,8 +1604,8 @@
       "moduleId": "KycModule",
       "name": "getStatus",
       "file": "sample-service/src/modules/kyc/KycModule.ts",
-      "line": 49,
-      "endLine": 52,
+      "line": 43,
+      "endLine": 46,
       "params": [
         {
           "name": "userId",
@@ -1751,7 +1634,7 @@
           "kind": "db.read",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 50
+          "line": 44
         }
       ],
       "effects": [
@@ -1759,7 +1642,7 @@
           "kind": "db.read",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 50
+          "line": 44
         }
       ],
       "calls": [],
@@ -1774,7 +1657,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-03T21:58:04.712Z"
+            "checkedAt": "2026-11-03T22:11:07.147Z"
           }
         },
         {
@@ -1784,7 +1667,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-03T21:58:04.714Z"
+            "checkedAt": "2026-11-03T22:11:07.149Z"
           }
         }
       ]
@@ -1794,8 +1677,8 @@
       "moduleId": "KycModule",
       "name": "override",
       "file": "sample-service/src/modules/kyc/KycModule.ts",
-      "line": 54,
-      "endLine": 58,
+      "line": 48,
+      "endLine": 52,
       "params": [
         {
           "name": "userId",
@@ -1828,13 +1711,13 @@
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 55
+          "line": 49
         },
         {
           "kind": "outbox",
           "target": "kyc.overridden",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 56
+          "line": 50
         }
       ],
       "effects": [
@@ -1842,13 +1725,13 @@
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 55
+          "line": 49
         },
         {
           "kind": "outbox",
           "target": "kyc.overridden",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 56
+          "line": 50
         }
       ],
       "calls": [],
@@ -1874,8 +1757,8 @@
       "moduleId": "KycModule",
       "name": "recheckExpired",
       "file": "sample-service/src/modules/kyc/KycModule.ts",
-      "line": 60,
-      "endLine": 64,
+      "line": 54,
+      "endLine": 58,
       "params": [],
       "returns": {
         "type": "number"
@@ -1885,19 +1768,19 @@
           "kind": "db.read",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 61
+          "line": 55
         },
         {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 44
+          "line": 38
         },
         {
           "kind": "outbox",
           "target": "kyc.completed",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 45
+          "line": 39
         }
       ],
       "effects": [
@@ -1905,55 +1788,55 @@
           "kind": "db.read",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 61
+          "line": 55
         },
         {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 44
+          "line": 38
         },
         {
           "kind": "outbox",
           "target": "kyc.completed",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 45
+          "line": 39
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "http",
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
-          "line": 18
+          "line": 15
         }
       ],
       "calls": [
@@ -1972,13 +1855,13 @@
             "kind": "outbox",
             "target": "birth_info.source_resolved",
             "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-            "line": 24
+            "line": 22
           },
           {
             "kind": "db.read",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 15
+            "line": 11
           }
         ],
         "effectsRemoved": [],
@@ -1998,8 +1881,8 @@
       "moduleId": "SanctionsScreening",
       "name": "screen",
       "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
-      "line": 17,
-      "endLine": 19,
+      "line": 14,
+      "endLine": 16,
       "params": [
         {
           "name": "person",
@@ -2024,7 +1907,7 @@
           "kind": "http",
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
-          "line": 18
+          "line": 15
         }
       ],
       "effects": [
@@ -2032,7 +1915,7 @@
           "kind": "http",
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
-          "line": 18
+          "line": 15
         }
       ],
       "calls": [],
@@ -2073,8 +1956,8 @@
       "moduleId": "NationalityModule",
       "name": "resolve",
       "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-      "line": 19,
-      "endLine": 22,
+      "line": 16,
+      "endLine": 19,
       "params": [
         {
           "name": "identity",
@@ -2103,7 +1986,7 @@
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "effects": [
@@ -2111,7 +1994,7 @@
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "calls": [],
@@ -2131,7 +2014,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-03T21:58:04.711Z"
+              "extractedAt": "2026-11-03T22:11:07.144Z"
             }
           },
           "output": {
@@ -2152,7 +2035,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-03T21:58:04.713Z"
+              "extractedAt": "2026-11-03T22:11:07.148Z"
             }
           },
           "output": {
@@ -2168,8 +2051,8 @@
       "moduleId": "OnboardingModule",
       "name": "complete",
       "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
-      "line": 19,
-      "endLine": 25,
+      "line": 15,
+      "endLine": 21,
       "params": [
         {
           "name": "userId",
@@ -2194,13 +2077,13 @@
           "kind": "db.write",
           "target": "users",
           "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
-          "line": 22
+          "line": 18
         },
         {
           "kind": "kafka",
           "target": "user.onboarded",
           "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
-          "line": 23
+          "line": 19
         }
       ],
       "effects": [
@@ -2208,61 +2091,61 @@
           "kind": "db.write",
           "target": "users",
           "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
-          "line": 22
+          "line": 18
         },
         {
           "kind": "kafka",
           "target": "user.onboarded",
           "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
-          "line": 23
+          "line": 19
         },
         {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 44
+          "line": 38
         },
         {
           "kind": "outbox",
           "target": "kyc.completed",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 45
+          "line": 39
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "http",
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
-          "line": 18
+          "line": 15
         }
       ],
       "calls": [
@@ -2278,13 +2161,13 @@
             "kind": "outbox",
             "target": "birth_info.source_resolved",
             "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-            "line": 24
+            "line": 22
           },
           {
             "kind": "db.read",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 15
+            "line": 11
           }
         ],
         "effectsRemoved": [],
@@ -2309,8 +2192,8 @@
       "moduleId": "PersonalDetailsModule",
       "name": "resolve",
       "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
-      "line": 19,
-      "endLine": 26,
+      "line": 16,
+      "endLine": 23,
       "params": [
         {
           "name": "userId",
@@ -2343,7 +2226,7 @@
           "kind": "db.read",
           "target": "user_profiles",
           "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "effects": [
@@ -2351,7 +2234,7 @@
           "kind": "db.read",
           "target": "user_profiles",
           "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "calls": [],
@@ -2372,7 +2255,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-03T21:58:04.711Z"
+              "extractedAt": "2026-11-03T22:11:07.144Z"
             }
           },
           "output": {
@@ -2394,7 +2277,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-03T21:58:04.713Z"
+              "extractedAt": "2026-11-03T22:11:07.148Z"
             }
           },
           "output": {
@@ -2410,8 +2293,8 @@
       "moduleId": "ProfileService",
       "name": "getProfile",
       "file": "sample-service/src/modules/profile/ProfileService.ts",
-      "line": 27,
-      "endLine": 35,
+      "line": 21,
+      "endLine": 29,
       "params": [
         {
           "name": "userId",
@@ -2445,37 +2328,37 @@
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "db.read",
           "target": "user_profiles",
           "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "calls": [
@@ -2494,13 +2377,13 @@
             "kind": "outbox",
             "target": "birth_info.source_resolved",
             "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-            "line": 24
+            "line": 22
           },
           {
             "kind": "db.read",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 15
+            "line": 11
           }
         ],
         "effectsRemoved": [],
@@ -2562,8 +2445,8 @@
       "moduleId": "ProfileService",
       "name": "getSummary",
       "file": "sample-service/src/modules/profile/ProfileService.ts",
-      "line": 37,
-      "endLine": 41,
+      "line": 31,
+      "endLine": 35,
       "params": [
         {
           "name": "userId",
@@ -2589,19 +2472,19 @@
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "db.read",
           "target": "user_profiles",
           "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "calls": [
@@ -2637,8 +2520,8 @@
       "moduleId": "ProfileService",
       "name": "getNationality",
       "file": "sample-service/src/modules/profile/ProfileService.ts",
-      "line": 43,
-      "endLine": 46,
+      "line": 37,
+      "endLine": 40,
       "params": [
         {
           "name": "userId",
@@ -2668,19 +2551,19 @@
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "calls": [
@@ -2718,8 +2601,8 @@
       "moduleId": "ProfileService",
       "name": "getBirthInfo",
       "file": "sample-service/src/modules/profile/ProfileService.ts",
-      "line": 48,
-      "endLine": 51,
+      "line": 42,
+      "endLine": 45,
       "params": [
         {
           "name": "userId",
@@ -2749,25 +2632,25 @@
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "calls": [
@@ -2816,13 +2699,13 @@
             "kind": "outbox",
             "target": "birth_info.source_resolved",
             "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-            "line": 24
+            "line": 22
           },
           {
             "kind": "db.read",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 15
+            "line": 11
           }
         ],
         "effectsRemoved": [],
@@ -2858,8 +2741,8 @@
       "moduleId": "ProfileService",
       "name": "exportProfile",
       "file": "sample-service/src/modules/profile/ProfileService.ts",
-      "line": 53,
-      "endLine": 58,
+      "line": 47,
+      "endLine": 52,
       "params": [
         {
           "name": "userId",
@@ -2880,13 +2763,13 @@
           "kind": "db.write",
           "target": "gdpr_exports",
           "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "line": 55
+          "line": 49
         },
         {
           "kind": "kafka",
           "target": "privacy.export.ready",
           "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "line": 56
+          "line": 50
         }
       ],
       "effects": [
@@ -2894,49 +2777,49 @@
           "kind": "db.write",
           "target": "gdpr_exports",
           "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "line": 55
+          "line": 49
         },
         {
           "kind": "kafka",
           "target": "privacy.export.ready",
           "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "line": 56
+          "line": 50
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "db.read",
           "target": "user_profiles",
           "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "calls": [
@@ -2955,13 +2838,13 @@
             "kind": "outbox",
             "target": "birth_info.source_resolved",
             "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-            "line": 24
+            "line": 22
           },
           {
             "kind": "db.read",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 15
+            "line": 11
           }
         ],
         "effectsRemoved": [],
@@ -2985,8 +2868,8 @@
       "moduleId": "ProfileService",
       "name": "purge",
       "file": "sample-service/src/modules/profile/ProfileService.ts",
-      "line": 60,
-      "endLine": 64,
+      "line": 54,
+      "endLine": 58,
       "params": [
         {
           "name": "userId",
@@ -3007,13 +2890,13 @@
           "kind": "db.write",
           "target": "user_profiles",
           "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "line": 61
+          "line": 55
         },
         {
           "kind": "db.write",
           "target": "user_documents",
           "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "line": 62
+          "line": 56
         }
       ],
       "effects": [
@@ -3021,13 +2904,13 @@
           "kind": "db.write",
           "target": "user_profiles",
           "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "line": 61
+          "line": 55
         },
         {
           "kind": "db.write",
           "target": "user_documents",
           "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "line": 62
+          "line": 56
         }
       ],
       "calls": [],
@@ -3040,8 +2923,8 @@
       "moduleId": "TaxResidencyModule",
       "name": "assess",
       "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-      "line": 29,
-      "endLine": 38,
+      "line": 23,
+      "endLine": 32,
       "params": [
         {
           "name": "userId",
@@ -3070,13 +2953,13 @@
           "kind": "db.read",
           "target": "tax_declarations",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 33
+          "line": 27
         },
         {
           "kind": "db.write",
           "target": "tax_residency_assessments",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 36
+          "line": 30
         }
       ],
       "effects": [
@@ -3084,43 +2967,43 @@
           "kind": "db.read",
           "target": "tax_declarations",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 33
+          "line": 27
         },
         {
           "kind": "db.write",
           "target": "tax_residency_assessments",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 36
+          "line": 30
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "calls": [
@@ -3138,13 +3021,13 @@
             "kind": "outbox",
             "target": "birth_info.source_resolved",
             "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-            "line": 24
+            "line": 22
           },
           {
             "kind": "db.read",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 15
+            "line": 11
           }
         ],
         "effectsRemoved": [],
@@ -3197,8 +3080,8 @@
       "moduleId": "TaxResidencyModule",
       "name": "recordDeclaration",
       "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-      "line": 40,
-      "endLine": 43,
+      "line": 34,
+      "endLine": 37,
       "params": [
         {
           "name": "userId",
@@ -3231,19 +3114,19 @@
           "kind": "db.write",
           "target": "tax_declarations",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 41
+          "line": 35
         },
         {
           "kind": "db.read",
           "target": "tax_declarations",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 33
+          "line": 27
         },
         {
           "kind": "db.write",
           "target": "tax_residency_assessments",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 36
+          "line": 30
         }
       ],
       "effects": [
@@ -3251,49 +3134,49 @@
           "kind": "db.write",
           "target": "tax_declarations",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 41
+          "line": 35
         },
         {
           "kind": "db.read",
           "target": "tax_declarations",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 33
+          "line": 27
         },
         {
           "kind": "db.write",
           "target": "tax_residency_assessments",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 36
+          "line": 30
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "calls": [
@@ -3311,13 +3194,13 @@
             "kind": "outbox",
             "target": "birth_info.source_resolved",
             "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-            "line": 24
+            "line": 22
           },
           {
             "kind": "db.read",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 15
+            "line": 11
           }
         ],
         "effectsRemoved": [],
@@ -3347,8 +3230,8 @@
       "moduleId": "TaxResidencyModule",
       "name": "weeklySweep",
       "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-      "line": 45,
-      "endLine": 48,
+      "line": 39,
+      "endLine": 42,
       "params": [],
       "returns": {
         "type": "void"
@@ -3358,19 +3241,19 @@
           "kind": "db.read",
           "target": "tax_residency_assessments",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 46
+          "line": 40
         },
         {
           "kind": "db.read",
           "target": "tax_declarations",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 33
+          "line": 27
         },
         {
           "kind": "db.write",
           "target": "tax_residency_assessments",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 36
+          "line": 30
         }
       ],
       "effects": [
@@ -3378,49 +3261,49 @@
           "kind": "db.read",
           "target": "tax_residency_assessments",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 46
+          "line": 40
         },
         {
           "kind": "db.read",
           "target": "tax_declarations",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 33
+          "line": 27
         },
         {
           "kind": "db.write",
           "target": "tax_residency_assessments",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 36
+          "line": 30
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "calls": [
@@ -3438,13 +3321,13 @@
             "kind": "outbox",
             "target": "birth_info.source_resolved",
             "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-            "line": 24
+            "line": 22
           },
           {
             "kind": "db.read",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 15
+            "line": 11
           }
         ],
         "effectsRemoved": [],
@@ -3463,8 +3346,8 @@
       "moduleId": "TravelEligibilityModule",
       "name": "checkVisa",
       "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
-      "line": 25,
-      "endLine": 31,
+      "line": 21,
+      "endLine": 27,
       "params": [
         {
           "name": "userId",
@@ -3493,7 +3376,7 @@
           "kind": "http",
           "target": "visa-rules-service",
           "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
-          "line": 29
+          "line": 25
         }
       ],
       "effects": [
@@ -3501,37 +3384,37 @@
           "kind": "http",
           "target": "visa-rules-service",
           "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
-          "line": 29
+          "line": 25
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "calls": [
@@ -3549,13 +3432,13 @@
             "kind": "outbox",
             "target": "birth_info.source_resolved",
             "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-            "line": 24
+            "line": 22
           },
           {
             "kind": "db.read",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 15
+            "line": 11
           }
         ],
         "effectsRemoved": [],
@@ -3601,8 +3484,8 @@
       "moduleId": "TravelEligibilityModule",
       "name": "prefillPassport",
       "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
-      "line": 33,
-      "endLine": 43,
+      "line": 29,
+      "endLine": 39,
       "params": [
         {
           "name": "userId",
@@ -3651,7 +3534,7 @@
           "kind": "db.write",
           "target": "passport_prefills",
           "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
-          "line": 41
+          "line": 37
         }
       ],
       "effects": [
@@ -3659,43 +3542,43 @@
           "kind": "db.write",
           "target": "passport_prefills",
           "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
-          "line": 41
+          "line": 37
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "db.read",
           "target": "user_profiles",
           "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "calls": [
@@ -3786,13 +3669,13 @@
             "kind": "outbox",
             "target": "birth_info.source_resolved",
             "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-            "line": 24
+            "line": 22
           },
           {
             "kind": "db.read",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 15
+            "line": 11
           }
         ],
         "effectsRemoved": [],
@@ -3847,49 +3730,49 @@
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 44
+          "line": 38
         },
         {
           "kind": "outbox",
           "target": "kyc.completed",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 45
+          "line": 39
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "http",
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
-          "line": 18
+          "line": 15
         }
       ],
       "change": "unchanged",
@@ -3899,13 +3782,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -3922,37 +3805,37 @@
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "db.read",
           "target": "user_profiles",
           "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "kafka",
@@ -3968,13 +3851,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -3991,43 +3874,43 @@
           "kind": "db.read",
           "target": "tax_declarations",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 33
+          "line": 27
         },
         {
           "kind": "db.write",
           "target": "tax_residency_assessments",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 36
+          "line": 30
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "change": "unchanged",
@@ -4037,13 +3920,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -4060,37 +3943,37 @@
           "kind": "http",
           "target": "visa-rules-service",
           "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
-          "line": 29
+          "line": 25
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "change": "unchanged",
@@ -4100,13 +3983,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -4123,13 +4006,13 @@
           "kind": "db.write",
           "target": "user_profiles",
           "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "line": 61
+          "line": 55
         },
         {
           "kind": "db.write",
           "target": "user_documents",
           "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "line": 62
+          "line": 56
         }
       ],
       "change": "unchanged",
@@ -4149,55 +4032,55 @@
           "kind": "db.read",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 61
+          "line": 55
         },
         {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 44
+          "line": 38
         },
         {
           "kind": "outbox",
           "target": "kyc.completed",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 45
+          "line": 39
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "http",
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
-          "line": 18
+          "line": 15
         }
       ],
       "change": "unchanged",
@@ -4207,13 +4090,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -4230,49 +4113,49 @@
           "kind": "db.read",
           "target": "tax_residency_assessments",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 46
+          "line": 40
         },
         {
           "kind": "db.read",
           "target": "tax_declarations",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 33
+          "line": 27
         },
         {
           "kind": "db.write",
           "target": "tax_residency_assessments",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 36
+          "line": 30
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "change": "unchanged",
@@ -4282,13 +4165,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -4305,55 +4188,55 @@
           "kind": "db.read",
           "target": "kyc_results",
           "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
-          "line": 20
+          "line": 16
         },
         {
           "kind": "http",
           "target": "regulator-reporting",
           "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
-          "line": 23
+          "line": 19
         },
         {
           "kind": "db.read",
           "target": "tax_declarations",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 33
+          "line": 27
         },
         {
           "kind": "db.write",
           "target": "tax_residency_assessments",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 36
+          "line": 30
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "change": "unchanged",
@@ -4363,13 +4246,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -4386,37 +4269,37 @@
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "db.read",
           "target": "user_profiles",
           "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "change": "unchanged",
@@ -4426,13 +4309,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -4449,25 +4332,25 @@
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "change": "unchanged",
@@ -4477,13 +4360,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -4500,49 +4383,49 @@
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 44
+          "line": 38
         },
         {
           "kind": "outbox",
           "target": "kyc.completed",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 45
+          "line": 39
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "http",
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
-          "line": 18
+          "line": 15
         }
       ],
       "change": "unchanged",
@@ -4552,13 +4435,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -4575,37 +4458,37 @@
           "kind": "http",
           "target": "visa-rules-service",
           "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
-          "line": 29
+          "line": 25
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "change": "unchanged",
@@ -4615,13 +4498,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -4638,31 +4521,31 @@
           "kind": "db.read",
           "target": "review_notes",
           "file": "sample-service/src/modules/admin/IdentityReviewModule.ts",
-          "line": 21
+          "line": 18
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "change": "unchanged",
@@ -4672,13 +4555,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -4695,13 +4578,13 @@
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 55
+          "line": 49
         },
         {
           "kind": "outbox",
           "target": "kyc.overridden",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 56
+          "line": 50
         }
       ],
       "change": "unchanged",
@@ -4721,49 +4604,49 @@
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 44
+          "line": 38
         },
         {
           "kind": "outbox",
           "target": "kyc.completed",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 45
+          "line": 39
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "http",
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
-          "line": 18
+          "line": 15
         }
       ],
       "change": "unchanged",
@@ -4773,13 +4656,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -4796,7 +4679,7 @@
           "kind": "db.read",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 50
+          "line": 44
         }
       ],
       "change": "unchanged",
@@ -4816,61 +4699,61 @@
           "kind": "db.write",
           "target": "users",
           "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
-          "line": 22
+          "line": 18
         },
         {
           "kind": "kafka",
           "target": "user.onboarded",
           "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
-          "line": 23
+          "line": 19
         },
         {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 44
+          "line": 38
         },
         {
           "kind": "outbox",
           "target": "kyc.completed",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 45
+          "line": 39
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "http",
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
-          "line": 18
+          "line": 15
         }
       ],
       "change": "unchanged",
@@ -4880,13 +4763,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -4903,43 +4786,43 @@
           "kind": "db.read",
           "target": "tax_declarations",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 33
+          "line": 27
         },
         {
           "kind": "db.write",
           "target": "tax_residency_assessments",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 36
+          "line": 30
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "change": "unchanged",
@@ -4949,13 +4832,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -4972,49 +4855,49 @@
           "kind": "db.write",
           "target": "tax_declarations",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 41
+          "line": 35
         },
         {
           "kind": "db.read",
           "target": "tax_declarations",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 33
+          "line": 27
         },
         {
           "kind": "db.write",
           "target": "tax_residency_assessments",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 36
+          "line": 30
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "change": "unchanged",
@@ -5024,13 +4907,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -5047,37 +4930,37 @@
           "kind": "http",
           "target": "visa-rules-service",
           "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
-          "line": 29
+          "line": 25
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "change": "unchanged",
@@ -5087,13 +4970,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -5110,43 +4993,43 @@
           "kind": "db.write",
           "target": "passport_prefills",
           "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
-          "line": 41
+          "line": 37
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "db.read",
           "target": "user_profiles",
           "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "change": "unchanged",
@@ -5156,13 +5039,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -5179,37 +5062,37 @@
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "db.read",
           "target": "user_profiles",
           "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "change": "unchanged",
@@ -5219,13 +5102,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -5242,19 +5125,19 @@
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "db.read",
           "target": "user_profiles",
           "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "change": "unchanged",
@@ -5274,19 +5157,19 @@
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         }
       ],
       "change": "unchanged",
@@ -5306,25 +5189,25 @@
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "change": "unchanged",
@@ -5334,13 +5217,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -5357,7 +5240,7 @@
           "kind": "db.write",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 20
+          "line": 16
         }
       ],
       "change": "added",
@@ -5367,7 +5250,7 @@
           "kind": "db.write",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 20
+          "line": 16
         }
       ],
       "effectsRemoved": []
@@ -5384,49 +5267,49 @@
           "kind": "db.write",
           "target": "gdpr_exports",
           "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "line": 55
+          "line": 49
         },
         {
           "kind": "kafka",
           "target": "privacy.export.ready",
           "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "line": 56
+          "line": 50
         },
         {
           "kind": "db.read",
           "target": "user_documents",
           "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 14
+          "line": 11
         },
         {
           "kind": "http",
           "target": "document-ai",
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 15
+          "line": 12
         },
         {
           "kind": "db.read",
           "target": "country_codes",
           "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "db.read",
           "target": "user_profiles",
           "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
-          "line": 20
+          "line": 17
         },
         {
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "change": "unchanged",
@@ -5436,13 +5319,13 @@
           "kind": "outbox",
           "target": "birth_info.source_resolved",
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 24
+          "line": 22
         },
         {
           "kind": "db.read",
           "target": "birth_info_consents",
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 15
+          "line": 11
         }
       ],
       "effectsRemoved": []
@@ -5459,13 +5342,13 @@
           "kind": "db.write",
           "target": "user_profiles",
           "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "line": 61
+          "line": 55
         },
         {
           "kind": "db.write",
           "target": "user_documents",
           "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "line": 62
+          "line": 56
         }
       ],
       "change": "unchanged",
@@ -5505,14 +5388,14 @@
           "id": "s1",
           "kind": "call",
           "target": "IdentityModule.fetchIdentity",
-          "line": 19,
+          "line": 16,
           "file": "sample-service/src/modules/admin/IdentityReviewModule.ts"
         },
         {
           "id": "s2",
           "kind": "call",
           "target": "BirthInfoModule.resolve",
-          "line": 20,
+          "line": 17,
           "file": "sample-service/src/modules/admin/IdentityReviewModule.ts"
         },
         {
@@ -5522,9 +5405,9 @@
             "kind": "db.read",
             "target": "review_notes",
             "file": "sample-service/src/modules/admin/IdentityReviewModule.ts",
-            "line": 21
+            "line": 18
           },
-          "line": 21,
+          "line": 18,
           "file": "sample-service/src/modules/admin/IdentityReviewModule.ts"
         }
       ],
@@ -5608,9 +5491,9 @@
             "kind": "db.read",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 15
+            "line": 11
           },
-          "line": 15,
+          "line": 11,
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts"
         }
       ],
@@ -5656,9 +5539,9 @@
             "kind": "db.write",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 20
+            "line": 16
           },
-          "line": 20,
+          "line": 16,
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts"
         },
         {
@@ -5668,9 +5551,9 @@
             "kind": "db.write",
             "target": "birth_info_consents",
             "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-            "line": 21
+            "line": 17
           },
-          "line": 21,
+          "line": 17,
           "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts"
         }
       ],
@@ -5729,7 +5612,7 @@
           "id": "s1",
           "kind": "call",
           "target": "BirthConsentStore.findActiveConsent",
-          "line": 20,
+          "line": 18,
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts"
         },
         {
@@ -5739,9 +5622,9 @@
             "kind": "outbox",
             "target": "birth_info.source_resolved",
             "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-            "line": 24
+            "line": 22
           },
-          "line": 24,
+          "line": 22,
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
           "condition": "if (consented)"
         },
@@ -5749,7 +5632,7 @@
           "id": "s3",
           "kind": "call",
           "target": "DocumentBirthExtractor.fromIdentity",
-          "line": 27,
+          "line": 25,
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
           "condition": "unless (consented)"
         }
@@ -5827,7 +5710,7 @@
           "id": "s1",
           "kind": "call",
           "target": "BirthConsentStore.recordConsent",
-          "line": 31,
+          "line": 29,
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts"
         }
       ],
@@ -5887,16 +5770,16 @@
             "kind": "db.read",
             "target": "kyc_results",
             "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
-            "line": 20
+            "line": 16
           },
-          "line": 20,
+          "line": 16,
           "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts"
         },
         {
           "id": "s2",
           "kind": "call",
           "target": "TaxResidencyModule.assess",
-          "line": 22,
+          "line": 18,
           "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
           "loop": true
         },
@@ -5907,9 +5790,9 @@
             "kind": "http",
             "target": "regulator-reporting",
             "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
-            "line": 23
+            "line": 19
           },
-          "line": 23,
+          "line": 19,
           "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts"
         }
       ],
@@ -5984,9 +5867,9 @@
             "kind": "http",
             "target": "document-ai",
             "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-            "line": 15
+            "line": 12
           },
-          "line": 15,
+          "line": 12,
           "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
           "condition": "unless (documents.length === 0)"
         }
@@ -6024,9 +5907,9 @@
             "kind": "db.read",
             "target": "user_documents",
             "file": "sample-service/src/modules/identity/DocumentStore.ts",
-            "line": 14
+            "line": 11
           },
-          "line": 14,
+          "line": 11,
           "file": "sample-service/src/modules/identity/DocumentStore.ts"
         }
       ],
@@ -6095,14 +5978,14 @@
           "id": "s1",
           "kind": "call",
           "target": "DocumentStore.latestDocuments",
-          "line": 18,
+          "line": 16,
           "file": "sample-service/src/modules/identity/IdentityModule.ts"
         },
         {
           "id": "s2",
           "kind": "call",
           "target": "DocumentExtractor.extract",
-          "line": 19,
+          "line": 17,
           "file": "sample-service/src/modules/identity/IdentityModule.ts"
         }
       ],
@@ -6163,28 +6046,28 @@
           "id": "s1",
           "kind": "call",
           "target": "IdentityModule.fetchIdentity",
-          "line": 36,
+          "line": 30,
           "file": "sample-service/src/modules/kyc/KycModule.ts"
         },
         {
           "id": "s2",
           "kind": "call",
           "target": "BirthInfoModule.resolve",
-          "line": 37,
+          "line": 31,
           "file": "sample-service/src/modules/kyc/KycModule.ts"
         },
         {
           "id": "s3",
           "kind": "call",
           "target": "NationalityModule.resolve",
-          "line": 37,
+          "line": 31,
           "file": "sample-service/src/modules/kyc/KycModule.ts"
         },
         {
           "id": "s4",
           "kind": "call",
           "target": "SanctionsScreening.screen",
-          "line": 38,
+          "line": 32,
           "file": "sample-service/src/modules/kyc/KycModule.ts"
         },
         {
@@ -6194,9 +6077,9 @@
             "kind": "db.write",
             "target": "kyc_results",
             "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 44
+            "line": 38
           },
-          "line": 44,
+          "line": 38,
           "file": "sample-service/src/modules/kyc/KycModule.ts"
         },
         {
@@ -6206,9 +6089,9 @@
             "kind": "outbox",
             "target": "kyc.completed",
             "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 45
+            "line": 39
           },
-          "line": 45,
+          "line": 39,
           "file": "sample-service/src/modules/kyc/KycModule.ts"
         }
       ],
@@ -6324,9 +6207,9 @@
             "kind": "db.read",
             "target": "kyc_results",
             "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 50
+            "line": 44
           },
-          "line": 50,
+          "line": 44,
           "file": "sample-service/src/modules/kyc/KycModule.ts"
         }
       ],
@@ -6382,9 +6265,9 @@
             "kind": "db.write",
             "target": "kyc_results",
             "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 55
+            "line": 49
           },
-          "line": 55,
+          "line": 49,
           "file": "sample-service/src/modules/kyc/KycModule.ts"
         },
         {
@@ -6394,9 +6277,9 @@
             "kind": "outbox",
             "target": "kyc.overridden",
             "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 56
+            "line": 50
           },
-          "line": 56,
+          "line": 50,
           "file": "sample-service/src/modules/kyc/KycModule.ts"
         }
       ],
@@ -6439,16 +6322,16 @@
             "kind": "db.read",
             "target": "kyc_results",
             "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 61
+            "line": 55
           },
-          "line": 61,
+          "line": 55,
           "file": "sample-service/src/modules/kyc/KycModule.ts"
         },
         {
           "id": "s2",
           "kind": "call",
           "target": "IdentityModule.fetchIdentity",
-          "line": 36,
+          "line": 30,
           "file": "sample-service/src/modules/kyc/KycModule.ts",
           "loop": true,
           "via": "KycModule.runCheck"
@@ -6457,7 +6340,7 @@
           "id": "s3",
           "kind": "call",
           "target": "BirthInfoModule.resolve",
-          "line": 37,
+          "line": 31,
           "file": "sample-service/src/modules/kyc/KycModule.ts",
           "loop": true,
           "via": "KycModule.runCheck"
@@ -6466,7 +6349,7 @@
           "id": "s4",
           "kind": "call",
           "target": "NationalityModule.resolve",
-          "line": 37,
+          "line": 31,
           "file": "sample-service/src/modules/kyc/KycModule.ts",
           "loop": true,
           "via": "KycModule.runCheck"
@@ -6475,7 +6358,7 @@
           "id": "s5",
           "kind": "call",
           "target": "SanctionsScreening.screen",
-          "line": 38,
+          "line": 32,
           "file": "sample-service/src/modules/kyc/KycModule.ts",
           "loop": true,
           "via": "KycModule.runCheck"
@@ -6487,9 +6370,9 @@
             "kind": "db.write",
             "target": "kyc_results",
             "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 44
+            "line": 38
           },
-          "line": 44,
+          "line": 38,
           "file": "sample-service/src/modules/kyc/KycModule.ts",
           "loop": true,
           "via": "KycModule.runCheck"
@@ -6501,9 +6384,9 @@
             "kind": "outbox",
             "target": "kyc.completed",
             "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 45
+            "line": 39
           },
-          "line": 45,
+          "line": 39,
           "file": "sample-service/src/modules/kyc/KycModule.ts",
           "loop": true,
           "via": "KycModule.runCheck"
@@ -6622,9 +6505,9 @@
             "kind": "http",
             "target": "sanctions-api",
             "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
-            "line": 18
+            "line": 15
           },
-          "line": 18,
+          "line": 15,
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts"
         }
       ],
@@ -6675,9 +6558,9 @@
             "kind": "db.read",
             "target": "country_codes",
             "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-            "line": 20
+            "line": 17
           },
-          "line": 20,
+          "line": 17,
           "file": "sample-service/src/modules/nationality/NationalityModule.ts"
         }
       ],
@@ -6722,7 +6605,7 @@
           "id": "s1",
           "kind": "call",
           "target": "KycModule.runCheck",
-          "line": 20,
+          "line": 16,
           "file": "sample-service/src/modules/onboarding/OnboardingModule.ts"
         },
         {
@@ -6732,9 +6615,9 @@
             "kind": "db.write",
             "target": "users",
             "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
-            "line": 22
+            "line": 18
           },
-          "line": 22,
+          "line": 18,
           "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
           "condition": "unless (kyc.status !== 'passed')"
         },
@@ -6745,9 +6628,9 @@
             "kind": "kafka",
             "target": "user.onboarded",
             "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
-            "line": 23
+            "line": 19
           },
-          "line": 23,
+          "line": 19,
           "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
           "condition": "unless (kyc.status !== 'passed')"
         }
@@ -6832,9 +6715,9 @@
             "kind": "db.read",
             "target": "user_profiles",
             "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
-            "line": 20
+            "line": 17
           },
-          "line": 20,
+          "line": 17,
           "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts"
         }
       ],
@@ -6887,28 +6770,28 @@
           "id": "s1",
           "kind": "call",
           "target": "IdentityModule.fetchIdentity",
-          "line": 28,
+          "line": 22,
           "file": "sample-service/src/modules/profile/ProfileService.ts"
         },
         {
           "id": "s2",
           "kind": "call",
           "target": "NationalityModule.resolve",
-          "line": 30,
+          "line": 24,
           "file": "sample-service/src/modules/profile/ProfileService.ts"
         },
         {
           "id": "s3",
           "kind": "call",
           "target": "PersonalDetailsModule.resolve",
-          "line": 31,
+          "line": 25,
           "file": "sample-service/src/modules/profile/ProfileService.ts"
         },
         {
           "id": "s4",
           "kind": "call",
           "target": "BirthInfoModule.resolve",
-          "line": 32,
+          "line": 26,
           "file": "sample-service/src/modules/profile/ProfileService.ts"
         }
       ],
@@ -6989,14 +6872,14 @@
           "id": "s1",
           "kind": "call",
           "target": "IdentityModule.fetchIdentity",
-          "line": 38,
+          "line": 32,
           "file": "sample-service/src/modules/profile/ProfileService.ts"
         },
         {
           "id": "s2",
           "kind": "call",
           "target": "PersonalDetailsModule.resolve",
-          "line": 39,
+          "line": 33,
           "file": "sample-service/src/modules/profile/ProfileService.ts"
         }
       ],
@@ -7057,14 +6940,14 @@
           "id": "s1",
           "kind": "call",
           "target": "IdentityModule.fetchIdentity",
-          "line": 44,
+          "line": 38,
           "file": "sample-service/src/modules/profile/ProfileService.ts"
         },
         {
           "id": "s2",
           "kind": "call",
           "target": "NationalityModule.resolve",
-          "line": 45,
+          "line": 39,
           "file": "sample-service/src/modules/profile/ProfileService.ts"
         }
       ],
@@ -7118,14 +7001,14 @@
           "id": "s1",
           "kind": "call",
           "target": "IdentityModule.fetchIdentity",
-          "line": 49,
+          "line": 43,
           "file": "sample-service/src/modules/profile/ProfileService.ts"
         },
         {
           "id": "s2",
           "kind": "call",
           "target": "BirthInfoModule.resolve",
-          "line": 50,
+          "line": 44,
           "file": "sample-service/src/modules/profile/ProfileService.ts"
         }
       ],
@@ -7171,7 +7054,7 @@
           "id": "s1",
           "kind": "call",
           "target": "IdentityModule.fetchIdentity",
-          "line": 28,
+          "line": 22,
           "file": "sample-service/src/modules/profile/ProfileService.ts",
           "via": "ProfileService.getProfile"
         },
@@ -7179,7 +7062,7 @@
           "id": "s2",
           "kind": "call",
           "target": "NationalityModule.resolve",
-          "line": 30,
+          "line": 24,
           "file": "sample-service/src/modules/profile/ProfileService.ts",
           "via": "ProfileService.getProfile"
         },
@@ -7187,7 +7070,7 @@
           "id": "s3",
           "kind": "call",
           "target": "PersonalDetailsModule.resolve",
-          "line": 31,
+          "line": 25,
           "file": "sample-service/src/modules/profile/ProfileService.ts",
           "via": "ProfileService.getProfile"
         },
@@ -7195,7 +7078,7 @@
           "id": "s4",
           "kind": "call",
           "target": "BirthInfoModule.resolve",
-          "line": 32,
+          "line": 26,
           "file": "sample-service/src/modules/profile/ProfileService.ts",
           "via": "ProfileService.getProfile"
         },
@@ -7206,9 +7089,9 @@
             "kind": "db.write",
             "target": "gdpr_exports",
             "file": "sample-service/src/modules/profile/ProfileService.ts",
-            "line": 55
+            "line": 49
           },
-          "line": 55,
+          "line": 49,
           "file": "sample-service/src/modules/profile/ProfileService.ts"
         },
         {
@@ -7218,9 +7101,9 @@
             "kind": "kafka",
             "target": "privacy.export.ready",
             "file": "sample-service/src/modules/profile/ProfileService.ts",
-            "line": 56
+            "line": 50
           },
-          "line": 56,
+          "line": 50,
           "file": "sample-service/src/modules/profile/ProfileService.ts"
         }
       ],
@@ -7322,9 +7205,9 @@
             "kind": "db.write",
             "target": "user_profiles",
             "file": "sample-service/src/modules/profile/ProfileService.ts",
-            "line": 61
+            "line": 55
           },
-          "line": 61,
+          "line": 55,
           "file": "sample-service/src/modules/profile/ProfileService.ts"
         },
         {
@@ -7334,9 +7217,9 @@
             "kind": "db.write",
             "target": "user_documents",
             "file": "sample-service/src/modules/profile/ProfileService.ts",
-            "line": 62
+            "line": 56
           },
-          "line": 62,
+          "line": 56,
           "file": "sample-service/src/modules/profile/ProfileService.ts"
         }
       ],
@@ -7395,21 +7278,21 @@
           "id": "s1",
           "kind": "call",
           "target": "IdentityModule.fetchIdentity",
-          "line": 30,
+          "line": 24,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts"
         },
         {
           "id": "s2",
           "kind": "call",
           "target": "BirthInfoModule.resolve",
-          "line": 31,
+          "line": 25,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts"
         },
         {
           "id": "s3",
           "kind": "call",
           "target": "NationalityModule.resolve",
-          "line": 32,
+          "line": 26,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts"
         },
         {
@@ -7419,9 +7302,9 @@
             "kind": "db.read",
             "target": "tax_declarations",
             "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-            "line": 33
+            "line": 27
           },
-          "line": 33,
+          "line": 27,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts"
         },
         {
@@ -7431,9 +7314,9 @@
             "kind": "db.write",
             "target": "tax_residency_assessments",
             "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-            "line": 36
+            "line": 30
           },
-          "line": 36,
+          "line": 30,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts"
         }
       ],
@@ -7548,16 +7431,16 @@
             "kind": "db.write",
             "target": "tax_declarations",
             "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-            "line": 41
+            "line": 35
           },
-          "line": 41,
+          "line": 35,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts"
         },
         {
           "id": "s2",
           "kind": "call",
           "target": "IdentityModule.fetchIdentity",
-          "line": 30,
+          "line": 24,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
           "via": "TaxResidencyModule.assess"
         },
@@ -7565,7 +7448,7 @@
           "id": "s3",
           "kind": "call",
           "target": "BirthInfoModule.resolve",
-          "line": 31,
+          "line": 25,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
           "via": "TaxResidencyModule.assess"
         },
@@ -7573,7 +7456,7 @@
           "id": "s4",
           "kind": "call",
           "target": "NationalityModule.resolve",
-          "line": 32,
+          "line": 26,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
           "via": "TaxResidencyModule.assess"
         },
@@ -7584,9 +7467,9 @@
             "kind": "db.read",
             "target": "tax_declarations",
             "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-            "line": 33
+            "line": 27
           },
-          "line": 33,
+          "line": 27,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
           "via": "TaxResidencyModule.assess"
         },
@@ -7597,9 +7480,9 @@
             "kind": "db.write",
             "target": "tax_residency_assessments",
             "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-            "line": 36
+            "line": 30
           },
-          "line": 36,
+          "line": 30,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
           "via": "TaxResidencyModule.assess"
         }
@@ -7703,16 +7586,16 @@
             "kind": "db.read",
             "target": "tax_residency_assessments",
             "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-            "line": 46
+            "line": 40
           },
-          "line": 46,
+          "line": 40,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts"
         },
         {
           "id": "s2",
           "kind": "call",
           "target": "IdentityModule.fetchIdentity",
-          "line": 30,
+          "line": 24,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
           "loop": true,
           "via": "TaxResidencyModule.assess"
@@ -7721,7 +7604,7 @@
           "id": "s3",
           "kind": "call",
           "target": "BirthInfoModule.resolve",
-          "line": 31,
+          "line": 25,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
           "loop": true,
           "via": "TaxResidencyModule.assess"
@@ -7730,7 +7613,7 @@
           "id": "s4",
           "kind": "call",
           "target": "NationalityModule.resolve",
-          "line": 32,
+          "line": 26,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
           "loop": true,
           "via": "TaxResidencyModule.assess"
@@ -7742,9 +7625,9 @@
             "kind": "db.read",
             "target": "tax_declarations",
             "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-            "line": 33
+            "line": 27
           },
-          "line": 33,
+          "line": 27,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
           "loop": true,
           "via": "TaxResidencyModule.assess"
@@ -7756,9 +7639,9 @@
             "kind": "db.write",
             "target": "tax_residency_assessments",
             "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-            "line": 36
+            "line": 30
           },
-          "line": 36,
+          "line": 30,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
           "loop": true,
           "via": "TaxResidencyModule.assess"
@@ -7855,21 +7738,21 @@
           "id": "s1",
           "kind": "call",
           "target": "IdentityModule.fetchIdentity",
-          "line": 26,
+          "line": 22,
           "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
         },
         {
           "id": "s2",
           "kind": "call",
           "target": "NationalityModule.resolve",
-          "line": 27,
+          "line": 23,
           "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
         },
         {
           "id": "s3",
           "kind": "call",
           "target": "BirthInfoModule.resolve",
-          "line": 27,
+          "line": 23,
           "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
         },
         {
@@ -7879,9 +7762,9 @@
             "kind": "http",
             "target": "visa-rules-service",
             "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
-            "line": 29
+            "line": 25
           },
-          "line": 29,
+          "line": 25,
           "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
         }
       ],
@@ -7980,28 +7863,28 @@
           "id": "s1",
           "kind": "call",
           "target": "IdentityModule.fetchIdentity",
-          "line": 34,
+          "line": 30,
           "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
         },
         {
           "id": "s2",
           "kind": "call",
           "target": "PersonalDetailsModule.resolve",
-          "line": 36,
+          "line": 32,
           "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
         },
         {
           "id": "s3",
           "kind": "call",
           "target": "BirthInfoModule.resolve",
-          "line": 37,
+          "line": 33,
           "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
         },
         {
           "id": "s4",
           "kind": "call",
           "target": "NationalityModule.resolve",
-          "line": 38,
+          "line": 34,
           "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
         },
         {
@@ -8011,9 +7894,9 @@
             "kind": "db.write",
             "target": "passport_prefills",
             "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
-            "line": 41
+            "line": 37
           },
-          "line": 41,
+          "line": 37,
           "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts"
         }
       ],
@@ -9310,17 +9193,6 @@
   },
   "findings": [
     {
-      "rule": "undeclared-effect",
-      "severity": "error",
-      "message": "BirthInfo performs outbox `birth_info.source_resolved` but its contract does not declare it",
-      "subject": {
-        "type": "module",
-        "id": "BirthInfoModule"
-      },
-      "isNew": true,
-      "hint": "Declare it with `@effect outbox birth_info.source_resolved` on BirthInfoModule, or move the side effect to the module that owns it."
-    },
-    {
       "rule": "table-ownership",
       "severity": "error",
       "message": "ProfileAssembler.purge writes `user_profiles`, which is owned by PersonalDetails",
@@ -9405,6 +9277,38 @@
       "hint": "Reads that write break caching, retries and replica routing. Move the write to a command path or make it explicit in the API contract."
     },
     {
+      "rule": "new-side-effect",
+      "severity": "info",
+      "message": "BirthConsentStore.findActiveConsent now performs db.read `birth_info_consents` (new operation)",
+      "subject": {
+        "type": "operation",
+        "id": "BirthConsentStore.findActiveConsent"
+      },
+      "isNew": true
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "warning",
+      "message": "BirthConsentStore.recordConsent now performs db.write `birth_info_consents` (new operation)",
+      "subject": {
+        "type": "operation",
+        "id": "BirthConsentStore.recordConsent"
+      },
+      "isNew": true,
+      "hint": "A new write runs on every flow that reaches this module. Check the zoom-out view."
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "warning",
+      "message": "BirthInfo.resolve now performs outbox `birth_info.source_resolved`",
+      "subject": {
+        "type": "operation",
+        "id": "BirthInfoModule.resolve"
+      },
+      "isNew": true,
+      "hint": "A new write runs on every flow that reaches this module. Check the zoom-out view."
+    },
+    {
       "rule": "unattributed-change",
       "severity": "info",
       "message": "3 changed files outside any module: src/app.ts, dev/seed.ts, birth-info/types.ts",
@@ -9483,7 +9387,7 @@
     ],
     "stats": {
       "files": 7,
-      "linesAdded": 61,
+      "linesAdded": 57,
       "linesRemoved": 4,
       "contractChanges": 5,
       "entryPointsAffected": 22
