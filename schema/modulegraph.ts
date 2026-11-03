@@ -51,6 +51,8 @@ export interface Source {
   title?: string;
   /** Stated intent (PR description). Used to flag undisclosed side effects. */
   intent?: string;
+  /** Scenario that was run against the head revision to capture example inputs/outputs. */
+  examples?: { scenario: string; operationsCovered: number };
   files: FileChange[];
 }
 
@@ -99,7 +101,16 @@ export interface Operation {
   delta?: ContractDelta;
   /** Line diff of this operation (base vs head), when changed. */
   diff?: DiffLine[];
+  /** Real calls recorded while running the scenario on the head revision (up to 3 distinct). */
+  examples?: Example[];
   source: string;
+}
+
+export interface Example {
+  /** Argument values keyed by parameter name. */
+  input: Record<string, unknown>;
+  output?: unknown;
+  error?: string;
 }
 
 export interface DiffLine {

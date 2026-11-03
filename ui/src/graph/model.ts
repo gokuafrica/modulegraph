@@ -1,7 +1,7 @@
 import type { Effect, EntryPoint, ModuleGraph, Operation, Param, Step } from '../../../schema/modulegraph.ts';
 
-export type NodeKind = 'module' | 'effect' | 'entry' | 'exit' | 'resource' | 'entrygroup' | 'code';
-export type EdgeKind = 'data' | 'control' | 'call' | 'read' | 'write';
+export type NodeKind = 'module' | 'effect' | 'entry' | 'exit' | 'resource' | 'entrygroup' | 'code' | 'decision';
+export type EdgeKind = 'data' | 'control' | 'call' | 'read' | 'write' | 'branch';
 
 export interface VNode {
   id: string;
@@ -127,18 +127,38 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
   const rootEntry = g.entryPoints[scopeId];
   const innerOp = g.operations[chain.at(-1)!];
 
-  if (rootEntry) nodes.push(entryNode(g, rootEntry, '__entry', { via: via.join(' › ') || undefined }));
-  else {
+  const examples = innerOp?.examples;
+  const exampleParams = innerOp && examples?.length ? innerOp.params.map((p) => p.name) : [];
+  if (rootEntry) {
+    const node = entryNode(g, rootEntry, '__entry', { via: via.join(' › ') || undefined, examples, exampleParams });
+    node.height += exampleParams.length ? 22 + exampleParams.length * 16 : 0;
+    nodes.push(node);
+  } else {
     nodes.push({
       id: '__entry',
       type: 'entry',
-      width: 230,
-      height: 50 + scope.params.length * 18,
-      data: { kind: 'input', label: `${opTitle(g, chain.at(-1)!)}(…)`, params: scope.params, change: 'unchanged', paramsDelta: innerOp?.delta?.params },
+      width: 260,
+      height: 50 + scope.params.length * 18 + (exampleParams.length ? 22 + exampleParams.length * 16 : 0),
+      data: { kind: 'input', label: `${opTitle(g, chain.at(-1)!)}(…)`, params: scope.params, change: 'unchanged', paramsDelta: innerOp?.delta?.params, examples, exampleParams },
     });
   }
 
-  for (const step of scope.steps) nodes.push(stepNode(g, step, opts.focusOp, opts.focusPath));
+  // Steps guarded by `if (x)` / `unless (x)` hang off one decision node per condition, so exclusive
+  // branches read as yes/no instead of two parallel arrows.
+  const branchOf = new Map<string, { dec: string; branch: 'yes' | 'no' }>();
+  const decisions = new Map<string, string>();
+  for (const step of scope.steps) {
+    const m = /^(if|unless) \((.+)\)$/.exec(step.condition ?? '');
+    if (!m || step.condition!.includes(') and ')) continue;
+    if (!decisions.has(m[2])) decisions.set(m[2], `__dec${decisions.size}`);
+    branchOf.set(step.id, { dec: decisions.get(m[2])!, branch: m[1] === 'if' ? 'yes' : 'no' });
+  }
+  for (const [cond, id] of decisions) {
+    nodes.push({ id, type: 'decision', width: Math.max(130, cond.length * 7.5 + 40), height: 46, data: { label: `${cond}?` } });
+  }
+  for (const step of scope.steps) {
+    nodes.push(stepNode(g, branchOf.has(step.id) ? { ...step, condition: undefined } : step, opts.focusOp, opts.focusPath));
+  }
   if (scope.steps.length === 0 && innerOp) {
     const lines = innerOp.source.split('\n').length;
     nodes.push({ id: '__code', type: 'code', width: 420, height: Math.min(60 + lines * 15, 340), data: { opId: innerOp.id, source: innerOp.source, diff: innerOp.diff } });
@@ -147,12 +167,14 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
 
   const returns = scope.returns;
   const before = innerOp?.delta?.returns?.before.fields;
+  const exampleKeys = Math.max(0, ...(examples ?? []).map((e) => exampleKeyCount(e.output ?? e.error)));
   nodes.push({
     id: '__exit',
     type: 'exit',
-    width: 230,
-    height: 46 + Math.min(returns?.fields?.length ?? 1, 8) * 18,
+    width: examples?.length ? 300 : 230,
+    height: 46 + Math.min(returns?.fields?.length ?? 1, 8) * 18 + (examples?.length ? 24 + Math.min(exampleKeys, 9) * 16 : 0),
     data: {
+      examples,
       label: rootEntry ? exitLabel[rootEntry.kind] : 'returns',
       type: returns?.type ?? 'void',
       fields: fieldsWithDelta(returns?.fields, innerOp?.delta?.returns ? before : undefined),
@@ -161,7 +183,19 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
 
   const mapId = (id: string) => (id === 'entry' ? '__entry' : id === 'exit' ? '__exit' : id);
   for (const e of scope.edges) {
+    const branch = branchOf.get(e.to);
+    if (branch && e.kind === 'control') {
+      // the guard's inputs feed the decision, not the guarded step
+      edges.push({ id: `e:${e.from}-${branch.dec}`, source: mapId(e.from), target: branch.dec, kind: 'control' });
+      continue;
+    }
     edges.push({ id: `e:${e.from}-${e.to}`, source: mapId(e.from), target: mapId(e.to), kind: e.kind, label: e.label });
+  }
+  for (const id of decisions.values()) {
+    if (!edges.some((e) => e.target === id)) edges.push({ id: `e:entry-${id}`, source: '__entry', target: id, kind: 'control' });
+  }
+  for (const [stepId, { dec, branch }] of branchOf) {
+    edges.push({ id: `e:${dec}-${stepId}`, source: dec, target: stepId, kind: 'branch', label: branch });
   }
 
   if (opts.showResources) {
@@ -178,7 +212,7 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
       }
     }
   }
-  return { nodes, edges, chain };
+  return { nodes, edges: [...new Map(edges.map((e) => [e.id, e])).values()], chain };
 }
 
 function stepNode(g: ModuleGraph, step: Step, focusOp?: string, focusPath?: Set<string>): VNode {
@@ -319,9 +353,9 @@ export function impactModel(g: ModuleGraph, index: CallerIndex, opId: string, op
   const opsByModule = new Map<string, string[]>();
   for (const id of visible) {
     if (g.entryPoints[id]) {
-      if (!groupFor.has(id)) nodes.push(entryNode(g, g.entryPoints[id], id));
+      if (!groupFor.has(id)) nodes.push(entryNode(g, g.entryPoints[id], id, { compact: true }));
     } else if (id === opId) {
-      nodes.push(moduleNode(g, id, id, { focus: true, reach: index.reach.get(id)?.size ?? 0 }));
+      nodes.push(moduleNode(g, id, id, { focus: true, inImpact: true, reach: index.reach.get(id)?.size ?? 0 }));
     } else {
       opsByModule.set(nodeOf(id), [...(opsByModule.get(nodeOf(id)) ?? []), id]);
     }
@@ -357,4 +391,9 @@ export function impactModel(g: ModuleGraph, index: CallerIndex, opId: string, op
     entriesShown: entries.length,
     entriesTotal: index.reach.get(opId)?.size ?? 0,
   };
+}
+
+/** Lines an example value takes in a node: one per top-level key (objects) or one line. */
+export function exampleKeyCount(value: unknown): number {
+  return value && typeof value === 'object' && !Array.isArray(value) ? Object.keys(value).length : 1;
 }

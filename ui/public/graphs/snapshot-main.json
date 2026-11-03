@@ -1,14 +1,18 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-10-30T22:54:30.014Z",
+  "generatedAt": "2026-11-03T21:57:59.266Z",
   "generator": "modulegraph-analyzer/0.1 (ts-morph)",
   "source": {
     "mode": "snapshot",
     "repo": ".",
     "project": "sample-service",
     "files": [],
-    "title": "Snapshot: identity-profile-service (main)"
+    "title": "Snapshot: identity-profile-service (main)",
+    "examples": {
+      "scenario": "sample-service/src/dev/scenario.ts",
+      "operationsCovered": 25
+    }
   },
   "modules": {
     "IdentityReviewModule": {
@@ -406,7 +410,57 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async review(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  const birth = await this.birthInfo.resolve(identity);\n  const notes = await this.db.select('review_notes', { userId });\n  return { identity, birth, notes };\n}"
+      "source": "async review(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  const birth = await this.birthInfo.resolve(identity);\n  const notes = await this.db.select('review_notes', { userId });\n  return { identity, birth, notes };\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "identity": {
+              "fullName": "Ana Silva",
+              "dateOfBirth": "1990-04-12",
+              "nationality": "PRT",
+              "countryOfBirth": "PRT",
+              "cityOfBirth": "Porto",
+              "userId": "u-1",
+              "documentIds": [
+                "doc-u-1"
+              ],
+              "extractedAt": "2026-11-03T21:57:59.204Z"
+            },
+            "birth": {
+              "countryOfBirth": "PRT",
+              "cityOfBirth": "Porto"
+            },
+            "notes": []
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "identity": {
+              "fullName": "Raj Patel",
+              "dateOfBirth": "1988-09-30",
+              "nationality": "IND",
+              "countryOfBirth": "IND",
+              "cityOfBirth": "Bombay",
+              "userId": "u-2",
+              "documentIds": [
+                "doc-u-2"
+              ],
+              "extractedAt": "2026-11-03T21:57:59.205Z"
+            },
+            "birth": {
+              "countryOfBirth": "IND",
+              "cityOfBirth": "Bombay"
+            },
+            "notes": []
+          }
+        }
+      ]
     },
     "BirthInfoModule.resolve": {
       "id": "BirthInfoModule.resolve",
@@ -441,7 +495,49 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async resolve(identity: IdentityData): Promise<BirthInfo> {\n  return this.documentBirth.fromIdentity(identity);\n}"
+      "source": "async resolve(identity: IdentityData): Promise<BirthInfo> {\n  return this.documentBirth.fromIdentity(identity);\n}",
+      "examples": [
+        {
+          "input": {
+            "identity": {
+              "fullName": "Ana Silva",
+              "dateOfBirth": "1990-04-12",
+              "nationality": "PRT",
+              "countryOfBirth": "PRT",
+              "cityOfBirth": "Porto",
+              "userId": "u-1",
+              "documentIds": [
+                "doc-u-1"
+              ],
+              "extractedAt": "2026-11-03T21:57:59.202Z"
+            }
+          },
+          "output": {
+            "countryOfBirth": "PRT",
+            "cityOfBirth": "Porto"
+          }
+        },
+        {
+          "input": {
+            "identity": {
+              "fullName": "Raj Patel",
+              "dateOfBirth": "1988-09-30",
+              "nationality": "IND",
+              "countryOfBirth": "IND",
+              "cityOfBirth": "Bombay",
+              "userId": "u-2",
+              "documentIds": [
+                "doc-u-2"
+              ],
+              "extractedAt": "2026-11-03T21:57:59.204Z"
+            }
+          },
+          "output": {
+            "countryOfBirth": "IND",
+            "cityOfBirth": "Bombay"
+          }
+        }
+      ]
     },
     "DocumentBirthExtractor.fromIdentity": {
       "id": "DocumentBirthExtractor.fromIdentity",
@@ -474,7 +570,49 @@
       "calls": [],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "fromIdentity(identity: IdentityData): BirthInfo {\n  return { countryOfBirth: identity.countryOfBirth, cityOfBirth: identity.cityOfBirth };\n}"
+      "source": "fromIdentity(identity: IdentityData): BirthInfo {\n  return { countryOfBirth: identity.countryOfBirth, cityOfBirth: identity.cityOfBirth };\n}",
+      "examples": [
+        {
+          "input": {
+            "identity": {
+              "fullName": "Ana Silva",
+              "dateOfBirth": "1990-04-12",
+              "nationality": "PRT",
+              "countryOfBirth": "PRT",
+              "cityOfBirth": "Porto",
+              "userId": "u-1",
+              "documentIds": [
+                "doc-u-1"
+              ],
+              "extractedAt": "2026-11-03T21:57:59.202Z"
+            }
+          },
+          "output": {
+            "countryOfBirth": "PRT",
+            "cityOfBirth": "Porto"
+          }
+        },
+        {
+          "input": {
+            "identity": {
+              "fullName": "Raj Patel",
+              "dateOfBirth": "1988-09-30",
+              "nationality": "IND",
+              "countryOfBirth": "IND",
+              "cityOfBirth": "Bombay",
+              "userId": "u-2",
+              "documentIds": [
+                "doc-u-2"
+              ],
+              "extractedAt": "2026-11-03T21:57:59.204Z"
+            }
+          },
+          "output": {
+            "countryOfBirth": "IND",
+            "cityOfBirth": "Bombay"
+          }
+        }
+      ]
     },
     "ComplianceReportModule.generateMonthly": {
       "id": "ComplianceReportModule.generateMonthly",
@@ -550,7 +688,12 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async generateMonthly(): Promise<void> {\n  const results = await this.db.select('kyc_results', {});\n  const residencies: TaxResidency[] = [];\n  for (const row of results) residencies.push(await this.tax.assess(row.userId as string));\n  await this.http.post('regulator-reporting', '/v1/reports', { results, residencies });\n}"
+      "source": "async generateMonthly(): Promise<void> {\n  const results = await this.db.select('kyc_results', {});\n  const residencies: TaxResidency[] = [];\n  for (const row of results) residencies.push(await this.tax.assess(row.userId as string));\n  await this.http.post('regulator-reporting', '/v1/reports', { results, residencies });\n}",
+      "examples": [
+        {
+          "input": {}
+        }
+      ]
     },
     "DocumentExtractor.extract": {
       "id": "DocumentExtractor.extract",
@@ -609,7 +752,49 @@
       "calls": [],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async extract(documents: IdentityDocument[]): Promise<ExtractedFields> {\n  if (documents.length === 0) throw new Error('no identity documents on file');\n  return this.http.post<ExtractedFields>('document-ai', '/v2/extract', { fileRefs: documents.map((d) => d.fileRef) });\n}"
+      "source": "async extract(documents: IdentityDocument[]): Promise<ExtractedFields> {\n  if (documents.length === 0) throw new Error('no identity documents on file');\n  return this.http.post<ExtractedFields>('document-ai', '/v2/extract', { fileRefs: documents.map((d) => d.fileRef) });\n}",
+      "examples": [
+        {
+          "input": {
+            "documents": [
+              {
+                "id": "doc-u-1",
+                "userId": "u-1",
+                "kind": "passport",
+                "fileRef": "s3://docs/u-1.pdf",
+                "uploadedAt": "2026-10-01"
+              }
+            ]
+          },
+          "output": {
+            "fullName": "Ana Silva",
+            "dateOfBirth": "1990-04-12",
+            "nationality": "PRT",
+            "countryOfBirth": "PRT",
+            "cityOfBirth": "Porto"
+          }
+        },
+        {
+          "input": {
+            "documents": [
+              {
+                "id": "doc-u-2",
+                "userId": "u-2",
+                "kind": "passport",
+                "fileRef": "s3://docs/u-2.pdf",
+                "uploadedAt": "2026-10-01"
+              }
+            ]
+          },
+          "output": {
+            "fullName": "Raj Patel",
+            "dateOfBirth": "1988-09-30",
+            "nationality": "IND",
+            "countryOfBirth": "IND",
+            "cityOfBirth": "Bombay"
+          }
+        }
+      ]
     },
     "DocumentStore.latestDocuments": {
       "id": "DocumentStore.latestDocuments",
@@ -646,7 +831,37 @@
       "calls": [],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async latestDocuments(userId: string): Promise<IdentityDocument[]> {\n  const docs = await this.db.select<IdentityDocument & Record<string, unknown>>('user_documents', { userId });\n  return docs.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));\n}"
+      "source": "async latestDocuments(userId: string): Promise<IdentityDocument[]> {\n  const docs = await this.db.select<IdentityDocument & Record<string, unknown>>('user_documents', { userId });\n  return docs.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": [
+            {
+              "id": "doc-u-1",
+              "userId": "u-1",
+              "kind": "passport",
+              "fileRef": "s3://docs/u-1.pdf",
+              "uploadedAt": "2026-10-01"
+            }
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": [
+            {
+              "id": "doc-u-2",
+              "userId": "u-2",
+              "kind": "passport",
+              "fileRef": "s3://docs/u-2.pdf",
+              "uploadedAt": "2026-10-01"
+            }
+          ]
+        }
+      ]
     },
     "IdentityModule.fetchIdentity": {
       "id": "IdentityModule.fetchIdentity",
@@ -719,7 +934,43 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async fetchIdentity(userId: string): Promise<IdentityData> {\n  const docs = await this.documents.latestDocuments(userId);\n  const fields = await this.extractor.extract(docs);\n  return { ...fields, userId, documentIds: docs.map((d) => d.id), extractedAt: new Date().toISOString() };\n}"
+      "source": "async fetchIdentity(userId: string): Promise<IdentityData> {\n  const docs = await this.documents.latestDocuments(userId);\n  const fields = await this.extractor.extract(docs);\n  return { ...fields, userId, documentIds: docs.map((d) => d.id), extractedAt: new Date().toISOString() };\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "fullName": "Ana Silva",
+            "dateOfBirth": "1990-04-12",
+            "nationality": "PRT",
+            "countryOfBirth": "PRT",
+            "cityOfBirth": "Porto",
+            "userId": "u-1",
+            "documentIds": [
+              "doc-u-1"
+            ],
+            "extractedAt": "2026-11-03T21:57:59.202Z"
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "fullName": "Raj Patel",
+            "dateOfBirth": "1988-09-30",
+            "nationality": "IND",
+            "countryOfBirth": "IND",
+            "cityOfBirth": "Bombay",
+            "userId": "u-2",
+            "documentIds": [
+              "doc-u-2"
+            ],
+            "extractedAt": "2026-11-03T21:57:59.204Z"
+          }
+        }
+      ]
     },
     "KycModule.runCheck": {
       "id": "KycModule.runCheck",
@@ -811,7 +1062,29 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async runCheck(userId: string): Promise<KycResult> {\n  const identity = await this.identity.fetchIdentity(userId);\n  const [birth, nationality] = await Promise.all([this.birthInfo.resolve(identity), this.nationality.resolve(identity)]);\n  const screening = await this.sanctions.screen({\n    name: identity.fullName,\n    countryOfBirth: birth.countryOfBirth,\n    nationality: nationality.alpha3,\n  });\n  const result: KycResult = { userId, status: screening.hit ? 'failed' : 'passed', checkedAt: new Date().toISOString() };\n  await this.db.insert('kyc_results', { ...result });\n  await this.outbox.enqueue('kyc.completed', { ...result });\n  return result;\n}"
+      "source": "async runCheck(userId: string): Promise<KycResult> {\n  const identity = await this.identity.fetchIdentity(userId);\n  const [birth, nationality] = await Promise.all([this.birthInfo.resolve(identity), this.nationality.resolve(identity)]);\n  const screening = await this.sanctions.screen({\n    name: identity.fullName,\n    countryOfBirth: birth.countryOfBirth,\n    nationality: nationality.alpha3,\n  });\n  const result: KycResult = { userId, status: screening.hit ? 'failed' : 'passed', checkedAt: new Date().toISOString() };\n  await this.db.insert('kyc_results', { ...result });\n  await this.outbox.enqueue('kyc.completed', { ...result });\n  return result;\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "status": "passed",
+            "checkedAt": "2026-11-03T21:57:59.204Z"
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "status": "passed",
+            "checkedAt": "2026-11-03T21:57:59.205Z"
+          }
+        }
+      ]
     },
     "KycModule.getStatus": {
       "id": "KycModule.getStatus",
@@ -862,7 +1135,29 @@
       "calls": [],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async getStatus(userId: string): Promise<KycResult | undefined> {\n  const [latest] = await this.db.select<KycResult & Record<string, unknown>>('kyc_results', { userId });\n  return latest;\n}"
+      "source": "async getStatus(userId: string): Promise<KycResult | undefined> {\n  const [latest] = await this.db.select<KycResult & Record<string, unknown>>('kyc_results', { userId });\n  return latest;\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "status": "passed",
+            "checkedAt": "2026-11-03T21:57:59.204Z"
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "status": "passed",
+            "checkedAt": "2026-11-03T21:57:59.205Z"
+          }
+        }
+      ]
     },
     "KycModule.override": {
       "id": "KycModule.override",
@@ -929,7 +1224,20 @@
       "calls": [],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async override(userId: string, status: KycStatus, reviewer: string) {\n  await this.db.update('kyc_results', { userId }, { status, overriddenBy: reviewer });\n  await this.outbox.enqueue('kyc.overridden', { userId, status, reviewer });\n  return { userId, status };\n}"
+      "source": "async override(userId: string, status: KycStatus, reviewer: string) {\n  await this.db.update('kyc_results', { userId }, { status, overriddenBy: reviewer });\n  await this.outbox.enqueue('kyc.overridden', { userId, status, reviewer });\n  return { userId, status };\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-2",
+            "status": "passed",
+            "reviewer": "ops-17"
+          },
+          "output": {
+            "userId": "u-2",
+            "status": "passed"
+          }
+        }
+      ]
     },
     "KycModule.recheckExpired": {
       "id": "KycModule.recheckExpired",
@@ -1014,7 +1322,13 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async recheckExpired(): Promise<number> {\n  const expired = await this.db.select<KycResult & Record<string, unknown>>('kyc_results', { status: 'expired' });\n  for (const row of expired) await this.runCheck(row.userId);\n  return expired.length;\n}"
+      "source": "async recheckExpired(): Promise<number> {\n  const expired = await this.db.select<KycResult & Record<string, unknown>>('kyc_results', { status: 'expired' });\n  for (const row of expired) await this.runCheck(row.userId);\n  return expired.length;\n}",
+      "examples": [
+        {
+          "input": {},
+          "output": 0
+        }
+      ]
     },
     "SanctionsScreening.screen": {
       "id": "SanctionsScreening.screen",
@@ -1061,7 +1375,35 @@
       "calls": [],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async screen(person: { name: string; countryOfBirth: string; nationality: string }): Promise<ScreeningResult> {\n  return this.http.post<ScreeningResult>('sanctions-api', '/v1/screen', person);\n}"
+      "source": "async screen(person: { name: string; countryOfBirth: string; nationality: string }): Promise<ScreeningResult> {\n  return this.http.post<ScreeningResult>('sanctions-api', '/v1/screen', person);\n}",
+      "examples": [
+        {
+          "input": {
+            "person": {
+              "name": "Ana Silva",
+              "countryOfBirth": "PRT",
+              "nationality": "PRT"
+            }
+          },
+          "output": {
+            "hit": false,
+            "listVersion": "2026-10"
+          }
+        },
+        {
+          "input": {
+            "person": {
+              "name": "Raj Patel",
+              "countryOfBirth": "IND",
+              "nationality": "IND"
+            }
+          },
+          "output": {
+            "hit": false,
+            "listVersion": "2026-10"
+          }
+        }
+      ]
     },
     "NationalityModule.resolve": {
       "id": "NationalityModule.resolve",
@@ -1112,7 +1454,51 @@
       "calls": [],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async resolve(identity: IdentityData): Promise<Nationality> {\n  const [country] = await this.db.select<Nationality & Record<string, unknown>>('country_codes', { alpha3: identity.nationality });\n  return country ?? { alpha3: identity.nationality, name: identity.nationality, isEu: false };\n}"
+      "source": "async resolve(identity: IdentityData): Promise<Nationality> {\n  const [country] = await this.db.select<Nationality & Record<string, unknown>>('country_codes', { alpha3: identity.nationality });\n  return country ?? { alpha3: identity.nationality, name: identity.nationality, isEu: false };\n}",
+      "examples": [
+        {
+          "input": {
+            "identity": {
+              "fullName": "Ana Silva",
+              "dateOfBirth": "1990-04-12",
+              "nationality": "PRT",
+              "countryOfBirth": "PRT",
+              "cityOfBirth": "Porto",
+              "userId": "u-1",
+              "documentIds": [
+                "doc-u-1"
+              ],
+              "extractedAt": "2026-11-03T21:57:59.202Z"
+            }
+          },
+          "output": {
+            "alpha3": "PRT",
+            "name": "Portugal",
+            "isEu": true
+          }
+        },
+        {
+          "input": {
+            "identity": {
+              "fullName": "Raj Patel",
+              "dateOfBirth": "1988-09-30",
+              "nationality": "IND",
+              "countryOfBirth": "IND",
+              "cityOfBirth": "Bombay",
+              "userId": "u-2",
+              "documentIds": [
+                "doc-u-2"
+              ],
+              "extractedAt": "2026-11-03T21:57:59.204Z"
+            }
+          },
+          "output": {
+            "alpha3": "IND",
+            "name": "India",
+            "isEu": false
+          }
+        }
+      ]
     },
     "OnboardingModule.complete": {
       "id": "OnboardingModule.complete",
@@ -1209,7 +1595,18 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async complete(userId: string) {\n  const kyc = await this.kyc.runCheck(userId);\n  if (kyc.status !== 'passed') return { userId, onboarded: false };\n  await this.db.update('users', { userId }, { status: 'active' });\n  await this.kafka.produce('user.onboarded', { userId });\n  return { userId, onboarded: true };\n}"
+      "source": "async complete(userId: string) {\n  const kyc = await this.kyc.runCheck(userId);\n  if (kyc.status !== 'passed') return { userId, onboarded: false };\n  await this.db.update('users', { userId }, { status: 'active' });\n  await this.kafka.produce('user.onboarded', { userId });\n  return { userId, onboarded: true };\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "onboarded": true
+          }
+        }
+      ]
     },
     "PersonalDetailsModule.resolve": {
       "id": "PersonalDetailsModule.resolve",
@@ -1264,7 +1661,53 @@
       "calls": [],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async resolve(userId: string, identity: IdentityData): Promise<PersonalDetails> {\n  const [profile] = await this.db.select('user_profiles', { userId });\n  return {\n    legalName: identity.fullName,\n    preferredName: (profile?.preferredName as string | undefined) ?? identity.fullName,\n    dateOfBirth: identity.dateOfBirth,\n  };\n}"
+      "source": "async resolve(userId: string, identity: IdentityData): Promise<PersonalDetails> {\n  const [profile] = await this.db.select('user_profiles', { userId });\n  return {\n    legalName: identity.fullName,\n    preferredName: (profile?.preferredName as string | undefined) ?? identity.fullName,\n    dateOfBirth: identity.dateOfBirth,\n  };\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1",
+            "identity": {
+              "fullName": "Ana Silva",
+              "dateOfBirth": "1990-04-12",
+              "nationality": "PRT",
+              "countryOfBirth": "PRT",
+              "cityOfBirth": "Porto",
+              "userId": "u-1",
+              "documentIds": [
+                "doc-u-1"
+              ],
+              "extractedAt": "2026-11-03T21:57:59.202Z"
+            }
+          },
+          "output": {
+            "legalName": "Ana Silva",
+            "preferredName": "Ana",
+            "dateOfBirth": "1990-04-12"
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2",
+            "identity": {
+              "fullName": "Raj Patel",
+              "dateOfBirth": "1988-09-30",
+              "nationality": "IND",
+              "countryOfBirth": "IND",
+              "cityOfBirth": "Bombay",
+              "userId": "u-2",
+              "documentIds": [
+                "doc-u-2"
+              ],
+              "extractedAt": "2026-11-03T21:57:59.204Z"
+            }
+          },
+          "output": {
+            "legalName": "Raj Patel",
+            "preferredName": "Raj",
+            "dateOfBirth": "1988-09-30"
+          }
+        }
+      ]
     },
     "ProfileService.getProfile": {
       "id": "ProfileService.getProfile",
@@ -1335,7 +1778,53 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async getProfile(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  const [nationality, personal, birth] = await Promise.all([\n    this.nationality.resolve(identity),\n    this.personalDetails.resolve(userId, identity),\n    this.birthInfo.resolve(identity),\n  ]);\n  return { userId, nationality, personal, birth };\n}"
+      "source": "async getProfile(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  const [nationality, personal, birth] = await Promise.all([\n    this.nationality.resolve(identity),\n    this.personalDetails.resolve(userId, identity),\n    this.birthInfo.resolve(identity),\n  ]);\n  return { userId, nationality, personal, birth };\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "nationality": {
+              "alpha3": "PRT",
+              "name": "Portugal",
+              "isEu": true
+            },
+            "personal": {
+              "legalName": "Ana Silva",
+              "preferredName": "Ana",
+              "dateOfBirth": "1990-04-12"
+            },
+            "birth": {
+              "countryOfBirth": "PRT",
+              "cityOfBirth": "Porto"
+            }
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "nationality": {
+              "alpha3": "IND",
+              "name": "India",
+              "isEu": false
+            },
+            "personal": {
+              "legalName": "Raj Patel",
+              "preferredName": "Raj",
+              "dateOfBirth": "1988-09-30"
+            },
+            "birth": {
+              "countryOfBirth": "IND",
+              "cityOfBirth": "Bombay"
+            }
+          }
+        }
+      ]
     },
     "ProfileService.getSummary": {
       "id": "ProfileService.getSummary",
@@ -1390,7 +1879,27 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async getSummary(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  const personal = await this.personalDetails.resolve(userId, identity);\n  return { userId, name: personal.preferredName };\n}"
+      "source": "async getSummary(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  const personal = await this.personalDetails.resolve(userId, identity);\n  return { userId, name: personal.preferredName };\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "name": "Ana"
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "name": "Raj"
+          }
+        }
+      ]
     },
     "ProfileService.getNationality": {
       "id": "ProfileService.getNationality",
@@ -1449,7 +1958,29 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async getNationality(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  return this.nationality.resolve(identity);\n}"
+      "source": "async getNationality(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  return this.nationality.resolve(identity);\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "alpha3": "PRT",
+            "name": "Portugal",
+            "isEu": true
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "alpha3": "IND",
+            "name": "India",
+            "isEu": false
+          }
+        }
+      ]
     },
     "ProfileService.getBirthInfo": {
       "id": "ProfileService.getBirthInfo",
@@ -1498,7 +2029,27 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async getBirthInfo(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  return this.birthInfo.resolve(identity);\n}"
+      "source": "async getBirthInfo(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  return this.birthInfo.resolve(identity);\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "countryOfBirth": "PRT",
+            "cityOfBirth": "Porto"
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "countryOfBirth": "IND",
+            "cityOfBirth": "Bombay"
+          }
+        }
+      ]
     },
     "ProfileService.exportProfile": {
       "id": "ProfileService.exportProfile",
@@ -1582,7 +2133,17 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async exportProfile(userId: string) {\n  const profile = await this.getProfile(userId);\n  await this.db.insert('gdpr_exports', { userId, profile, exportedAt: new Date().toISOString() });\n  await this.kafka.produce('privacy.export.ready', { userId });\n  return { status: 'queued' };\n}"
+      "source": "async exportProfile(userId: string) {\n  const profile = await this.getProfile(userId);\n  await this.db.insert('gdpr_exports', { userId, profile, exportedAt: new Date().toISOString() });\n  await this.kafka.produce('privacy.export.ready', { userId });\n  return { status: 'queued' };\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "status": "queued"
+          }
+        }
+      ]
     },
     "ProfileService.purge": {
       "id": "ProfileService.purge",
@@ -1722,7 +2283,46 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async assess(userId: string): Promise<TaxResidency> {\n  const identity = await this.identity.fetchIdentity(userId);\n  const birth = await this.birthInfo.resolve(identity);\n  const nationality = await this.nationality.resolve(identity);\n  const declarations = await this.db.select('tax_declarations', { userId });\n  const residencies = [...new Set([nationality.alpha3, ...declarations.map((d) => d.country as string)])];\n  const assessment = { userId, residencies, usPerson: birth.countryOfBirth === 'USA' || nationality.alpha3 === 'USA' };\n  await this.db.insert('tax_residency_assessments', { ...assessment, assessedAt: new Date().toISOString() });\n  return assessment;\n}"
+      "source": "async assess(userId: string): Promise<TaxResidency> {\n  const identity = await this.identity.fetchIdentity(userId);\n  const birth = await this.birthInfo.resolve(identity);\n  const nationality = await this.nationality.resolve(identity);\n  const declarations = await this.db.select('tax_declarations', { userId });\n  const residencies = [...new Set([nationality.alpha3, ...declarations.map((d) => d.country as string)])];\n  const assessment = { userId, residencies, usPerson: birth.countryOfBirth === 'USA' || nationality.alpha3 === 'USA' };\n  await this.db.insert('tax_residency_assessments', { ...assessment, assessedAt: new Date().toISOString() });\n  return assessment;\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "residencies": [
+              "PRT"
+            ],
+            "usPerson": false
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "residencies": [
+              "IND"
+            ],
+            "usPerson": false
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "residencies": [
+              "IND",
+              "GBR"
+            ],
+            "usPerson": false
+          }
+        }
+      ]
     },
     "TaxResidencyModule.recordDeclaration": {
       "id": "TaxResidencyModule.recordDeclaration",
@@ -1823,7 +2423,23 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async recordDeclaration(userId: string, country: string) {\n  await this.db.insert('tax_declarations', { userId, country });\n  return this.assess(userId);\n}"
+      "source": "async recordDeclaration(userId: string, country: string) {\n  await this.db.insert('tax_declarations', { userId, country });\n  return this.assess(userId);\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-2",
+            "country": "GBR"
+          },
+          "output": {
+            "userId": "u-2",
+            "residencies": [
+              "IND",
+              "GBR"
+            ],
+            "usPerson": false
+          }
+        }
+      ]
     },
     "TaxResidencyModule.weeklySweep": {
       "id": "TaxResidencyModule.weeklySweep",
@@ -1901,7 +2517,12 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async weeklySweep(): Promise<void> {\n  const users = await this.db.select('tax_residency_assessments', {});\n  for (const user of users) await this.assess(user.userId as string);\n}"
+      "source": "async weeklySweep(): Promise<void> {\n  const users = await this.db.select('tax_residency_assessments', {});\n  for (const user of users) await this.assess(user.userId as string);\n}",
+      "examples": [
+        {
+          "input": {}
+        }
+      ]
     },
     "TravelEligibilityModule.checkVisa": {
       "id": "TravelEligibilityModule.checkVisa",
@@ -1974,7 +2595,39 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async checkVisa(userId: string, destination: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  const [nationality, birth] = await Promise.all([this.nationality.resolve(identity), this.birthInfo.resolve(identity)]);\n  const path = `/v1/rules?from=${nationality.alpha3}&born=${birth.countryOfBirth}&to=${destination}`;\n  const rules = await this.http.get<{ visaRequired: boolean }>('visa-rules-service', path);\n  return { destination, visaRequired: rules.visaRequired };\n}"
+      "source": "async checkVisa(userId: string, destination: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  const [nationality, birth] = await Promise.all([this.nationality.resolve(identity), this.birthInfo.resolve(identity)]);\n  const path = `/v1/rules?from=${nationality.alpha3}&born=${birth.countryOfBirth}&to=${destination}`;\n  const rules = await this.http.get<{ visaRequired: boolean }>('visa-rules-service', path);\n  return { destination, visaRequired: rules.visaRequired };\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1",
+            "destination": "USA"
+          },
+          "output": {
+            "destination": "USA",
+            "visaRequired": false
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2",
+            "destination": "USA"
+          },
+          "output": {
+            "destination": "USA",
+            "visaRequired": false
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2",
+            "destination": "JPN"
+          },
+          "output": {
+            "destination": "JPN",
+            "visaRequired": false
+          }
+        }
+      ]
     },
     "TravelEligibilityModule.prefillPassport": {
       "id": "TravelEligibilityModule.prefillPassport",
@@ -2070,7 +2723,37 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async prefillPassport(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  const [personal, birth, nationality] = await Promise.all([\n    this.personalDetails.resolve(userId, identity),\n    this.birthInfo.resolve(identity),\n    this.nationality.resolve(identity),\n  ]);\n  const prefill = { userId, ...personal, ...birth, nationality: nationality.alpha3 };\n  await this.db.insert('passport_prefills', prefill);\n  return prefill;\n}"
+      "source": "async prefillPassport(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  const [personal, birth, nationality] = await Promise.all([\n    this.personalDetails.resolve(userId, identity),\n    this.birthInfo.resolve(identity),\n    this.nationality.resolve(identity),\n  ]);\n  const prefill = { userId, ...personal, ...birth, nationality: nationality.alpha3 };\n  await this.db.insert('passport_prefills', prefill);\n  return prefill;\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "legalName": "Ana Silva",
+            "preferredName": "Ana",
+            "dateOfBirth": "1990-04-12",
+            "countryOfBirth": "PRT",
+            "cityOfBirth": "Porto",
+            "nationality": "PRT"
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "legalName": "Raj Patel",
+            "preferredName": "Raj",
+            "dateOfBirth": "1988-09-30",
+            "countryOfBirth": "IND",
+            "cityOfBirth": "Bombay",
+            "nationality": "IND"
+          }
+        }
+      ]
     }
   },
   "entryPoints": {

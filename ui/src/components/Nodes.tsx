@@ -1,6 +1,6 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { createContext, useContext } from 'react';
-import type { DiffLine, Effect, Param } from '../../../schema/modulegraph.ts';
+import type { DiffLine, Effect, Example, Param } from '../../../schema/modulegraph.ts';
 import type { Chip } from '../graph/model.ts';
 
 export interface Actions {
@@ -10,6 +10,42 @@ export interface Actions {
   expandGroup: (groupId: string) => void;
 }
 export const ActionsContext = createContext<Actions>(null!);
+
+/** Which recorded example the input and output nodes show; shared so both ends of a flow stay in sync. */
+export const ExampleContext = createContext<{ index: number; setIndex: (i: number) => void }>({ index: 0, setIndex: () => {} });
+
+export function compact(value: unknown, max = 60): string {
+  const text = typeof value === 'string' ? JSON.stringify(value) : JSON.stringify(value) ?? String(value);
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+/** One line per top-level key of an example value, with fields added by this change highlighted. */
+export function ExampleLines({ value, added }: { value: unknown; added?: Set<string> }) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return (
+      <>
+        {Object.entries(value as Record<string, unknown>).slice(0, 9).map(([k, v]) => (
+          <div key={k} className={`example-line ${added?.has(k) ? 'added' : ''}`} title={JSON.stringify(v, null, 2)}>
+            {added?.has(k) ? '+' : ''}<span className="k">{k}:</span> <span className="v">{compact(v)}</span>
+          </div>
+        ))}
+      </>
+    );
+  }
+  return <div className="example-line" title={JSON.stringify(value, null, 2)}><span className="v">{compact(value)}</span></div>;
+}
+
+function ExampleTabs({ examples }: { examples: Example[] }) {
+  const { index, setIndex } = useContext(ExampleContext);
+  if (examples.length < 2) return null;
+  return (
+    <span className="example-tabs nodrag">
+      {examples.map((_, i) => (
+        <button key={i} className={i === index % examples.length ? 'on' : ''} onClick={(e) => { e.stopPropagation(); setIndex(i); }}>{i + 1}</button>
+      ))}
+    </span>
+  );
+}
 
 export const EFFECT_META: Record<Effect['kind'], { icon: string; label: string; cls: string }> = {
   'db.read': { icon: '⛁', label: 'read', cls: 'fx-read' },
@@ -49,6 +85,8 @@ export function EffectChip({ chip }: { chip: Chip }) {
   );
 }
 
+/** "changes inside" only means something in a flow: it tells you which box to drill into. In the zoom-out
+ *  view every node is there because it reaches the change, so the badge is suppressed. */
 function ChangeBadge({ change, containsChanges }: { change: string; containsChanges?: boolean }) {
   if (change !== 'unchanged') return <span className={`badge b-${change}`}>{change}</span>;
   if (containsChanges) return <span className="badge b-inside" title="Something this module calls changed. Drill in.">changes inside</span>;
@@ -59,12 +97,13 @@ export function ModuleNode({ data, selected }: NodeProps) {
   const d = data as {
     opId: string; title: string; operation: string; change: string; containsChanges: boolean; chips: Chip[];
     condition?: string; loop?: boolean; via?: string; focus?: boolean; onPath?: boolean; hasInternals: boolean; reach?: number;
-    compact?: boolean; totalEffects: number; ops?: string[]; opIds?: string[];
+    compact?: boolean; inImpact?: boolean; totalEffects: number; ops?: string[]; opIds?: string[];
   };
+  const inside = d.containsChanges && !d.compact && !d.inImpact;
   const actions = useContext(ActionsContext);
   const extra = d.chips.length - 6;
   return (
-    <div className={`node module ${d.compact ? 'compact' : ''} c-${d.change} ${d.containsChanges ? 'has-changes' : ''} ${d.focus ? 'focus' : ''} ${d.onPath ? 'on-path' : ''} ${selected ? 'selected' : ''}`}>
+    <div className={`node module ${d.compact ? 'compact' : ''} c-${d.change} ${inside ? 'has-changes' : ''} ${d.focus ? 'focus' : ''} ${d.onPath ? 'on-path' : ''} ${selected ? 'selected' : ''}`}>
       <Handles />
       {d.condition && <div className="cond" title={d.condition}>{d.condition}</div>}
       <div className="module-head">
@@ -80,7 +119,7 @@ export function ModuleNode({ data, selected }: NodeProps) {
             <div className="module-op">.{d.operation}()</div>
           )}
         </div>
-        <ChangeBadge change={d.change} containsChanges={d.containsChanges} />
+        <ChangeBadge change={d.change} containsChanges={inside} />
       </div>
       {d.via && <div className="via">inlined from {d.via}</div>}
       <div className="chips">
@@ -123,8 +162,11 @@ export function EffectNode({ data, selected }: NodeProps) {
 export function EntryNode({ data, selected }: NodeProps) {
   const d = data as {
     kind: string; label: string; change: string; containsChanges?: boolean; readOnly?: boolean; effectsAdded?: Effect[];
-    params?: Param[]; via?: string; entryId?: string; paramsDelta?: unknown;
+    params?: Param[]; via?: string; entryId?: string; paramsDelta?: unknown; compact?: boolean;
+    examples?: Example[]; exampleParams?: string[];
   };
+  const { index } = useContext(ExampleContext);
+  const example = d.examples?.length ? d.examples[index % d.examples.length] : undefined;
   const meta = KIND_META[d.kind] ?? KIND_META.input;
   const actions = useContext(ActionsContext);
   const writes = (d.effectsAdded ?? []).filter((e) => e.kind !== 'db.read' && e.kind !== 'http');
@@ -134,11 +176,21 @@ export function EntryNode({ data, selected }: NodeProps) {
       <Handle type="target" position={Position.Left} />
       <div className="entry-kind">
         <span>{meta.icon} {meta.label}{d.readOnly ? ' · read-only' : ''}</span>
-        <ChangeBadge change={d.change} containsChanges={d.containsChanges} />
+        <ChangeBadge change={d.change} containsChanges={d.containsChanges && !d.compact} />
       </div>
       <div className="entry-label">{d.label}</div>
       {d.kind === 'input' && d.params?.map((p) => <div className="param" key={p.name}>{p.name}: <span>{p.type}</span></div>)}
       {d.via && <div className="via">via {d.via}</div>}
+      {example && (
+        <div className="example">
+          <div className="example-head"><span>e.g. input</span><ExampleTabs examples={d.examples!} /></div>
+          {d.exampleParams!.map((p) => (
+            <div key={p} className="example-line" title={JSON.stringify(example.input[p], null, 2)}>
+              <span className="k">{p}:</span> <span className="v">{compact(example.input[p], 44)}</span>
+            </div>
+          ))}
+        </div>
+      )}
       {(d.effectsAdded?.length ?? 0) > 0 && (
         <div className={`entry-delta ${d.readOnly && writes.length ? 'warn' : ''}`}>
           +{d.effectsAdded!.map((e) => `${e.kind} ${e.target}`).join(', +')}
@@ -149,11 +201,21 @@ export function EntryNode({ data, selected }: NodeProps) {
 }
 
 export function ExitNode({ data }: NodeProps) {
-  const d = data as { label: string; type: string; fields: (Param & { delta?: string })[] };
+  const d = data as { label: string; type: string; fields: (Param & { delta?: string })[]; examples?: Example[] };
+  const { index } = useContext(ExampleContext);
+  const example = d.examples?.length ? d.examples[index % d.examples.length] : undefined;
+  const added = new Set(d.fields.filter((f) => f.delta === '+').map((f) => f.name));
   return (
     <div className="node exit">
       <Handle type="target" position={Position.Left} />
       <div className="entry-kind">⇥ {d.label}</div>
+      {example && (
+        <div className="example">
+          <div className="example-head"><span>e.g. output{d.examples!.length > 1 ? ` · call ${(index % d.examples!.length) + 1}` : ''}</span><ExampleTabs examples={d.examples!} /></div>
+          {example.error ? <div className="example-line"><span className="v">throws {compact(example.error)}</span></div> : <ExampleLines value={example.output} added={added} />}
+        </div>
+      )}
+      {example && <div className="example-head" style={{ marginTop: 6 }}><span>shape</span></div>}
       <div className="exit-type" title={d.type}>{d.fields.length ? '' : d.type}</div>
       {d.fields.slice(0, 8).map((f) => (
         <div key={f.name} className={`param ${f.delta === '+' ? 'added' : f.delta === '-' ? 'removed' : ''}`}>
@@ -196,6 +258,17 @@ export function GroupNode({ data }: NodeProps) {
   );
 }
 
+export function DecisionNode({ data }: NodeProps) {
+  const d = data as { label: string };
+  return (
+    <div className="node decision" title="Exclusive branch: exactly one side runs">
+      <Handles />
+      <span className="decision-icon">◇</span>
+      <span className="decision-label">{d.label}</span>
+    </div>
+  );
+}
+
 export function CodeNode({ data }: NodeProps) {
   const d = data as { source: string; diff?: DiffLine[] };
   const lines = d.diff ?? d.source.split('\n').map((text) => ({ t: ' ', text }) as DiffLine);
@@ -218,4 +291,5 @@ export const nodeTypes = {
   resource: ResourceNode,
   entrygroup: GroupNode,
   code: CodeNode,
+  decision: DecisionNode,
 };

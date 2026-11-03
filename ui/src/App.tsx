@@ -1,10 +1,11 @@
-import { Background, Controls, ReactFlow, type Edge, type Node } from '@xyflow/react';
+import { Background, Controls, ReactFlow, useReactFlow, type Edge, type Node } from '@xyflow/react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ModuleGraph } from '../../schema/modulegraph.ts';
 import { Inspector, type Selection } from './components/Inspector.tsx';
-import { ActionsContext, nodeTypes, type Actions } from './components/Nodes.tsx';
+import { edgeTypes } from './components/Edges.tsx';
+import { ActionsContext, ExampleContext, nodeTypes, type Actions } from './components/Nodes.tsx';
 import { Sidebar } from './components/Sidebar.tsx';
-import { layout } from './graph/layout.ts';
+import { layout, type Theme } from './graph/layout.ts';
 import { buildIndex, flowModel, impactModel, opTitle } from './graph/model.ts';
 
 type View =
@@ -19,6 +20,24 @@ interface IndexEntry {
 }
 
 const base = import.meta.env.BASE_URL;
+const FIT = { padding: 0.12, maxZoom: 1.4 };
+
+/** Refit the graph whenever the canvas changes size (window resize, panels shown/hidden). */
+function FitOnResize() {
+  const { fitView } = useReactFlow();
+  useEffect(() => {
+    const el = document.querySelector('.canvas .react-flow');
+    if (!el) return;
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => void fitView(FIT));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [fitView]);
+  return null;
+}
 
 function readHash(): Record<string, string> {
   return Object.fromEntries(new URLSearchParams(location.hash.slice(1)));
@@ -50,6 +69,18 @@ export default function App() {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [canvas, setCanvas] = useState<{ nodes: Node[]; edges: Edge[]; key: string; meta?: { maxDepth: number; shown: number; total: number }; chain?: string[] }>();
   const [error, setError] = useState<string>();
+  const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('modulegraph-theme') as Theme) ?? 'dark');
+  const [exampleIndex, setExampleIndex] = useState(0);
+  const exampleCtx = useMemo(() => ({ index: exampleIndex, setIndex: setExampleIndex }), [exampleIndex]);
+  const [panels, setPanels] = useState<{ left: boolean; right: boolean }>(() =>
+    JSON.parse(localStorage.getItem('modulegraph-panels') ?? '{"left":true,"right":true}'),
+  );
+  useEffect(() => localStorage.setItem('modulegraph-panels', JSON.stringify(panels)), [panels]);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem('modulegraph-theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     fetch(`${base}graphs/index.json`)
@@ -97,6 +128,8 @@ export default function App() {
   viewRef.current = view;
   const chainRef = useRef<string[]>(undefined);
   chainRef.current = canvas?.chain;
+  const maxDepthRef = useRef<number>(undefined);
+  maxDepthRef.current = canvas?.meta?.maxDepth;
   const navigate = useCallback((next: View) => {
     const cur = viewRef.current;
     if (cur) setBack((b) => [...b.slice(-30), cur]);
@@ -106,22 +139,23 @@ export default function App() {
   useEffect(() => {
     if (!g || !index || !view || !graphId) return;
     writeHash(graphId, view);
+    setExampleIndex(0);
     let cancelled = false;
     if (view.mode === 'flow') {
       const scopeId = view.trail.at(-1)!;
       const model = flowModel(g, scopeId, { collapsePassthrough, showResources, focusOp: view.focus, focusPath: view.focus ? ancestors(index, view.focus) : undefined });
       for (const n of model.nodes) if (n.type === 'module') n.data.reach = index.reach.get(n.data.opId as string)?.size ?? 0;
-      layout(model).then((res) => !cancelled && setCanvas({ ...res, key: `${graphId}|${view.trail.join('>')}|${collapsePassthrough}|${showResources}`, chain: model.chain }));
+      layout(model, theme).then((res) => !cancelled && setCanvas({ ...res, key: `${graphId}|${view.trail.join('>')}|${collapsePassthrough}|${showResources}|${theme}`, chain: model.chain }));
     } else {
       const model = impactModel(g, index, view.op, { depth: view.depth, groupThreshold: 12, expandedGroups });
-      layout(model).then((res) =>
-        !cancelled && setCanvas({ ...res, key: `${graphId}|impact|${view.op}|${view.depth}|${[...expandedGroups].join()}`, meta: { maxDepth: model.maxDepth, shown: model.entriesShown, total: model.entriesTotal } }),
+      layout(model, theme).then((res) =>
+        !cancelled && setCanvas({ ...res, key: `${graphId}|impact|${view.op}|${view.depth}|${[...expandedGroups].join()}|${theme}`, meta: { maxDepth: model.maxDepth, shown: model.entriesShown, total: model.entriesTotal } }),
       );
     }
     return () => {
       cancelled = true;
     };
-  }, [g, index, view, collapsePassthrough, showResources, expandedGroups, graphId]);
+  }, [g, index, view, collapsePassthrough, showResources, expandedGroups, graphId, theme]);
 
   const actions: Actions = useMemo(
     () => ({
@@ -132,7 +166,13 @@ export default function App() {
         navigate({ mode: 'flow', trail: [...trail.filter((t) => t !== opId), opId], focus: cur?.mode === 'flow' ? cur.focus : undefined });
       },
       zoomOut: (opId) => {
+        const cur = viewRef.current;
         setSelection({ type: 'op', id: opId });
+        // Already zoomed out from this module: go one more level up instead of re-opening the same view.
+        if (cur?.mode === 'impact' && cur.op === opId) {
+          setView({ ...cur, depth: Math.min(cur.depth + 1, maxDepthRef.current ?? cur.depth + 1) });
+          return;
+        }
         navigate({ mode: 'impact', op: opId, depth: 1 });
       },
       openEntry: (entryId) => {
@@ -165,7 +205,8 @@ export default function App() {
 
   return (
     <ActionsContext.Provider value={actions}>
-      <div className="app">
+     <ExampleContext.Provider value={exampleCtx}>
+      <div className={`app ${panels.left ? '' : 'no-left'} ${panels.right ? '' : 'no-right'}`}>
         <header className="topbar">
           <div className="brand">◇ modulegraph <span className="muted">module-level review</span></div>
           <select value={graphId} onChange={(e) => { setGraphId(e.target.value); history.replaceState(null, '', '#'); }}>
@@ -173,10 +214,15 @@ export default function App() {
           </select>
           <span className="muted small">{g.service} · {Object.keys(g.modules).length} modules · {Object.keys(g.entryPoints).length} entry points</span>
           <div className="spacer" />
+          <button className={`panel-toggle ${panels.left ? 'on' : ''}`} onClick={() => setPanels({ ...panels, left: !panels.left })} title="Show or hide the review panel">◧ review</button>
+          <button className={`panel-toggle ${panels.right ? 'on' : ''}`} onClick={() => setPanels({ ...panels, right: !panels.right })} title="Show or hide the contract panel">◨ contract</button>
           <label className="small"><input type="checkbox" checked={collapsePassthrough} onChange={(e) => setCollapse(e.target.checked)} /> skip pass-through wrappers</label>
           <label className="small"><input type="checkbox" checked={showResources} onChange={(e) => setShowResources(e.target.checked)} /> show data sources &amp; sinks</label>
+          <button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} title="Toggle dark mode">
+            {theme === 'dark' ? '☀ light' : '☾ dark'}
+          </button>
         </header>
-        <Sidebar g={g} index={index} onSelect={setSelection} />
+        {panels.left && <Sidebar g={g} index={index} onSelect={setSelection} />}
         <main className="canvas">
           <div className="crumbs">
             <button disabled={!back.length} onClick={() => { setView(back.at(-1)); setBack(back.slice(0, -1)); }}>← back</button>
@@ -222,21 +268,26 @@ export default function App() {
               nodes={canvas.nodes}
               edges={canvas.edges}
               nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              colorMode={theme}
+              nodesDraggable={false}
               onNodeClick={onNodeClick}
               onNodeDoubleClick={onNodeDoubleClick}
               fitView
-              fitViewOptions={{ padding: 0.15, maxZoom: 1.1 }}
+              fitViewOptions={FIT}
               minZoom={0.15}
               nodesConnectable={false}
             >
-              <Background gap={24} color="#e2e8f0" />
-              <Controls showInteractive={false} />
+              <Background gap={24} color={theme === 'dark' ? '#1e293b' : '#e2e8f0'} />
+              <Controls showInteractive={false} fitViewOptions={FIT} />
+              <FitOnResize />
             </ReactFlow>
           )}
           <Legend />
         </main>
-        <Inspector g={g} index={index} selection={selection} onSelect={setSelection} />
+        {panels.right && <Inspector g={g} index={index} selection={selection} onSelect={setSelection} />}
       </div>
+     </ExampleContext.Provider>
     </ActionsContext.Provider>
   );
 }
@@ -252,6 +303,7 @@ function Legend() {
       <span className="chip fx-outbox direct">outbox</span>
       <span className="chip fx-kafka direct">kafka</span>
       <span className="chip fx-http direct">http</span>
+      <span><span className="legend-decision">◇</span> exclusive branch (yes / no)</span>
       <span className="muted">solid chip = this module · outlined = via submodules · ━ data · ┅ control</span>
     </div>
   );

@@ -199,6 +199,23 @@
           "type": "string",
           "description": "Stated intent (PR description). Used to flag undisclosed side effects."
         },
+        "examples": {
+          "type": "object",
+          "properties": {
+            "scenario": {
+              "type": "string"
+            },
+            "operationsCovered": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "scenario",
+            "operationsCovered"
+          ],
+          "additionalProperties": false,
+          "description": "Scenario that was run against the head revision to capture example inputs/outputs."
+        },
         "files": {
           "type": "array",
           "items": {
@@ -375,6 +392,13 @@
           },
           "description": "Line diff of this operation (base vs head), when changed."
         },
+        "examples": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Example"
+          },
+          "description": "Real calls recorded while running the scenario on the head revision (up to 3 distinct)."
+        },
         "source": {
           "type": "string"
         }
@@ -394,6 +418,24 @@
         "change",
         "containsChanges",
         "source"
+      ],
+      "additionalProperties": false
+    },
+    "Example": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "Argument values keyed by parameter name."
+        },
+        "output": {},
+        "error": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "input"
       ],
       "additionalProperties": false
     },

@@ -3,3 +3,4 @@ dist/
 .modulegraph-tmp/
 *.log
 .playwright-mcp/
+.worktrees/

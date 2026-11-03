@@ -3,6 +3,23 @@ import type { Effect, Finding, ModuleGraph, Operation } from '../../../schema/mo
 import { chipsFor, effectKey, opTitle, type CallerIndex } from '../graph/model.ts';
 import { ActionsContext, EffectChip, EFFECT_META } from './Nodes.tsx';
 
+function Examples({ op, scenario }: { op: Operation; scenario?: string }) {
+  if (!op.examples?.length) return null;
+  return (
+    <section>
+      <h4>Example calls <span className="muted small">(recorded running {scenario ?? 'the scenario'})</span></h4>
+      {op.examples.map((e, i) => (
+        <div key={i} className="example-block">
+          <div className="example-head"><span>call {i + 1}: input</span></div>
+          <pre className="example-json">{JSON.stringify(e.input, null, 2)}</pre>
+          <div className="example-head"><span>{e.error ? 'throws' : 'output'}</span></div>
+          <pre className="example-json">{e.error ?? JSON.stringify(e.output, null, 2)}</pre>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 export type Selection =
   | { type: 'op'; id: string }
   | { type: 'entry'; id: string }
@@ -103,6 +120,8 @@ function OpInspector({ g, index, op, onSelect }: { g: ModuleGraph; index: Caller
           <div key={f.name} className="param indent removed">{f.name}: <span>{f.type}</span></div>
         ))}
       </section>
+
+      <Examples op={op} scenario={g.source.examples?.scenario} />
 
       <section>
         <h4>Side effects</h4>

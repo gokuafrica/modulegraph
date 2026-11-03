@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-10-30T22:54:34.869Z",
+  "generatedAt": "2026-11-03T21:58:04.852Z",
   "generator": "modulegraph-analyzer/0.1 (ts-morph)",
   "source": {
     "mode": "branch",
@@ -67,7 +67,11 @@
         "modules": []
       }
     ],
-    "intent": "BirthInfo: prefer user-consented birth data (birth_info_consents) over document data; add consent endpoint."
+    "intent": "BirthInfo: prefer user-consented birth data (birth_info_consents) over document data; add consent endpoint.",
+    "examples": {
+      "scenario": "sample-service/src/dev/scenario.ts",
+      "operationsCovered": 28
+    }
   },
   "modules": {
     "IdentityReviewModule": {
@@ -523,7 +527,59 @@
         "callsAdded": [],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "identity": {
+              "fullName": "Ana Silva",
+              "dateOfBirth": "1990-04-12",
+              "nationality": "PRT",
+              "countryOfBirth": "PRT",
+              "cityOfBirth": "Porto",
+              "userId": "u-1",
+              "documentIds": [
+                "doc-u-1"
+              ],
+              "extractedAt": "2026-11-03T21:58:04.713Z"
+            },
+            "birth": {
+              "countryOfBirth": "PRT",
+              "cityOfBirth": "Porto",
+              "source": "document"
+            },
+            "notes": []
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "identity": {
+              "fullName": "Raj Patel",
+              "dateOfBirth": "1988-09-30",
+              "nationality": "IND",
+              "countryOfBirth": "IND",
+              "cityOfBirth": "Bombay",
+              "userId": "u-2",
+              "documentIds": [
+                "doc-u-2"
+              ],
+              "extractedAt": "2026-11-03T21:58:04.714Z"
+            },
+            "birth": {
+              "countryOfBirth": "IND",
+              "cityOfBirth": "Mumbai",
+              "source": "consent"
+            },
+            "notes": []
+          }
+        }
+      ]
     },
     "BirthConsentStore.findActiveConsent": {
       "id": "BirthConsentStore.findActiveConsent",
@@ -615,7 +671,26 @@
         "callsAdded": [],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "countryOfBirth": "IND",
+            "cityOfBirth": "Mumbai",
+            "consentedAt": "2026-10-20",
+            "revokedAt": null
+          }
+        }
+      ]
     },
     "BirthConsentStore.recordConsent": {
       "id": "BirthConsentStore.recordConsent",
@@ -693,7 +768,16 @@
         "callsAdded": [],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1",
+            "countryOfBirth": "PRT",
+            "cityOfBirth": "Lisbon"
+          }
+        }
+      ]
     },
     "BirthInfoModule.resolve": {
       "id": "BirthInfoModule.resolve",
@@ -850,7 +934,51 @@
         ],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {
+            "identity": {
+              "fullName": "Ana Silva",
+              "dateOfBirth": "1990-04-12",
+              "nationality": "PRT",
+              "countryOfBirth": "PRT",
+              "cityOfBirth": "Porto",
+              "userId": "u-1",
+              "documentIds": [
+                "doc-u-1"
+              ],
+              "extractedAt": "2026-11-03T21:58:04.711Z"
+            }
+          },
+          "output": {
+            "countryOfBirth": "PRT",
+            "cityOfBirth": "Porto",
+            "source": "document"
+          }
+        },
+        {
+          "input": {
+            "identity": {
+              "fullName": "Raj Patel",
+              "dateOfBirth": "1988-09-30",
+              "nationality": "IND",
+              "countryOfBirth": "IND",
+              "cityOfBirth": "Bombay",
+              "userId": "u-2",
+              "documentIds": [
+                "doc-u-2"
+              ],
+              "extractedAt": "2026-11-03T21:58:04.713Z"
+            }
+          },
+          "output": {
+            "countryOfBirth": "IND",
+            "cityOfBirth": "Mumbai",
+            "source": "consent"
+          }
+        }
+      ]
     },
     "BirthInfoModule.recordConsent": {
       "id": "BirthInfoModule.recordConsent",
@@ -921,7 +1049,16 @@
         ],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1",
+            "countryOfBirth": "PRT",
+            "cityOfBirth": "Lisbon"
+          }
+        }
+      ]
     },
     "DocumentBirthExtractor.fromIdentity": {
       "id": "DocumentBirthExtractor.fromIdentity",
@@ -1016,7 +1153,30 @@
         "callsAdded": [],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {
+            "identity": {
+              "fullName": "Ana Silva",
+              "dateOfBirth": "1990-04-12",
+              "nationality": "PRT",
+              "countryOfBirth": "PRT",
+              "cityOfBirth": "Porto",
+              "userId": "u-1",
+              "documentIds": [
+                "doc-u-1"
+              ],
+              "extractedAt": "2026-11-03T21:58:04.711Z"
+            }
+          },
+          "output": {
+            "countryOfBirth": "PRT",
+            "cityOfBirth": "Porto",
+            "source": "document"
+          }
+        }
+      ]
     },
     "ComplianceReportModule.generateMonthly": {
       "id": "ComplianceReportModule.generateMonthly",
@@ -1125,7 +1285,12 @@
         "callsAdded": [],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {}
+        }
+      ]
     },
     "DocumentExtractor.extract": {
       "id": "DocumentExtractor.extract",
@@ -1184,7 +1349,49 @@
       "calls": [],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async extract(documents: IdentityDocument[]): Promise<ExtractedFields> {\n  if (documents.length === 0) throw new Error('no identity documents on file');\n  return this.http.post<ExtractedFields>('document-ai', '/v2/extract', { fileRefs: documents.map((d) => d.fileRef) });\n}"
+      "source": "async extract(documents: IdentityDocument[]): Promise<ExtractedFields> {\n  if (documents.length === 0) throw new Error('no identity documents on file');\n  return this.http.post<ExtractedFields>('document-ai', '/v2/extract', { fileRefs: documents.map((d) => d.fileRef) });\n}",
+      "examples": [
+        {
+          "input": {
+            "documents": [
+              {
+                "id": "doc-u-1",
+                "userId": "u-1",
+                "kind": "passport",
+                "fileRef": "s3://docs/u-1.pdf",
+                "uploadedAt": "2026-10-01"
+              }
+            ]
+          },
+          "output": {
+            "fullName": "Ana Silva",
+            "dateOfBirth": "1990-04-12",
+            "nationality": "PRT",
+            "countryOfBirth": "PRT",
+            "cityOfBirth": "Porto"
+          }
+        },
+        {
+          "input": {
+            "documents": [
+              {
+                "id": "doc-u-2",
+                "userId": "u-2",
+                "kind": "passport",
+                "fileRef": "s3://docs/u-2.pdf",
+                "uploadedAt": "2026-10-01"
+              }
+            ]
+          },
+          "output": {
+            "fullName": "Raj Patel",
+            "dateOfBirth": "1988-09-30",
+            "nationality": "IND",
+            "countryOfBirth": "IND",
+            "cityOfBirth": "Bombay"
+          }
+        }
+      ]
     },
     "DocumentStore.latestDocuments": {
       "id": "DocumentStore.latestDocuments",
@@ -1221,7 +1428,37 @@
       "calls": [],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async latestDocuments(userId: string): Promise<IdentityDocument[]> {\n  const docs = await this.db.select<IdentityDocument & Record<string, unknown>>('user_documents', { userId });\n  return docs.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));\n}"
+      "source": "async latestDocuments(userId: string): Promise<IdentityDocument[]> {\n  const docs = await this.db.select<IdentityDocument & Record<string, unknown>>('user_documents', { userId });\n  return docs.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": [
+            {
+              "id": "doc-u-1",
+              "userId": "u-1",
+              "kind": "passport",
+              "fileRef": "s3://docs/u-1.pdf",
+              "uploadedAt": "2026-10-01"
+            }
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": [
+            {
+              "id": "doc-u-2",
+              "userId": "u-2",
+              "kind": "passport",
+              "fileRef": "s3://docs/u-2.pdf",
+              "uploadedAt": "2026-10-01"
+            }
+          ]
+        }
+      ]
     },
     "IdentityModule.fetchIdentity": {
       "id": "IdentityModule.fetchIdentity",
@@ -1294,7 +1531,43 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async fetchIdentity(userId: string): Promise<IdentityData> {\n  const docs = await this.documents.latestDocuments(userId);\n  const fields = await this.extractor.extract(docs);\n  return { ...fields, userId, documentIds: docs.map((d) => d.id), extractedAt: new Date().toISOString() };\n}"
+      "source": "async fetchIdentity(userId: string): Promise<IdentityData> {\n  const docs = await this.documents.latestDocuments(userId);\n  const fields = await this.extractor.extract(docs);\n  return { ...fields, userId, documentIds: docs.map((d) => d.id), extractedAt: new Date().toISOString() };\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "fullName": "Ana Silva",
+            "dateOfBirth": "1990-04-12",
+            "nationality": "PRT",
+            "countryOfBirth": "PRT",
+            "cityOfBirth": "Porto",
+            "userId": "u-1",
+            "documentIds": [
+              "doc-u-1"
+            ],
+            "extractedAt": "2026-11-03T21:58:04.711Z"
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "fullName": "Raj Patel",
+            "dateOfBirth": "1988-09-30",
+            "nationality": "IND",
+            "countryOfBirth": "IND",
+            "cityOfBirth": "Bombay",
+            "userId": "u-2",
+            "documentIds": [
+              "doc-u-2"
+            ],
+            "extractedAt": "2026-11-03T21:58:04.713Z"
+          }
+        }
+      ]
     },
     "KycModule.runCheck": {
       "id": "KycModule.runCheck",
@@ -1419,7 +1692,29 @@
         "callsAdded": [],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "status": "passed",
+            "checkedAt": "2026-11-03T21:58:04.712Z"
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "status": "passed",
+            "checkedAt": "2026-11-03T21:58:04.714Z"
+          }
+        }
+      ]
     },
     "KycModule.getStatus": {
       "id": "KycModule.getStatus",
@@ -1470,7 +1765,29 @@
       "calls": [],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async getStatus(userId: string): Promise<KycResult | undefined> {\n  const [latest] = await this.db.select<KycResult & Record<string, unknown>>('kyc_results', { userId });\n  return latest;\n}"
+      "source": "async getStatus(userId: string): Promise<KycResult | undefined> {\n  const [latest] = await this.db.select<KycResult & Record<string, unknown>>('kyc_results', { userId });\n  return latest;\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "status": "passed",
+            "checkedAt": "2026-11-03T21:58:04.712Z"
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "status": "passed",
+            "checkedAt": "2026-11-03T21:58:04.714Z"
+          }
+        }
+      ]
     },
     "KycModule.override": {
       "id": "KycModule.override",
@@ -1537,7 +1854,20 @@
       "calls": [],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async override(userId: string, status: KycStatus, reviewer: string) {\n  await this.db.update('kyc_results', { userId }, { status, overriddenBy: reviewer });\n  await this.outbox.enqueue('kyc.overridden', { userId, status, reviewer });\n  return { userId, status };\n}"
+      "source": "async override(userId: string, status: KycStatus, reviewer: string) {\n  await this.db.update('kyc_results', { userId }, { status, overriddenBy: reviewer });\n  await this.outbox.enqueue('kyc.overridden', { userId, status, reviewer });\n  return { userId, status };\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-2",
+            "status": "passed",
+            "reviewer": "ops-17"
+          },
+          "output": {
+            "userId": "u-2",
+            "status": "passed"
+          }
+        }
+      ]
     },
     "KycModule.recheckExpired": {
       "id": "KycModule.recheckExpired",
@@ -1655,7 +1985,13 @@
         "callsAdded": [],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {},
+          "output": 0
+        }
+      ]
     },
     "SanctionsScreening.screen": {
       "id": "SanctionsScreening.screen",
@@ -1702,7 +2038,35 @@
       "calls": [],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async screen(person: { name: string; countryOfBirth: string; nationality: string }): Promise<ScreeningResult> {\n  return this.http.post<ScreeningResult>('sanctions-api', '/v1/screen', person);\n}"
+      "source": "async screen(person: { name: string; countryOfBirth: string; nationality: string }): Promise<ScreeningResult> {\n  return this.http.post<ScreeningResult>('sanctions-api', '/v1/screen', person);\n}",
+      "examples": [
+        {
+          "input": {
+            "person": {
+              "name": "Ana Silva",
+              "countryOfBirth": "PRT",
+              "nationality": "PRT"
+            }
+          },
+          "output": {
+            "hit": false,
+            "listVersion": "2026-10"
+          }
+        },
+        {
+          "input": {
+            "person": {
+              "name": "Raj Patel",
+              "countryOfBirth": "IND",
+              "nationality": "IND"
+            }
+          },
+          "output": {
+            "hit": false,
+            "listVersion": "2026-10"
+          }
+        }
+      ]
     },
     "NationalityModule.resolve": {
       "id": "NationalityModule.resolve",
@@ -1753,7 +2117,51 @@
       "calls": [],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async resolve(identity: IdentityData): Promise<Nationality> {\n  const [country] = await this.db.select<Nationality & Record<string, unknown>>('country_codes', { alpha3: identity.nationality });\n  return country ?? { alpha3: identity.nationality, name: identity.nationality, isEu: false };\n}"
+      "source": "async resolve(identity: IdentityData): Promise<Nationality> {\n  const [country] = await this.db.select<Nationality & Record<string, unknown>>('country_codes', { alpha3: identity.nationality });\n  return country ?? { alpha3: identity.nationality, name: identity.nationality, isEu: false };\n}",
+      "examples": [
+        {
+          "input": {
+            "identity": {
+              "fullName": "Ana Silva",
+              "dateOfBirth": "1990-04-12",
+              "nationality": "PRT",
+              "countryOfBirth": "PRT",
+              "cityOfBirth": "Porto",
+              "userId": "u-1",
+              "documentIds": [
+                "doc-u-1"
+              ],
+              "extractedAt": "2026-11-03T21:58:04.711Z"
+            }
+          },
+          "output": {
+            "alpha3": "PRT",
+            "name": "Portugal",
+            "isEu": true
+          }
+        },
+        {
+          "input": {
+            "identity": {
+              "fullName": "Raj Patel",
+              "dateOfBirth": "1988-09-30",
+              "nationality": "IND",
+              "countryOfBirth": "IND",
+              "cityOfBirth": "Bombay",
+              "userId": "u-2",
+              "documentIds": [
+                "doc-u-2"
+              ],
+              "extractedAt": "2026-11-03T21:58:04.713Z"
+            }
+          },
+          "output": {
+            "alpha3": "IND",
+            "name": "India",
+            "isEu": false
+          }
+        }
+      ]
     },
     "OnboardingModule.complete": {
       "id": "OnboardingModule.complete",
@@ -1883,7 +2291,18 @@
         "callsAdded": [],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "onboarded": true
+          }
+        }
+      ]
     },
     "PersonalDetailsModule.resolve": {
       "id": "PersonalDetailsModule.resolve",
@@ -1938,7 +2357,53 @@
       "calls": [],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async resolve(userId: string, identity: IdentityData): Promise<PersonalDetails> {\n  const [profile] = await this.db.select('user_profiles', { userId });\n  return {\n    legalName: identity.fullName,\n    preferredName: (profile?.preferredName as string | undefined) ?? identity.fullName,\n    dateOfBirth: identity.dateOfBirth,\n  };\n}"
+      "source": "async resolve(userId: string, identity: IdentityData): Promise<PersonalDetails> {\n  const [profile] = await this.db.select('user_profiles', { userId });\n  return {\n    legalName: identity.fullName,\n    preferredName: (profile?.preferredName as string | undefined) ?? identity.fullName,\n    dateOfBirth: identity.dateOfBirth,\n  };\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1",
+            "identity": {
+              "fullName": "Ana Silva",
+              "dateOfBirth": "1990-04-12",
+              "nationality": "PRT",
+              "countryOfBirth": "PRT",
+              "cityOfBirth": "Porto",
+              "userId": "u-1",
+              "documentIds": [
+                "doc-u-1"
+              ],
+              "extractedAt": "2026-11-03T21:58:04.711Z"
+            }
+          },
+          "output": {
+            "legalName": "Ana Silva",
+            "preferredName": "Ana",
+            "dateOfBirth": "1990-04-12"
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2",
+            "identity": {
+              "fullName": "Raj Patel",
+              "dateOfBirth": "1988-09-30",
+              "nationality": "IND",
+              "countryOfBirth": "IND",
+              "cityOfBirth": "Bombay",
+              "userId": "u-2",
+              "documentIds": [
+                "doc-u-2"
+              ],
+              "extractedAt": "2026-11-03T21:58:04.713Z"
+            }
+          },
+          "output": {
+            "legalName": "Raj Patel",
+            "preferredName": "Raj",
+            "dateOfBirth": "1988-09-30"
+          }
+        }
+      ]
     },
     "ProfileService.getProfile": {
       "id": "ProfileService.getProfile",
@@ -2042,7 +2507,55 @@
         "callsAdded": [],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "nationality": {
+              "alpha3": "PRT",
+              "name": "Portugal",
+              "isEu": true
+            },
+            "personal": {
+              "legalName": "Ana Silva",
+              "preferredName": "Ana",
+              "dateOfBirth": "1990-04-12"
+            },
+            "birth": {
+              "countryOfBirth": "PRT",
+              "cityOfBirth": "Porto",
+              "source": "document"
+            }
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "nationality": {
+              "alpha3": "IND",
+              "name": "India",
+              "isEu": false
+            },
+            "personal": {
+              "legalName": "Raj Patel",
+              "preferredName": "Raj",
+              "dateOfBirth": "1988-09-30"
+            },
+            "birth": {
+              "countryOfBirth": "IND",
+              "cityOfBirth": "Mumbai",
+              "source": "consent"
+            }
+          }
+        }
+      ]
     },
     "ProfileService.getSummary": {
       "id": "ProfileService.getSummary",
@@ -2097,7 +2610,27 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async getSummary(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  const personal = await this.personalDetails.resolve(userId, identity);\n  return { userId, name: personal.preferredName };\n}"
+      "source": "async getSummary(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  const personal = await this.personalDetails.resolve(userId, identity);\n  return { userId, name: personal.preferredName };\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "name": "Ana"
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "name": "Raj"
+          }
+        }
+      ]
     },
     "ProfileService.getNationality": {
       "id": "ProfileService.getNationality",
@@ -2156,7 +2689,29 @@
       ],
       "change": "unchanged",
       "containsChanges": false,
-      "source": "async getNationality(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  return this.nationality.resolve(identity);\n}"
+      "source": "async getNationality(userId: string) {\n  const identity = await this.identity.fetchIdentity(userId);\n  return this.nationality.resolve(identity);\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "alpha3": "PRT",
+            "name": "Portugal",
+            "isEu": true
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "alpha3": "IND",
+            "name": "India",
+            "isEu": false
+          }
+        }
+      ]
     },
     "ProfileService.getBirthInfo": {
       "id": "ProfileService.getBirthInfo",
@@ -2274,7 +2829,29 @@
         "callsAdded": [],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "countryOfBirth": "PRT",
+            "cityOfBirth": "Porto",
+            "source": "document"
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "countryOfBirth": "IND",
+            "cityOfBirth": "Mumbai",
+            "source": "consent"
+          }
+        }
+      ]
     },
     "ProfileService.exportProfile": {
       "id": "ProfileService.exportProfile",
@@ -2391,7 +2968,17 @@
         "callsAdded": [],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "status": "queued"
+          }
+        }
+      ]
     },
     "ProfileService.purge": {
       "id": "ProfileService.purge",
@@ -2564,7 +3151,46 @@
         "callsAdded": [],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "residencies": [
+              "PRT"
+            ],
+            "usPerson": false
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "residencies": [
+              "IND"
+            ],
+            "usPerson": false
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "residencies": [
+              "IND",
+              "GBR"
+            ],
+            "usPerson": false
+          }
+        }
+      ]
     },
     "TaxResidencyModule.recordDeclaration": {
       "id": "TaxResidencyModule.recordDeclaration",
@@ -2698,7 +3324,23 @@
         "callsAdded": [],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {
+            "userId": "u-2",
+            "country": "GBR"
+          },
+          "output": {
+            "userId": "u-2",
+            "residencies": [
+              "IND",
+              "GBR"
+            ],
+            "usPerson": false
+          }
+        }
+      ]
     },
     "TaxResidencyModule.weeklySweep": {
       "id": "TaxResidencyModule.weeklySweep",
@@ -2809,7 +3451,12 @@
         "callsAdded": [],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {}
+        }
+      ]
     },
     "TravelEligibilityModule.checkVisa": {
       "id": "TravelEligibilityModule.checkVisa",
@@ -2915,7 +3562,39 @@
         "callsAdded": [],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1",
+            "destination": "USA"
+          },
+          "output": {
+            "destination": "USA",
+            "visaRequired": false
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2",
+            "destination": "USA"
+          },
+          "output": {
+            "destination": "USA",
+            "visaRequired": false
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2",
+            "destination": "JPN"
+          },
+          "output": {
+            "destination": "JPN",
+            "visaRequired": false
+          }
+        }
+      ]
     },
     "TravelEligibilityModule.prefillPassport": {
       "id": "TravelEligibilityModule.prefillPassport",
@@ -3120,7 +3799,39 @@
         "callsAdded": [],
         "callsRemoved": [],
         "implementationOnly": false
-      }
+      },
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "legalName": "Ana Silva",
+            "preferredName": "Ana",
+            "dateOfBirth": "1990-04-12",
+            "countryOfBirth": "PRT",
+            "cityOfBirth": "Porto",
+            "source": "document",
+            "nationality": "PRT"
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "legalName": "Raj Patel",
+            "preferredName": "Raj",
+            "dateOfBirth": "1988-09-30",
+            "countryOfBirth": "IND",
+            "cityOfBirth": "Mumbai",
+            "source": "consent",
+            "nationality": "IND"
+          }
+        }
+      ]
     }
   },
   "entryPoints": {

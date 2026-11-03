@@ -35,11 +35,14 @@ npm run analyze -- --project sample-service --uncommitted
 npm run analyze -- --project sample-service --head feature/birthinfo-consent --base main --intent "…"
 npm run analyze -- --project sample-service --pr 123          # needs gh
 npm run analyze -- --project sample-service --head my-branch --check   # CI gate: exit 1 on new errors
+npm run analyze -- --project sample-service --head my-branch --examples src/dev/scenario.ts   # record real example inputs/outputs
 ```
 
 Each run writes `ui/public/graphs/<id>.json` and adds it to the UI's selector.
 
 ## The demo
+
+Code map, and where the before/after versions live: [sample-service/README.md](sample-service/README.md).
 
 `sample-service/` is an identity/profile microservice with 16 modules and 28 entry points (REST, gRPC,
 Kafka consumers, cron jobs):

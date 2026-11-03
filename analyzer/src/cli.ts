@@ -1,5 +1,6 @@
 #!/usr/bin/env -S npx tsx
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -8,7 +9,7 @@ import type { Finding, ModuleGraph, Source } from '../../schema/modulegraph.ts';
 import { compare } from './compare.ts';
 import { loadConfig } from './config.ts';
 import { extract, type Snapshot } from './extract.ts';
-import { diffBetween, fetchPullRequest, filesAtRef, mergeBase, repoRootOf, revParse, type RawDiff } from './git.ts';
+import { diffBetween, fetchPullRequest, filesAtRef, git, mergeBase, repoRootOf, revParse, type RawDiff } from './git.ts';
 import { architectureFindings, changeFindings, markNew, opLabel, reviewSummary } from './rules.ts';
 
 const HELP = `modulegraph: module-level review graph for a TypeScript service
@@ -23,6 +24,8 @@ modes (default: --uncommitted)
 
 options
   --intent <text>          what the change is supposed to do (enables undisclosed-effect rule)
+  --examples <file>        scenario (relative to --project) to run on the head revision; records real
+                           inputs/outputs per operation. Branches/PRs run in a temporary git worktree
   --title <text>           label shown in the UI
   --name <id>              output id (default derived from mode)
   --out <file>             output path (default: ui/public/graphs/<id>.json, also updates index.json)
@@ -39,6 +42,7 @@ const { values: args } = parseArgs({
     pr: { type: 'string' },
     snapshot: { type: 'boolean' },
     intent: { type: 'string' },
+    examples: { type: 'string' },
     title: { type: 'string' },
     name: { type: 'string' },
     out: { type: 'string' },
@@ -72,6 +76,8 @@ let base: Snapshot | undefined;
 let diff: RawDiff | undefined;
 let intent = args.intent;
 let source: Source;
+/** Commit the head side was read from; undefined = working tree. */
+let headSha: string | undefined;
 
 if (args.snapshot) {
   head = snapshotOf();
@@ -88,7 +94,8 @@ if (args.snapshot) {
     intent ??= `${pr.title}\n${pr.body}`;
   }
   const mb = mergeBase(repo, baseRef, headRef);
-  head = snapshotOf(filesAtRef(repo, revParse(repo, headRef), projectRel));
+  headSha = revParse(repo, headRef);
+  head = snapshotOf(filesAtRef(repo, headSha, projectRel));
   base = snapshotOf(filesAtRef(repo, mb, projectRel));
   diff = diffBetween(repo, mb, headRef, projectRel);
   source = { mode: args.pr ? 'pr' : 'branch', repo, project: projectRel, base: baseRef, head: args.pr ? `#${args.pr}` : headRef, title, files: diff.files };
@@ -105,6 +112,8 @@ const graph = compare(head, base);
 for (const file of source.files) {
   file.modules = Object.values(graph.modules).filter((m) => m.file === file.path).map((m) => m.id);
 }
+
+if (args.examples) captureExamples(args.examples);
 
 let findings: Finding[] = architectureFindings(graph, config);
 if (base) {
@@ -167,4 +176,37 @@ if (args.check && findings.some((f) => f.isNew && f.severity === 'error')) {
 
 function slug(s: string): string {
   return s.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
+}
+
+/** Runs the scenario against the head revision and attaches recorded calls to each operation. */
+function captureExamples(scenarioRel: string): void {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const tmp = join(repo, '.modulegraph-tmp');
+  mkdirSync(tmp, { recursive: true });
+  let codeRoot = repo;
+  let worktree: string | undefined;
+  if (headSha) {
+    worktree = join(tmp, `wt-${headSha.slice(0, 10)}`).replace(/\\/g, '/');
+    if (existsSync(worktree)) git(repo, ['worktree', 'remove', '--force', worktree]);
+    git(repo, ['worktree', 'add', '--detach', worktree, headSha]);
+    codeRoot = worktree;
+  }
+  try {
+    const scenario = join(codeRoot, projectRel, scenarioRel);
+    if (!existsSync(scenario)) throw new Error(`scenario not found at head revision: ${join(projectRel, scenarioRel)}`);
+    const out = join(tmp, 'examples.json');
+    const spec = join(tmp, 'examples-spec.json');
+    const targets = Object.values(graph.operations)
+      .filter((op) => op.change !== 'removed')
+      .map((op) => ({ opId: op.id, file: join(codeRoot, op.file), className: graph.modules[op.moduleId].className, method: op.name, params: op.params.map((p) => p.name) }));
+    writeFileSync(spec, JSON.stringify({ scenario, out, targets }));
+    execFileSync(process.execPath, ['--import', 'tsx', join(here, 'examples-runner.ts'), spec], { cwd: resolve(here, '..'), stdio: 'inherit' });
+    const recorded = JSON.parse(readFileSync(out, 'utf8')) as Record<string, NonNullable<ModuleGraph['operations'][string]['examples']>>;
+    for (const [opId, examples] of Object.entries(recorded)) if (graph.operations[opId]) graph.operations[opId].examples = examples;
+    source.examples = { scenario: join(projectRel, scenarioRel).replace(/\\/g, '/'), operationsCovered: Object.keys(recorded).length };
+    rmSync(out, { force: true });
+    rmSync(spec, { force: true });
+  } finally {
+    if (worktree) git(repo, ['worktree', 'remove', '--force', worktree]);
+  }
 }
