@@ -1,0 +1,40 @@
+import { buildApp } from '../app.ts';
+import { seed } from './seed.ts';
+
+/**
+ * A realistic tour of the service, used by `modulegraph --examples` to record real inputs/outputs.
+ * u-1 has only identity documents; u-2 has documents and (from the consent feature on) consented birth data.
+ */
+export default async function scenario(): Promise<void> {
+  const app = buildApp();
+  await seed(app);
+  const call = (method: string, url: string, body?: unknown) => app.router.dispatch(method, url, body);
+
+  for (const user of ['u-1', 'u-2']) {
+    await call('GET', `/v1/users/${user}/profile`);
+    await call('GET', `/v1/users/${user}/birth-info`);
+    await call('GET', `/v1/users/${user}/profile/summary`);
+    await call('GET', `/v1/users/${user}/nationality`);
+    await call('POST', `/v1/kyc/${user}/check`);
+    await call('GET', `/v1/kyc/${user}/status`);
+    await call('GET', `/v1/tax/${user}/residency`);
+    await call('GET', `/v1/travel/${user}/visa-eligibility?destination=USA`);
+    await call('POST', `/v1/travel/${user}/passport-prefill`);
+    await call('GET', `/admin/v1/users/${user}/identity-review`);
+  }
+  await call('POST', '/v1/onboarding/u-1/complete');
+  await call('POST', '/v1/tax/u-2/declarations', { country: 'GBR' });
+  await call('POST', '/v1/users/u-1/export');
+  await call('POST', '/admin/v1/users/u-2/kyc-override', { status: 'passed', reviewer: 'ops-17' });
+
+  for (const [method, request] of app.grpc.methods) {
+    if (method.endsWith('CheckVisa')) await request({ userId: 'u-2', destination: 'JPN' });
+    else await request({ userId: 'u-1' });
+  }
+  await app.kafka.produce('user.profile.changed', { userId: 'u-2' });
+  await app.kafka.produce('travel.booking.created', { userId: 'u-1', destination: 'CAN' });
+  for (const { job } of app.scheduler.jobs) await job();
+
+  // Exists from the consent feature on (404 before it): u-1 gives consent last so earlier calls stay document-based.
+  await call('PUT', '/v1/users/u-1/birth-info/consent', { countryOfBirth: 'PRT', cityOfBirth: 'Lisbon' });
+}
