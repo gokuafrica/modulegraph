@@ -3,7 +3,7 @@
     "id": "demo-birthinfo-consent",
     "title": "BirthInfo: consented data wins over documents",
     "mode": "branch",
-    "generatedAt": "2026-11-03T22:11:07.306Z",
+    "generatedAt": "2026-11-03T22:15:18.990Z",
     "stats": {
       "files": 7,
       "linesAdded": 57,
@@ -16,7 +16,7 @@
     "id": "snapshot-main",
     "title": "Snapshot: identity-profile-service (main)",
     "mode": "snapshot",
-    "generatedAt": "2026-11-03T22:11:01.181Z",
+    "generatedAt": "2026-11-03T22:15:13.471Z",
     "stats": {
       "files": 0,
       "linesAdded": 0,
