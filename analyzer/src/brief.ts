@@ -112,9 +112,13 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://localhos
   // ---------- findings ----------
   out.push('## New findings (machine-checked)', '');
   if (!newFindings.length) out.push('None.');
-  for (const [rule, fs] of group(newFindings)) {
-    const sev = fs[0].severity.toUpperCase();
-    out.push(`- **${sev} ${rule}** ×${fs.length}${fs[0].hint ? ` (${fs[0].hint.replace(/\s+/g, ' ')})` : ''}`);
+  const hinted = new Set<string>();
+  for (const fs of group(newFindings)) {
+    const { rule, severity, hint } = fs[0];
+    // A rule can fire at several levels (a new read is info, a new write a warning): one heading per level, hint once.
+    const showHint = hint && !hinted.has(rule);
+    hinted.add(rule);
+    out.push(`- **${severity.toUpperCase()} ${rule}** ×${fs.length}${showHint ? ` (${hint.replace(/\s+/g, ' ')})` : ''}`);
     for (const f of fs.slice(0, 10)) out.push(`  - ${f.message}`);
     if (fs.length > 10) out.push(`  - … ${fs.length - 10} more`);
   }
@@ -172,11 +176,15 @@ function stepsOf(g: ModuleGraph, e: EntryPoint): string {
   return steps.length ? steps.map((s) => (s.target ? opLabel(g, s.target) : `${s.effect!.kind} ${s.effect!.target}`)).join(', ') : 'not analyzed';
 }
 
-function group(fs: Finding[]): [string, Finding[]][] {
+/** Findings grouped by severity and rule, most severe first. */
+function group(fs: Finding[]): Finding[][] {
   const order = { error: 0, warning: 1, info: 2 };
   const m = new Map<string, Finding[]>();
-  for (const f of [...fs].sort((a, b) => order[a.severity] - order[b.severity])) m.set(f.rule, [...(m.get(f.rule) ?? []), f]);
-  return [...m.entries()];
+  for (const f of [...fs].sort((a, b) => order[a.severity] - order[b.severity])) {
+    const key = `${f.severity} ${f.rule}`;
+    m.set(key, [...(m.get(key) ?? []), f]);
+  }
+  return [...m.values()];
 }
 
 /** "if (x)" → "when x", "unless (x)" → "when not x", so guards read as plain conditions. */

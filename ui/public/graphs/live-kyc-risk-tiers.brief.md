@@ -59,12 +59,13 @@ Lazy analysis: 2 of 28 flows analyzed (`topic kyc.recheck_requested`, `cron kyc-
 
 - **WARNING duplicate-read** ×1 (Read once and reuse the value.)
   - SanctionsScreening.screen performs http sanctions-api 2× in one call
-- **WARNING new-side-effect** ×3 (A new write runs on every flow that reaches this module. Check the zoom-out view.)
+- **WARNING new-side-effect** ×2 (A new write runs on every flow that reaches this module. Check the zoom-out view.)
   - KycCheck.runCheck now performs outbox `kyc.manual_review_requested`
   - KycCheck.recheckExpired now performs outbox `kyc.recheck_requested`
-  - KycCheck.runCheck now performs db.read `kyc_results`
 - **WARNING undisclosed-effect** ×1 (Either the description is incomplete or the agent added a side effect nobody asked for.)
   - Change adds db.read `kyc_results`, which the PR description never mentions
+- **INFO new-side-effect** ×1
+  - KycCheck.runCheck now performs db.read `kyc_results`
 - **INFO unattributed-change** ×1 (Wiring, shared types and dev tooling. Contract effects of shared types already show up as output-shape changes on the modules.)
   - 1 changed file outside any module: dev/seed.ts
 

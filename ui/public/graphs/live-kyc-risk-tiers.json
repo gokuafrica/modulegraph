@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T09:41:33.237Z",
+  "generatedAt": "2026-11-04T10:44:23.842Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -809,7 +809,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T09:41:33.117Z"
+            "checkedAt": "2026-11-04T10:44:23.662Z"
           }
         },
         {
@@ -820,7 +820,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-04T09:41:33.119Z"
+            "checkedAt": "2026-11-04T10:44:23.664Z"
           }
         }
       ],
@@ -916,7 +916,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T09:41:33.113Z"
+            "extractedAt": "2026-11-04T10:44:23.660Z"
           }
         },
         {
@@ -933,7 +933,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T09:41:33.119Z"
+            "extractedAt": "2026-11-04T10:44:23.663Z"
           }
         }
       ],
@@ -1165,7 +1165,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:41:33.113Z"
+              "extractedAt": "2026-11-04T10:44:23.660Z"
             }
           },
           "output": {
@@ -1185,7 +1185,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:41:33.119Z"
+              "extractedAt": "2026-11-04T10:44:23.663Z"
             }
           },
           "output": {
@@ -1244,7 +1244,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:41:33.113Z"
+              "extractedAt": "2026-11-04T10:44:23.660Z"
             }
           },
           "output": {
@@ -1264,7 +1264,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:41:33.119Z"
+              "extractedAt": "2026-11-04T10:44:23.663Z"
             }
           },
           "output": {
@@ -1341,7 +1341,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:41:33.113Z"
+              "extractedAt": "2026-11-04T10:44:23.660Z"
             }
           },
           "output": {
@@ -1362,7 +1362,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:41:33.119Z"
+              "extractedAt": "2026-11-04T10:44:23.663Z"
             }
           },
           "output": {
@@ -1769,7 +1769,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T09:41:33.117Z"
+            "checkedAt": "2026-11-04T10:44:23.662Z"
           }
         },
         {
@@ -4509,7 +4509,7 @@
       "entryPointsReached": 5,
       "operationsKnown": 26,
       "operationsAnalyzed": 12,
-      "ms": 2866
+      "ms": 2689
     }
   }
 }

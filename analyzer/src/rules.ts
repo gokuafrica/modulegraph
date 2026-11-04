@@ -12,6 +12,18 @@ export function opLabel(g: Graphish, opId: string): string {
 }
 
 /** op id -> entry point ids whose flow reaches it (the reference index behind zoom-out). */
+/**
+ * The modules a changed file belongs to: the module whose class lives there, the operations that inline code from
+ * it, and otherwise the modules in the same folder (a module's own types or constants file has no class of its own).
+ */
+export function modulesOfFile(g: Graphish, path: string): string[] {
+  const viaOps = Object.values(g.operations).filter((op) => op.changes?.some((c) => c.file === path)).map((op) => op.moduleId);
+  const own = [...new Set([...Object.values(g.modules).filter((m) => m.file === path).map((m) => m.id), ...viaOps])];
+  if (own.length) return own;
+  const dir = (p: string) => p.slice(0, p.lastIndexOf('/') + 1);
+  return Object.values(g.modules).filter((m) => m.file && dir(m.file) === dir(path)).map((m) => m.id);
+}
+
 export function reachIndex(g: Graphish): Map<string, Set<string>> {
   const index = new Map<string, Set<string>>();
   for (const entry of Object.values(g.entryPoints)) {

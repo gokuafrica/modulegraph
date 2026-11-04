@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "order-service",
-  "generatedAt": "2026-11-04T09:41:47.747Z",
+  "generatedAt": "2026-11-04T10:44:38.978Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -41,14 +41,18 @@
         "status": "modified",
         "added": 16,
         "removed": 1,
-        "modules": []
+        "modules": [
+          "OrdersService"
+        ]
       },
       {
         "path": "sample-nest-service/src/orders/orders.controller.ts",
         "status": "modified",
         "added": 20,
         "removed": 1,
-        "modules": []
+        "modules": [
+          "OrdersService"
+        ]
       },
       {
         "path": "sample-nest-service/src/orders/orders.service.ts",
@@ -7176,15 +7180,11 @@
     {
       "rule": "unattributed-change",
       "severity": "info",
-      "message": "2 changed files outside any module: src/app.module.ts, orders/order.entity.ts",
+      "message": "1 changed file outside any module: src/app.module.ts",
       "related": [
         {
           "type": "file",
           "id": "sample-nest-service/src/app.module.ts"
-        },
-        {
-          "type": "file",
-          "id": "sample-nest-service/src/orders/order.entity.ts"
         }
       ],
       "isNew": true,
@@ -7326,7 +7326,7 @@
       "entryPointsReached": 0,
       "operationsKnown": 33,
       "operationsAnalyzed": 23,
-      "ms": 5582
+      "ms": 5863
     }
   }
 }

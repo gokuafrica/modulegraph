@@ -90,14 +90,15 @@ Stated intent (flag): “BirthInfo: prefer user-consented birth data (birth_info
 
 - **WARNING read-path-writes** ×1 (Reads that write break caching, retries and replica routing. Move the write to a command path or make it explicit in the API contract.)
   - outbox `birth_info.source_resolved` runs on 8 read-only entry points: gRPC identity.v1.ProfileService/GetProfile, gRPC identity.v1.ProfileService/GetBirthInfo, gRPC travel.v1.TravelService/CheckVisa, …
-- **WARNING new-side-effect** ×3 (A new write runs on every flow that reaches this module. Check the zoom-out view.)
+- **WARNING new-side-effect** ×2 (A new write runs on every flow that reaches this module. Check the zoom-out view.)
   - BirthConsentStore.recordConsent now performs db.write `birth_info_consents` (new operation)
   - BirthInfo.resolve now performs outbox `birth_info.source_resolved`
-  - BirthConsentStore.findActiveConsent now performs db.read `birth_info_consents` (new operation)
 - **WARNING undisclosed-effect** ×1 (Either the description is incomplete or the agent added a side effect nobody asked for.)
   - Change adds outbox `birth_info.source_resolved`, which the PR description never mentions
+- **INFO new-side-effect** ×1
+  - BirthConsentStore.findActiveConsent now performs db.read `birth_info_consents` (new operation)
 - **INFO unattributed-change** ×1 (Wiring, shared types and dev tooling. Contract effects of shared types already show up as output-shape changes on the modules.)
-  - 3 changed files outside any module: src/app.ts, dev/seed.ts, birth-info/types.ts
+  - 2 changed files outside any module: src/app.ts, dev/seed.ts
 
 3 pre-existing findings not caused by this change (not listed).
 

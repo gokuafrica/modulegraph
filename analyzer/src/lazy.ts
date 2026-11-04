@@ -4,7 +4,7 @@ import type { RevisionAnalysis } from './analyzers/types.ts';
 import { compare } from './compare.ts';
 import type { Config } from './config.ts';
 import { hunks, type RawDiff } from './git.ts';
-import { architectureFindings, changeFindings, markNew, reviewSummary } from './rules.ts';
+import { architectureFindings, changeFindings, markNew, modulesOfFile, reviewSummary } from './rules.ts';
 
 export interface LazyOptions {
   /** How many entry points to analyze up front. */
@@ -103,8 +103,7 @@ export class LazySession {
       e.analysis = this.head.deep.has(e.id) || (this.base?.deep.has(e.id) && !head.entryPoints[e.id]) ? 'full' : g.scopes[e.id] ? 'reached' : 'listed';
     }
     for (const file of this.source.files) {
-      const viaOps = Object.values(g.operations).filter((op) => op.changes?.some((c) => c.file === file.path)).map((op) => op.moduleId);
-      file.modules = [...new Set([...Object.values(g.modules).filter((m) => m.file === file.path).map((m) => m.id), ...viaOps])];
+      file.modules = modulesOfFile(g, file.path);
     }
     let findings = architectureFindings(g, this.config);
     if (base) {

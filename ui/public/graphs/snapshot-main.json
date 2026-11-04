@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T09:41:08.534Z",
+  "generatedAt": "2026-11-04T10:43:57.705Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "snapshot",
@@ -324,7 +324,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:41:08.495Z"
+              "extractedAt": "2026-11-04T10:43:57.665Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -348,7 +348,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:41:08.495Z"
+              "extractedAt": "2026-11-04T10:43:57.666Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -406,7 +406,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:41:08.492Z"
+              "extractedAt": "2026-11-04T10:43:57.663Z"
             }
           },
           "output": {
@@ -426,7 +426,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:41:08.495Z"
+              "extractedAt": "2026-11-04T10:43:57.666Z"
             }
           },
           "output": {
@@ -481,7 +481,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:41:08.492Z"
+              "extractedAt": "2026-11-04T10:43:57.663Z"
             }
           },
           "output": {
@@ -501,7 +501,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:41:08.495Z"
+              "extractedAt": "2026-11-04T10:43:57.666Z"
             }
           },
           "output": {
@@ -847,7 +847,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T09:41:08.492Z"
+            "extractedAt": "2026-11-04T10:43:57.663Z"
           }
         },
         {
@@ -864,7 +864,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T09:41:08.495Z"
+            "extractedAt": "2026-11-04T10:43:57.666Z"
           }
         }
       ]
@@ -968,7 +968,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-04T09:41:08.494Z"
+            "checkedAt": "2026-11-04T10:43:57.665Z"
           }
         },
         {
@@ -978,7 +978,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-04T09:41:08.495Z"
+            "checkedAt": "2026-11-04T10:43:57.666Z"
           }
         }
       ]
@@ -1041,7 +1041,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-04T09:41:08.494Z"
+            "checkedAt": "2026-11-04T10:43:57.665Z"
           }
         },
         {
@@ -1051,7 +1051,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-04T09:41:08.495Z"
+            "checkedAt": "2026-11-04T10:43:57.666Z"
           }
         }
       ]
@@ -1350,7 +1350,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:41:08.492Z"
+              "extractedAt": "2026-11-04T10:43:57.663Z"
             }
           },
           "output": {
@@ -1371,7 +1371,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:41:08.495Z"
+              "extractedAt": "2026-11-04T10:43:57.666Z"
             }
           },
           "output": {
@@ -1558,7 +1558,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:41:08.492Z"
+              "extractedAt": "2026-11-04T10:43:57.663Z"
             }
           },
           "output": {
@@ -1580,7 +1580,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:41:08.495Z"
+              "extractedAt": "2026-11-04T10:43:57.666Z"
             }
           },
           "output": {

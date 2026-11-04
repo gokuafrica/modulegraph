@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T09:41:26.449Z",
+  "generatedAt": "2026-11-04T10:44:17.116Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -64,7 +64,11 @@
         "status": "modified",
         "added": 11,
         "removed": 0,
-        "modules": []
+        "modules": [
+          "BirthConsentStore",
+          "BirthInfoModule",
+          "DocumentBirthExtractor"
+        ]
       }
     ],
     "analyzer": {
@@ -927,7 +931,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:41:26.326Z"
+              "extractedAt": "2026-11-04T10:44:16.968Z"
             }
           },
           "output": {
@@ -948,7 +952,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:41:26.330Z"
+              "extractedAt": "2026-11-04T10:44:16.971Z"
             }
           },
           "output": {
@@ -1105,7 +1109,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:41:26.326Z"
+              "extractedAt": "2026-11-04T10:44:16.968Z"
             }
           },
           "output": {
@@ -1623,7 +1627,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:41:26.329Z"
+              "extractedAt": "2026-11-04T10:44:16.971Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -1648,7 +1652,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:41:26.331Z"
+              "extractedAt": "2026-11-04T10:44:16.971Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -1784,7 +1788,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-04T09:41:26.328Z"
+            "checkedAt": "2026-11-04T10:44:16.970Z"
           }
         },
         {
@@ -1794,7 +1798,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-04T09:41:26.330Z"
+            "checkedAt": "2026-11-04T10:44:16.971Z"
           }
         }
       ],
@@ -3005,7 +3009,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T09:41:26.326Z"
+            "extractedAt": "2026-11-04T10:44:16.968Z"
           }
         },
         {
@@ -3022,7 +3026,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T09:41:26.330Z"
+            "extractedAt": "2026-11-04T10:44:16.971Z"
           }
         }
       ],
@@ -7277,7 +7281,7 @@
     {
       "rule": "unattributed-change",
       "severity": "info",
-      "message": "3 changed files outside any module: src/app.ts, dev/seed.ts, birth-info/types.ts",
+      "message": "2 changed files outside any module: src/app.ts, dev/seed.ts",
       "related": [
         {
           "type": "file",
@@ -7286,10 +7290,6 @@
         {
           "type": "file",
           "id": "sample-service/src/dev/seed.ts"
-        },
-        {
-          "type": "file",
-          "id": "sample-service/src/modules/birth-info/types.ts"
         }
       ],
       "isNew": true,
@@ -7376,7 +7376,7 @@
       "entryPointsReached": 18,
       "operationsKnown": 29,
       "operationsAnalyzed": 21,
-      "ms": 2507
+      "ms": 2868
     }
   }
 }

@@ -124,7 +124,7 @@ Stated intent (commits): “Orders: hold high-risk orders for fraud review; loya
   - db.write `order_views` runs on 2 read-only entry points: GET /api/orders/:id, gRPC OrderService/GetOrder
 - **WARNING review-budget** ×1 (Split into a stack: one PR per contract change, each reviewable as its own graph diff.)
   - Change exceeds the review budget: 10 contract changes (budget 5)
-- **WARNING new-side-effect** ×10 (A new write runs on every flow that reaches this module. Check the zoom-out view.)
+- **WARNING new-side-effect** ×7 (A new write runs on every flow that reaches this module. Check the zoom-out view.)
   - Fraud.assess now performs db.write `fraud_checks` (new operation)
   - Orders.create now performs kafka `orders.held`
   - Orders.release now performs db.write `orders` (new operation)
@@ -132,14 +132,15 @@ Stated intent (commits): “Orders: hold high-risk orders for fraud review; loya
   - Orders.release now performs event `order.created` (new operation)
   - Orders.get now performs db.write `order_views`
   - Shipping.updateStatus now performs db.write `shipments` (new operation)
-  - Fraud.assess now performs http `risk.example.com` (new operation)
-  - Orders.release now performs db.read `orders` (new operation)
-  - Orders.release now performs db.read `order_lines` (new operation)
 - **WARNING undisclosed-effect** ×2 (Either the description is incomplete or the agent added a side effect nobody asked for.)
   - Change adds db.write `fraud_checks`, which the PR description never mentions
   - Change adds db.write `order_views`, which the PR description never mentions
+- **INFO new-side-effect** ×3
+  - Fraud.assess now performs http `risk.example.com` (new operation)
+  - Orders.release now performs db.read `orders` (new operation)
+  - Orders.release now performs db.read `order_lines` (new operation)
 - **INFO unattributed-change** ×1 (Wiring, shared types and dev tooling. Contract effects of shared types already show up as output-shape changes on the modules.)
-  - 2 changed files outside any module: src/app.module.ts, orders/order.entity.ts
+  - 1 changed file outside any module: src/app.module.ts
 
 ## Request review from
 

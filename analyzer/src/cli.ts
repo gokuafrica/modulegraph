@@ -13,7 +13,7 @@ import { brief } from './brief.ts';
 import { LazySession } from './lazy.ts';
 import { serve } from './server.ts';
 import { commitMessages, diffBetween, fetchPullRequest, filesAtRef, git, mergeBase, repoRootOf, revParse, type RawDiff } from './git.ts';
-import { architectureFindings, changeFindings, markNew, opLabel, reviewSummary } from './rules.ts';
+import { architectureFindings, changeFindings, markNew, modulesOfFile, opLabel, reviewSummary } from './rules.ts';
 
 const HELP = `modulegraph: module-level review graph for a service
 
@@ -195,9 +195,7 @@ if (args.lazy) {
   const base = baseProject?.run();
   const graph = compare(head, base);
   for (const file of source.files) {
-    // A file belongs to a module when the module's class lives there or one of its operations inlines code from it.
-    const viaOps = Object.values(graph.operations).filter((op) => op.changes?.some((c) => c.file === file.path)).map((op) => op.moduleId);
-    file.modules = [...new Set([...Object.values(graph.modules).filter((m) => m.file === file.path).map((m) => m.id), ...viaOps])];
+    file.modules = modulesOfFile(graph, file.path);
   }
   if (args.examples) {
     const targets = Object.values(graph.operations)
