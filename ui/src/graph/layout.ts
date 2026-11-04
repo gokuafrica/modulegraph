@@ -9,12 +9,12 @@ export type Theme = 'dark' | 'light';
 
 /** Edge colours per theme. Concrete values, not CSS variables: React Flow derives marker ids from the colour. */
 const PALETTE: Record<Theme, Record<VEdge['kind'], string>> = {
-  light: { data: '#475569', control: '#94a3b8', call: '#64748b', read: '#2563eb', write: '#c2410c', branch: '#7c3aed' },
-  dark: { data: '#94a3b8', control: '#64748b', call: '#94a3b8', read: '#60a5fa', write: '#fb923c', branch: '#a78bfa' },
+  light: { data: '#475569', control: '#94a3b8', call: '#64748b', read: '#2563eb', write: '#c2410c', branch: '#7c3aed', removed: '#dc2626' },
+  dark: { data: '#94a3b8', control: '#64748b', call: '#94a3b8', read: '#60a5fa', write: '#fb923c', branch: '#a78bfa', removed: '#f87171' },
 };
 
-const DASH: Partial<Record<VEdge['kind'], string>> = { control: '5 4', read: '2 3', write: '2 3' };
-const WIDTH: Record<VEdge['kind'], number> = { data: 1.6, control: 1.2, call: 1.6, read: 1.1, write: 1.3, branch: 1.6 };
+const DASH: Partial<Record<VEdge['kind'], string>> = { control: '5 4', read: '2 3', write: '2 3', removed: '3 4' };
+const WIDTH: Record<VEdge['kind'], number> = { data: 1.6, control: 1.2, call: 1.6, read: 1.1, write: 1.3, branch: 1.6, removed: 1.3 };
 
 /** Layered left→right layout with ELK-routed orthogonal edges (they go around nodes) and placed labels. */
 export async function layout(model: Model, theme: Theme): Promise<{ nodes: Node[]; edges: Edge[] }> {

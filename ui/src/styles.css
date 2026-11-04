@@ -371,3 +371,79 @@ h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color:
 .check-text.wrap { white-space: normal; }
 .inspector { position: relative; }
 .inspector .close { position: absolute; top: 10px; right: 12px; color: var(--muted); font-size: 14px; }
+
+/* ---------- object tree (devtools-style example values) ---------- */
+.otree { font-family: ui-monospace, Consolas, monospace; font-size: 11px; line-height: 16px; cursor: default; max-height: 340px; overflow: auto; }
+.ot-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ot-toggle { cursor: pointer; }
+.ot-toggle:hover { background: rgba(148, 163, 184, 0.12); }
+.ot-caret { display: inline-block; width: 11px; color: var(--muted); font-size: 9px; }
+.ot-children { padding-left: 13px; }
+.ot-key { color: var(--ot-key); }
+.ot-colon { color: var(--muted); }
+.ot-str { color: var(--ot-str); }
+.ot-date { color: var(--ot-date); }
+.ot-num { color: var(--ot-num); }
+.ot-bool, .ot-null { color: var(--ot-bool); }
+.ot-type { color: var(--muted); font-style: italic; }
+.ot-preview { color: var(--text-2); }
+.ot-mark { font-weight: 700; margin-right: 2px; }
+.ot-added > .ot-line, .ot-added > .ot-line .ot-key { color: #4ade80; }
+.ot-removed > .ot-line { color: #f87171; text-decoration: line-through; }
+.entry .otree, .exit .otree { --muted: var(--entry-muted); --text-2: var(--entry-fg); }
+:root, [data-theme='light'] { --ot-key: #7c3aed; --ot-str: #b45309; --ot-date: #0e7490; --ot-num: #1d4ed8; --ot-bool: #9333ea; }
+[data-theme='dark'] { --ot-key: #c4b5fd; --ot-str: #fdba74; --ot-date: #67e8f9; --ot-num: #93c5fd; --ot-bool: #f0abfc; }
+.entry .otree, .exit .otree { --ot-key: #c4b5fd; --ot-str: #fde68a; --ot-date: #67e8f9; --ot-num: #93c5fd; --ot-bool: #f0abfc; }
+.example-tabs .tab-label { opacity: 0.8; }
+.blackbox .bb-head { font-size: 11px; font-weight: 600; margin-bottom: 4px; }
+.blackbox .bb-side { display: grid; grid-template-columns: 34px 1fr; align-items: start; gap: 4px; padding: 3px 0; border-top: 1px dashed var(--line); }
+.blackbox .bb-tag { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); padding-top: 1px; }
+.blackbox .bb-tag.err, .err { color: #ef4444; }
+
+/* ---------- toast ---------- */
+.toast { position: absolute; left: 50%; bottom: 64px; transform: translateX(-50%); background: var(--topbar-bg); color: var(--topbar-fg); border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 14px; font-size: 12.5px; z-index: 20; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); }
+
+/* ---------- structural diff in the flow ---------- */
+.node.step-added { outline: 2px dashed var(--add-border); outline-offset: 3px; }
+.node.ghost { opacity: 0.6; border-style: dashed !important; border-color: var(--rem-border) !important; background: var(--rem-bg) !important; }
+.node.ghost .module-title, .node.ghost .effect-target { text-decoration: line-through; }
+.step-delta { font-size: 10.5px; font-weight: 600; margin: -2px 0 4px; }
+.step-delta.add { color: var(--add-fg); }
+.step-delta.del { color: var(--rem-fg); }
+.step-delta.cond { color: var(--cond-fg); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.diff-link { color: var(--mod-fg) !important; }
+
+/* ---------- code changes: leaf node, drawer ---------- */
+.code-head { display: flex; justify-content: space-between; align-items: center; }
+.code-fns { margin: 4px 0; font-size: 11px; font-family: ui-monospace, Consolas, monospace; }
+.code-fn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 18px; }
+.st { display: inline-block; width: 15px; text-align: center; border-radius: 3px; font-size: 9.5px; font-weight: 700; color: #fff; }
+.st-added { background: #16a34a; } .st-modified { background: #d97706; } .st-removed { background: #dc2626; }
+.plus { color: #22c55e; } .minus { color: #ef4444; }
+.fn-diff { margin-bottom: 12px; }
+.fn-diff-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; padding: 4px 2px; font-size: 12px; }
+.fn-diff-head .file { font-family: ui-monospace, Consolas, monospace; }
+.fn-diff-head .counts { margin-left: auto; }
+.hunks { background: var(--code-bg); color: var(--code-fg); border-radius: 6px; padding: 4px 0; font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; line-height: 17px; }
+.node.code .hunks { font-size: 11px; line-height: 16px; max-height: 260px; overflow: auto; }
+.hl { display: grid; grid-template-columns: 34px 34px 14px 1fr; }
+.hl .ln { color: #64748b; text-align: right; padding-right: 6px; user-select: none; font-size: 10px; }
+.hl .sign { color: #94a3b8; user-select: none; }
+.hl .code { white-space: pre-wrap; word-break: break-word; padding-right: 8px; }
+.hl.dl-add .w-hl { background: rgba(34, 197, 94, 0.45); border-radius: 2px; }
+.hl.dl-del .w-hl { background: rgba(239, 68, 68, 0.5); border-radius: 2px; }
+.hunks .gap { display: block; width: 100%; text-align: left; background: rgba(148, 163, 184, 0.1); color: #94a3b8; border: 0; border-radius: 0; padding: 2px 0 2px 82px; font-size: 10.5px; cursor: pointer; }
+.hunks .gap:hover { background: rgba(148, 163, 184, 0.2); }
+.diff-drawer { position: absolute; left: 0; right: 0; bottom: 0; height: min(52%, 560px); background: var(--panel); border-top: 1px solid var(--line-strong); z-index: 15; display: flex; flex-direction: column; box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.25); }
+.diff-head { display: flex; gap: 12px; align-items: baseline; padding: 8px 14px; border-bottom: 1px solid var(--line); }
+.diff-body { flex: 1; min-height: 0; display: grid; grid-template-columns: clamp(200px, 18%, 300px) 1fr; }
+.diff-nav { overflow: auto; border-right: 1px solid var(--line); padding: 6px 0; }
+.diff-nav-path { font-size: 10.5px; color: var(--muted); padding: 6px 12px 2px; font-family: ui-monospace, Consolas, monospace; }
+.diff-nav-fn { display: grid; grid-template-columns: 18px 1fr auto auto; gap: 4px; align-items: center; width: 100%; text-align: left; background: transparent; border: 0; border-radius: 0; padding: 3px 12px; font-size: 12px; color: var(--text); cursor: pointer; }
+.diff-nav-fn:hover, .diff-nav-fn.on { background: var(--hover); }
+.diff-nav-fn .fn-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.diff-main { overflow: auto; padding: 8px 14px; }
+.fn-row { display: flex; gap: 4px; align-items: baseline; width: 100%; background: transparent; border: 0; text-align: left; padding: 2px 0; color: var(--text); cursor: pointer; font-size: 12px; }
+.fn-row .counts { margin-left: auto; }
+.fn-row:hover b { text-decoration: underline; }
+.diff-crumb { color: var(--mod-fg); border-color: var(--mod-border); }

@@ -2,6 +2,7 @@ import { Background, Controls, ReactFlow, useReactFlow, type Edge, type Node } f
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ModuleGraph } from '../../schema/modulegraph.ts';
 import { Inspector, type Selection } from './components/Inspector.tsx';
+import { DiffPanel } from './components/DiffView.tsx';
 import { edgeTypes } from './components/Edges.tsx';
 import { ActionsContext, ExampleContext, nodeTypes, type Actions } from './components/Nodes.tsx';
 import { Sidebar } from './components/Sidebar.tsx';
@@ -43,7 +44,10 @@ function readHash(): Record<string, string> {
   return Object.fromEntries(new URLSearchParams(location.hash.slice(1)));
 }
 
-function writeHash(graphId: string, view: View) {
+/** Browser history entries this app owns. `guard` sits below the first view so one stray Back doesn't leave the page. */
+type HistState = { mg: 'view'; graphId: string; view: View; idx: number } | { mg: 'guard' };
+
+function hashFor(graphId: string, view: View): string {
   const p = new URLSearchParams({ g: graphId });
   if (view.mode === 'flow') {
     p.set('v', 'flow');
@@ -54,7 +58,7 @@ function writeHash(graphId: string, view: View) {
     p.set('op', view.op);
     p.set('d', String(view.depth));
   }
-  history.replaceState(null, '', `#${p.toString()}`);
+  return `#${p.toString()}`;
 }
 
 export default function App() {
@@ -62,7 +66,9 @@ export default function App() {
   const [graphId, setGraphId] = useState<string>();
   const [g, setG] = useState<ModuleGraph>();
   const [view, setView] = useState<View>();
-  const [back, setBack] = useState<View[]>([]);
+  const [canGoBack, setCanGoBack] = useState(false);
+  const [toast, setToast] = useState<string>();
+  const [diffFor, setDiffFor] = useState<string>();
   const [selection, setSelection] = useState<Selection>();
   const [collapsePassthrough, setCollapse] = useState(true);
   const [showResources, setShowResources] = useState(false);
@@ -96,7 +102,6 @@ export default function App() {
       .then((r) => r.json())
       .then((data: ModuleGraph) => {
         setG(data);
-        setBack([]);
         setExpandedGroups(new Set());
         const h = readHash();
         if (h.g === graphId && h.v === 'flow' && h.t) {
@@ -119,21 +124,78 @@ export default function App() {
 
   const index = useMemo(() => (g ? buildIndex(g) : undefined), [g]);
 
+  const graphIdRef = useRef<string>(undefined);
+  graphIdRef.current = graphId;
   const viewRef = useRef<View>(undefined);
   viewRef.current = view;
   const chainRef = useRef<string[]>(undefined);
   chainRef.current = canvas?.chain;
   const maxDepthRef = useRef<number>(undefined);
   maxDepthRef.current = canvas?.meta?.maxDepth;
+  /** In-app navigation and the browser's Back/Forward share one history: every view change is a history entry. */
+  const histIdx = useRef<number>((history.state as HistState | null)?.mg === 'view' ? (history.state as { idx: number }).idx : 0);
+  const nextWrite = useRef<'push' | 'replace' | 'none'>('replace');
   const navigate = useCallback((next: View) => {
-    const cur = viewRef.current;
-    if (cur) setBack((b) => [...b.slice(-30), cur]);
+    nextWrite.current = 'push';
     setView(next);
   }, []);
 
   useEffect(() => {
+    const graphId = graphIdRef.current;
+    if (!view || !graphId) return;
+    const mode = nextWrite.current;
+    nextWrite.current = 'replace';
+    if (mode === 'none') return;
+    const url = hashFor(graphId, view);
+    const st = history.state as HistState | null;
+    if (mode === 'replace' && st?.mg !== 'view') {
+      // First view of this tab: put a guard entry underneath it.
+      history.replaceState({ mg: 'guard' } satisfies HistState, '', url);
+      histIdx.current = 0;
+      history.pushState({ mg: 'view', graphId, view, idx: 0 } satisfies HistState, '', url);
+    } else if (mode === 'push') {
+      histIdx.current += 1;
+      history.pushState({ mg: 'view', graphId, view, idx: histIdx.current } satisfies HistState, '', url);
+    } else {
+      history.replaceState({ mg: 'view', graphId, view, idx: histIdx.current } satisfies HistState, '', url);
+    }
+    setCanGoBack(histIdx.current > 0);
+  }, [view]);
+
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      const st = e.state as HistState | null;
+      if (st?.mg === 'guard') {
+        histIdx.current = -1;
+        setCanGoBack(false);
+        setToast('This is where the review started. Press Back again to leave modulegraph.');
+        return;
+      }
+      if (st?.mg !== 'view') return;
+      setToast(undefined);
+      histIdx.current = st.idx;
+      setCanGoBack(st.idx > 0);
+      nextWrite.current = 'none';
+      if (st.graphId !== graphIdRef.current) setGraphId(st.graphId);
+      else setView(st.view);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setDiffFor(undefined);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  useEffect(() => setDiffFor(undefined), [view, graphId]);
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(undefined), 4000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  useEffect(() => {
     if (!g || !index || !view || !graphId) return;
-    writeHash(graphId, view);
     setExampleIndex(0);
     let cancelled = false;
     if (view.mode === 'flow') {
@@ -173,6 +235,7 @@ export default function App() {
         navigate({ mode: 'flow', trail: [entryId], focus: cur?.mode === 'impact' ? cur.op : cur?.mode === 'flow' ? cur.focus : undefined });
       },
       expandGroup: (gid) => setExpandedGroups((s) => new Set([...s, gid])),
+      showDiff: (id) => setDiffFor(id),
     }),
     [navigate],
   );
@@ -201,7 +264,7 @@ export default function App() {
       <div className={`app ${railOpen ? '' : 'no-left'} ${selection ? '' : 'no-right'}`}>
         <header className="topbar">
           <div className="brand">◇ modulegraph <span className="muted">module-level review</span></div>
-          <select value={graphId} onChange={(e) => { setGraphId(e.target.value); history.replaceState(null, '', '#'); }}>
+          <select value={graphId} onChange={(e) => { nextWrite.current = 'push'; history.replaceState(history.state, '', `#g=${e.target.value}`); setGraphId(e.target.value); }}>
             {graphs.map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
           </select>
           <span className="muted small">{g.service} · {Object.keys(g.modules).length} modules · {Object.keys(g.entryPoints).length} entry points</span>
@@ -216,7 +279,7 @@ export default function App() {
         {railOpen && <Sidebar g={g} />}
         <main className="canvas">
           <div className="crumbs">
-            <button disabled={!back.length} onClick={() => { setView(back.at(-1)); setBack(back.slice(0, -1)); }}>← back</button>
+            <button disabled={!canGoBack} onClick={() => history.back()} title="Same as the browser's Back button">← back</button>
             {view.mode === 'flow' ? (
               <>
                 <span className="mode-tag">flow</span>
@@ -231,6 +294,11 @@ export default function App() {
                     focus: {opTitle(g, view.focus)} <button className="link" onClick={() => setView({ ...view, focus: undefined })}>✕</button>
                   </span>
                 )}
+                {(() => {
+                  const scopeId = canvas?.chain?.at(-1) ?? view.trail.at(-1)!;
+                  const n = (g.operations[scopeId]?.changes ?? g.entryPoints[scopeId]?.changes)?.length ?? 0;
+                  return n ? <button className="diff-crumb" onClick={() => setDiffFor(scopeId)} title="Code changes behind this flow, function by function">code changes ± ({n})</button> : null;
+                })()}
                 {(canvas?.chain?.length ?? 0) > 1 && (
                   <span className="muted small">
                     {' '}› {canvas!.chain!.slice(1).map((id) => (
@@ -276,6 +344,10 @@ export default function App() {
             </ReactFlow>
           )}
           <Legend />
+          {toast && <div className="toast">{toast}</div>}
+          {diffFor && (g.operations[diffFor]?.changes ?? g.entryPoints[diffFor]?.changes)?.length ? (
+            <DiffPanel title={label(diffFor)} changes={(g.operations[diffFor]?.changes ?? g.entryPoints[diffFor]?.changes)!} onClose={() => setDiffFor(undefined)} />
+          ) : null}
         </main>
         {selection && <Inspector g={g} selection={selection} onClose={() => setSelection(undefined)} />}
       </div>

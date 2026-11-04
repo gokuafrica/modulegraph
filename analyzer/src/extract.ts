@@ -14,7 +14,7 @@ import {
   type MethodDeclaration,
   type Type,
 } from 'ts-morph';
-import type { Edge, Effect, EntryPoint, ModuleInfo, Operation, Param, Scope, Step, TypeShape } from '../../schema/modulegraph.ts';
+import type { CodeChange, Edge, Effect, EntryPoint, ModuleInfo, Operation, Param, Scope, Step, TypeShape } from '../../schema/modulegraph.ts';
 import type { Config } from './config.ts';
 
 type Fn = MethodDeclaration | FunctionDeclaration | ArrowFunction | FunctionExpression;
@@ -28,6 +28,16 @@ export interface Snapshot {
   scopes: Record<string, Scope>;
   /** Normalised source of everything that defines behaviour, per module/op/entry id. Equal = unchanged. */
   fingerprints: Record<string, string>;
+  /** Functions behind each scope (its own function first, then inlined helpers), for per-function diffs. */
+  parts: Record<string, Part[]>;
+}
+
+export interface Part {
+  name: string;
+  role: CodeChange['role'];
+  file: string;
+  line: number;
+  text: string;
 }
 
 type Resolved =
@@ -40,7 +50,7 @@ interface FnResult {
   steps: Step[];
   edges: Edge[];
   returns: Prod;
-  parts: string[];
+  parts: Part[];
 }
 
 const MAX_TYPE = 110;
@@ -51,7 +61,7 @@ export function extract(project: Project, repoRoot: string, projectDir: string, 
 
 class Extractor {
   private moduleIds = new Map<ClassDeclaration, string>();
-  private snapshot: Snapshot = { modules: {}, operations: {}, entryPoints: {}, scopes: {}, fingerprints: {} };
+  private snapshot: Snapshot = { modules: {}, operations: {}, entryPoints: {}, scopes: {}, fingerprints: {}, parts: {} };
   private stepCounter = 0;
   private currentClass?: ClassDeclaration;
 
@@ -160,7 +170,7 @@ class Extractor {
         containsChanges: false,
         source: dedent(method.getText()),
       };
-      this.snapshot.fingerprints[id] = normalise([method.getText(), ...scope.result.parts].join('\n'));
+      this.recordParts(id, { name: method.getName(), role: 'operation', file: this.rel(method.getSourceFile().getFilePath()), line: method.getStartLineNumber(), text: method.getText() }, scope.result.parts);
     }
   }
 
@@ -188,7 +198,14 @@ class Extractor {
       change: 'unchanged',
       containsChanges: false,
     };
-    this.snapshot.fingerprints[id] = normalise([call.getText(), ...scope.result.parts].join('\n'));
+    this.recordParts(id, { name: label, role: 'handler', file: this.rel(call.getSourceFile().getFilePath()), line: call.getStartLineNumber(), text: call.getText() }, scope.result.parts);
+  }
+
+  private recordParts(id: string, own: Part, inlined: Part[]): void {
+    const seen = new Set<string>();
+    const parts = [own, ...inlined].filter((p) => !seen.has(p.name) && !!seen.add(p.name));
+    this.snapshot.parts[id] = parts.map((p) => ({ ...p, text: dedent(p.text) }));
+    this.snapshot.fingerprints[id] = normalise([own.text, ...inlined.map((p) => p.text)].join('\n'));
   }
 
   private toFn(node: Node | undefined): Fn | undefined {
@@ -225,7 +242,7 @@ class Extractor {
   private analyzeFn(fn: Fn, stack: Set<Node>): FnResult {
     const steps: Step[] = [];
     const edges: Edge[] = [];
-    const parts: string[] = [];
+    const parts: Part[] = [];
     const vars = new Map<string, Prod>();
     const callProd = new Map<Node, Prod>();
     let returns: Prod = new Map();
@@ -296,7 +313,7 @@ class Extractor {
         stack.add(resolved.fn);
         const sub = this.analyzeFn(resolved.fn, stack);
         stack.delete(resolved.fn);
-        parts.push(resolved.fn.getText(), ...sub.parts);
+        parts.push({ name: resolved.name, role: 'helper', file: this.rel(resolved.fn.getSourceFile().getFilePath()), line: resolved.fn.getStartLineNumber(), text: resolved.fn.getText() }, ...sub.parts);
         for (const s of sub.steps) {
           steps.push({
             ...s,

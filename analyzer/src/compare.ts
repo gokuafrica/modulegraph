@@ -1,8 +1,9 @@
 import { diffLines } from 'diff';
 import type { ContractDelta, DiffLine, Effect, Operation, Param, Risk, TypeShape } from '../../schema/modulegraph.ts';
+import { codeChanges, diffScope, functionIndex } from './compare-steps.ts';
 import { effectKey, type Snapshot } from './extract.ts';
 
-export type Graphish = Omit<Snapshot, 'fingerprints'>;
+export type Graphish = Omit<Snapshot, 'fingerprints' | 'parts'>;
 
 /** Folds the base snapshot into the head one: change status, contract deltas and per-op line diffs. */
 export function compare(head: Snapshot, base?: Snapshot): Graphish {
@@ -13,6 +14,8 @@ export function compare(head: Snapshot, base?: Snapshot): Graphish {
     scopes: head.scopes,
   });
   if (!base) return out;
+  const baseFns = functionIndex(base.parts);
+  const headFns = functionIndex(head.parts);
 
   for (const op of Object.values(out.operations)) {
     const before = base.operations[op.id];
@@ -22,7 +25,10 @@ export function compare(head: Snapshot, base?: Snapshot): Graphish {
     } else if (base.fingerprints[op.id] !== head.fingerprints[op.id]) {
       op.change = 'modified';
       op.diff = lineDiff(before.source, op.source);
+      op.changes = codeChanges(base.parts[op.id], head.parts[op.id], baseFns, headFns);
+      if (base.scopes[op.id] && out.scopes[op.id]) diffScope(out.scopes[op.id], base.scopes[op.id]);
     }
+    if (op.change === 'added') op.changes = codeChanges(undefined, head.parts[op.id], baseFns, headFns);
     const delta = contractDelta(before, op);
     if (delta.risk !== 'none') op.delta = delta;
   }
@@ -49,7 +55,12 @@ export function compare(head: Snapshot, base?: Snapshot): Graphish {
   for (const entry of Object.values(out.entryPoints)) {
     const before = base.entryPoints[entry.id];
     if (!before) entry.change = 'added';
-    else if (base.fingerprints[entry.id] !== head.fingerprints[entry.id]) entry.change = 'modified';
+    else if (base.fingerprints[entry.id] !== head.fingerprints[entry.id]) {
+      entry.change = 'modified';
+      entry.changes = codeChanges(base.parts[entry.id], head.parts[entry.id], baseFns, headFns);
+      if (base.scopes[entry.id] && out.scopes[entry.id]) diffScope(out.scopes[entry.id], base.scopes[entry.id]);
+    }
+    if (entry.change === 'added') entry.changes = codeChanges(undefined, head.parts[entry.id], baseFns, headFns);
     const prev = before?.effects ?? [];
     entry.effectsAdded = entry.effects.filter((e) => !prev.some((p) => effectKey(p) === effectKey(e)));
     entry.effectsRemoved = prev.filter((p) => !entry.effects.some((e) => effectKey(p) === effectKey(e)));

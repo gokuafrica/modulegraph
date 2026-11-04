@@ -113,7 +113,9 @@ if (intent) source.intent = intent;
 
 const graph = compare(head, base);
 for (const file of source.files) {
-  file.modules = Object.values(graph.modules).filter((m) => m.file === file.path).map((m) => m.id);
+  // A file belongs to a module when the module's class lives there or one of its operations inlines code from it.
+  const viaOps = Object.values(graph.operations).filter((op) => op.changes?.some((c) => c.file === file.path)).map((op) => op.moduleId);
+  file.modules = [...new Set([...Object.values(graph.modules).filter((m) => m.file === file.path).map((m) => m.id), ...viaOps])];
 }
 
 if (args.examples) captureExamples(args.examples);

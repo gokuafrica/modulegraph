@@ -299,7 +299,15 @@
           "items": {
             "$ref": "#/definitions/Effect"
           },
-          "description": "Side effects the module declares in its contract (`@effect` tags)."
+          "description": "Side effects declared for the module (external config, or opt-in `@effect` tags). Empty when none are declared."
+        },
+        "contractSource": {
+          "type": "string",
+          "enum": [
+            "config",
+            "tags"
+          ],
+          "description": "Where declarations came from. Absent = nothing declared, so the undeclared-effect rule doesn't apply."
         },
         "operations": {
           "type": "array",
@@ -390,7 +398,14 @@
           "items": {
             "$ref": "#/definitions/DiffLine"
           },
-          "description": "Line diff of this operation (base vs head), when changed."
+          "description": "Line diff of this operation's own method (base vs head), when changed."
+        },
+        "changes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CodeChange"
+          },
+          "description": "Every changed function behind this operation: its own method plus inlined helpers, possibly in other files."
         },
         "examples": {
           "type": "array",
@@ -452,11 +467,74 @@
         },
         "text": {
           "type": "string"
+        },
+        "a": {
+          "type": "number",
+          "description": "Line number in the base file (context and removed lines)."
+        },
+        "b": {
+          "type": "number",
+          "description": "Line number in the head file (context and added lines)."
         }
       },
       "required": [
         "t",
         "text"
+      ],
+      "additionalProperties": false
+    },
+    "CodeChange": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "\"resolve\", or the inlined helper, e.g. \"riskTier\" or \"KycModule.persist\"."
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "operation",
+            "handler",
+            "helper"
+          ]
+        },
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "number",
+          "description": "First line of the function (head; base when removed)."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "added",
+            "removed",
+            "modified"
+          ]
+        },
+        "added": {
+          "type": "number"
+        },
+        "removed": {
+          "type": "number"
+        },
+        "diff": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DiffLine"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "role",
+        "file",
+        "line",
+        "status",
+        "added",
+        "removed",
+        "diff"
       ],
       "additionalProperties": false
     },
@@ -588,6 +666,13 @@
           "items": {
             "$ref": "#/definitions/Effect"
           }
+        },
+        "changes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CodeChange"
+          },
+          "description": "Changed functions behind the handler (handler + inlined helpers)."
         }
       },
       "required": [
@@ -629,6 +714,20 @@
           "items": {
             "$ref": "#/definitions/Edge"
           }
+        },
+        "removedSteps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Step"
+          },
+          "description": "Steps the base revision had that the head no longer has (drawn as ghosts). Ids are prefixed \"rm:\"."
+        },
+        "removedEdges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Edge"
+          },
+          "description": "Base edges that touched a removed step, mapped onto head step ids."
         }
       },
       "required": [
@@ -675,6 +774,18 @@
         "via": {
           "type": "string",
           "description": "Non-module helper the step was inlined from."
+        },
+        "delta": {
+          "type": "string",
+          "enum": [
+            "added",
+            "removed"
+          ],
+          "description": "Set when comparing with a base: the step is new in this scope, or (in removedSteps) gone."
+        },
+        "conditionBefore": {
+          "type": "string",
+          "description": "The step's guard on the base revision, when it changed (\"\" = had none)."
         }
       },
       "required": [

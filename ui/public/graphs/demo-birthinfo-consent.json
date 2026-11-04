@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-03T22:15:18.990Z",
+  "generatedAt": "2026-11-04T00:42:43.640Z",
   "generator": "modulegraph-analyzer/0.1 (ts-morph)",
   "source": {
     "mode": "branch",
@@ -427,7 +427,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-03T22:15:18.847Z"
+              "extractedAt": "2026-11-04T00:42:43.527Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -452,7 +452,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-03T22:15:18.848Z"
+              "extractedAt": "2026-11-04T00:42:43.528Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -538,6 +538,39 @@
         {
           "t": "+",
           "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "findActiveConsent",
+          "role": "operation",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 10,
+          "status": "added",
+          "added": 4,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "async findActiveConsent(userId: string): Promise<ConsentedBirthData | undefined> {",
+              "b": 10
+            },
+            {
+              "t": "+",
+              "text": "  const rows = await this.db.select<ConsentedBirthData & Record<string, unknown>>('birth_info_consents', { userId, revokedAt: null });",
+              "b": 11
+            },
+            {
+              "t": "+",
+              "text": "  return rows.at(-1);",
+              "b": 12
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 13
+            }
+          ]
         }
       ],
       "delta": {
@@ -635,6 +668,39 @@
         {
           "t": "+",
           "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "recordConsent",
+          "role": "operation",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 15,
+          "status": "added",
+          "added": 4,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "async recordConsent(userId: string, countryOfBirth: string, cityOfBirth: string): Promise<void> {",
+              "b": 15
+            },
+            {
+              "t": "+",
+              "text": "  await this.db.update('birth_info_consents', { userId, revokedAt: null }, { revokedAt: new Date().toISOString() });",
+              "b": 16
+            },
+            {
+              "t": "+",
+              "text": "  await this.db.insert('birth_info_consents', { userId, countryOfBirth, cityOfBirth, consentedAt: new Date().toISOString(), revokedAt: null });",
+              "b": 17
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 18
+            }
+          ]
         }
       ],
       "delta": {
@@ -763,6 +829,72 @@
           "text": "}"
         }
       ],
+      "changes": [
+        {
+          "name": "resolve",
+          "role": "operation",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 17,
+          "status": "modified",
+          "added": 7,
+          "removed": 0,
+          "diff": [
+            {
+              "t": " ",
+              "text": "async resolve(identity: IdentityData): Promise<BirthInfo> {",
+              "a": 11,
+              "b": 17
+            },
+            {
+              "t": "+",
+              "text": "  const consented = await this.consents.findActiveConsent(identity.userId);",
+              "b": 18
+            },
+            {
+              "t": "+",
+              "text": "  if (consented) {",
+              "b": 19
+            },
+            {
+              "t": "+",
+              "text": "    // Consented data replaces document data as a whole; fields are never mixed across sources.",
+              "b": 20
+            },
+            {
+              "t": "+",
+              "text": "    const info: BirthInfo = { countryOfBirth: consented.countryOfBirth, cityOfBirth: consented.cityOfBirth, source: 'consent' };",
+              "b": 21
+            },
+            {
+              "t": "+",
+              "text": "    await this.outbox.enqueue('birth_info.source_resolved', { userId: identity.userId, source: info.source });",
+              "b": 22
+            },
+            {
+              "t": "+",
+              "text": "    return info;",
+              "b": 23
+            },
+            {
+              "t": "+",
+              "text": "  }",
+              "b": 24
+            },
+            {
+              "t": " ",
+              "text": "  return this.documentBirth.fromIdentity(identity);",
+              "a": 12,
+              "b": 25
+            },
+            {
+              "t": " ",
+              "text": "}",
+              "a": 13,
+              "b": 26
+            }
+          ]
+        }
+      ],
       "delta": {
         "risk": "high",
         "returns": {
@@ -831,7 +963,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-03T22:15:18.844Z"
+              "extractedAt": "2026-11-04T00:42:43.523Z"
             }
           },
           "output": {
@@ -852,7 +984,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-03T22:15:18.847Z"
+              "extractedAt": "2026-11-04T00:42:43.527Z"
             }
           },
           "output": {
@@ -914,6 +1046,34 @@
         {
           "t": "+",
           "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "recordConsent",
+          "role": "operation",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 28,
+          "status": "added",
+          "added": 3,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "async recordConsent(userId: string, countryOfBirth: string, cityOfBirth: string): Promise<void> {",
+              "b": 28
+            },
+            {
+              "t": "+",
+              "text": "  await this.consents.recordConsent(userId, countryOfBirth, cityOfBirth);",
+              "b": 29
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 30
+            }
+          ]
         }
       ],
       "delta": {
@@ -997,6 +1157,41 @@
           "text": "}"
         }
       ],
+      "changes": [
+        {
+          "name": "fromIdentity",
+          "role": "operation",
+          "file": "sample-service/src/modules/birth-info/DocumentBirthExtractor.ts",
+          "line": 8,
+          "status": "modified",
+          "added": 1,
+          "removed": 1,
+          "diff": [
+            {
+              "t": " ",
+              "text": "fromIdentity(identity: IdentityData): BirthInfo {",
+              "a": 8,
+              "b": 8
+            },
+            {
+              "t": "-",
+              "text": "  return { countryOfBirth: identity.countryOfBirth, cityOfBirth: identity.cityOfBirth };",
+              "a": 9
+            },
+            {
+              "t": "+",
+              "text": "  return { countryOfBirth: identity.countryOfBirth, cityOfBirth: identity.cityOfBirth, source: 'document' };",
+              "b": 9
+            },
+            {
+              "t": " ",
+              "text": "}",
+              "a": 10,
+              "b": 10
+            }
+          ]
+        }
+      ],
       "delta": {
         "risk": "medium",
         "returns": {
@@ -1050,7 +1245,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-03T22:15:18.844Z"
+              "extractedAt": "2026-11-04T00:42:43.523Z"
             }
           },
           "output": {
@@ -1430,7 +1625,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-03T22:15:18.844Z"
+            "extractedAt": "2026-11-04T00:42:43.523Z"
           }
         },
         {
@@ -1447,7 +1642,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-03T22:15:18.847Z"
+            "extractedAt": "2026-11-04T00:42:43.527Z"
           }
         }
       ]
@@ -1584,7 +1779,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-03T22:15:18.846Z"
+            "checkedAt": "2026-11-04T00:42:43.526Z"
           }
         },
         {
@@ -1594,7 +1789,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-03T22:15:18.847Z"
+            "checkedAt": "2026-11-04T00:42:43.528Z"
           }
         }
       ]
@@ -1657,7 +1852,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-03T22:15:18.846Z"
+            "checkedAt": "2026-11-04T00:42:43.526Z"
           }
         },
         {
@@ -1667,7 +1862,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-03T22:15:18.847Z"
+            "checkedAt": "2026-11-04T00:42:43.528Z"
           }
         }
       ]
@@ -2014,7 +2209,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-03T22:15:18.844Z"
+              "extractedAt": "2026-11-04T00:42:43.523Z"
             }
           },
           "output": {
@@ -2035,7 +2230,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-03T22:15:18.847Z"
+              "extractedAt": "2026-11-04T00:42:43.527Z"
             }
           },
           "output": {
@@ -2255,7 +2450,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-03T22:15:18.844Z"
+              "extractedAt": "2026-11-04T00:42:43.523Z"
             }
           },
           "output": {
@@ -2277,7 +2472,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-03T22:15:18.847Z"
+              "extractedAt": "2026-11-04T00:42:43.527Z"
             }
           },
           "output": {
@@ -5245,6 +5440,34 @@
       ],
       "change": "added",
       "containsChanges": true,
+      "changes": [
+        {
+          "name": "PUT /v1/users/:userId/birth-info/consent",
+          "role": "handler",
+          "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+          "line": 9,
+          "status": "added",
+          "added": 3,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "router.put('/v1/users/:userId/birth-info/consent', (req) =>",
+              "b": 9
+            },
+            {
+              "t": "+",
+              "text": "  m.birthInfo.recordConsent(req.params.userId, req.body.countryOfBirth, req.body.cityOfBirth),",
+              "b": 10
+            },
+            {
+              "t": "+",
+              "text": ")",
+              "b": 11
+            }
+          ]
+        }
+      ],
       "effectsAdded": [
         {
           "kind": "db.write",
@@ -5613,7 +5836,8 @@
           "kind": "call",
           "target": "BirthConsentStore.findActiveConsent",
           "line": 18,
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts"
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "delta": "added"
         },
         {
           "id": "s2",
@@ -5626,7 +5850,8 @@
           },
           "line": 22,
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "condition": "if (consented)"
+          "condition": "if (consented)",
+          "delta": "added"
         },
         {
           "id": "s3",
@@ -5634,7 +5859,8 @@
           "target": "DocumentBirthExtractor.fromIdentity",
           "line": 25,
           "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "condition": "unless (consented)"
+          "condition": "unless (consented)",
+          "conditionBefore": ""
         }
       ],
       "edges": [

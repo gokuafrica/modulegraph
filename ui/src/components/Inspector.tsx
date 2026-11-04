@@ -2,6 +2,7 @@ import { useContext, useState } from 'react';
 import type { Effect, Finding, ModuleGraph, Operation } from '../../../schema/modulegraph.ts';
 import { chipsFor, effectKey, opTitle } from '../graph/model.ts';
 import { ActionsContext, EffectChip, EFFECT_META } from './Nodes.tsx';
+import { exampleLabels, ObjectTree } from './ObjectTree.tsx';
 
 export type Selection =
   | { type: 'op'; id: string }
@@ -41,10 +42,13 @@ function Checks({ g, ids }: { g: ModuleGraph; ids: string[] }) {
 
 function OpCard({ g, op }: { g: ModuleGraph; op: Operation }) {
   const mod = g.modules[op.moduleId];
-  const [showCode, setShowCode] = useState(op.change !== 'unchanged');
+  const [showCode, setShowCode] = useState(false);
+  const actions = useContext(ActionsContext);
   const chips = chipsFor(op);
   const declared = new Set(mod.declaredEffects.map(effectKey));
   const before = op.delta?.returns?.before.fields ?? [];
+  const labels = exampleLabels((op.examples ?? []).map((e) => e.input));
+  const addedFields = new Set(op.delta?.returns ? (op.returns.fields ?? []).filter((f) => !before.some((b) => b.name === f.name)).map((f) => f.name) : []);
   return (
     <div key={op.id}>
       <div className="insp-head">
@@ -55,7 +59,7 @@ function OpCard({ g, op }: { g: ModuleGraph; op: Operation }) {
           {mod.owner && <span className="owner">{mod.owner}</span>}
         </div>
         {mod.summary && <p className="summary">{mod.summary}</p>}
-        <div className="file">{op.file}:{op.line}</div>
+        <div className="file" title="The diagram shows this revision of the code">{op.file}:{op.line} <span className="muted">· {revisionNote(g)}</span></div>
       </div>
 
       <section>
@@ -77,13 +81,14 @@ function OpCard({ g, op }: { g: ModuleGraph; op: Operation }) {
 
       {op.examples?.length ? (
         <section>
-          <h4>Example calls <span className="muted small">recorded from {g.source.examples?.scenario ?? 'a scenario run'}</span></h4>
+          <h4>Example calls <span className="muted small">recorded by running {g.source.examples?.scenario ?? 'a scenario'} on the head revision</span></h4>
           {op.examples.map((e, i) => (
-            <div key={i} className="example-block">
-              <div className="example-head"><span>call {i + 1} · input</span></div>
-              <pre className="example-json">{JSON.stringify(e.input, null, 2)}</pre>
-              <div className="example-head"><span>{e.error ? 'throws' : 'output'}</span></div>
-              <pre className="example-json">{e.error ?? JSON.stringify(e.output, null, 2)}</pre>
+            <div key={i} className="example-block blackbox">
+              <div className="bb-head">call {i + 1}{labels[i] && <span className="muted"> · {labels[i]}</span>}</div>
+              <div className="bb-side"><span className="bb-tag">in</span><ObjectTree value={e.input} flat /></div>
+              <div className="bb-side"><span className={`bb-tag ${e.error ? 'err' : ''}`}>{e.error ? 'throws' : 'out'}</span>
+                {e.error ? <span className="err">{e.error}</span> : <ObjectTree value={e.output} flat added={addedFields} />}
+              </div>
             </div>
           ))}
         </section>
@@ -104,18 +109,38 @@ function OpCard({ g, op }: { g: ModuleGraph; op: Operation }) {
 
       <Checks g={g} ids={[op.id, op.moduleId]} />
 
+      {op.changes?.length ? (
+        <section>
+          <h4>Code changes <span className="muted small">{op.changes.length} function{op.changes.length > 1 ? 's' : ''} · <span className="plus">+{op.changes.reduce((n, c) => n + c.added, 0)}</span> <span className="minus">−{op.changes.reduce((n, c) => n + c.removed, 0)}</span></span></h4>
+          {op.changes.map((c) => (
+            <button key={c.name} className="linkrow fn-row" onClick={() => actions.showDiff(op.id)} title={`${c.file}:${c.line}`}>
+              <span className={`st st-${c.status}`}>{c.status[0].toUpperCase()}</span> <b>{c.name}</b>
+              <span className="muted small"> {c.file.split('/').pop()}</span>
+              <span className="counts small"><span className="plus">+{c.added}</span> <span className="minus">−{c.removed}</span></span>
+            </button>
+          ))}
+          <div className="insp-actions"><button onClick={() => actions.showDiff(op.id)}>Open diff ▸</button></div>
+        </section>
+      ) : null}
+
       <section>
-        <h4 className="clickable" onClick={() => setShowCode(!showCode)}>{showCode ? '▾' : '▸'} {op.diff ? 'Code diff' : 'Code'}</h4>
+        <h4 className="clickable" onClick={() => setShowCode(!showCode)}>{showCode ? '▾' : '▸'} Code <span className="muted small">{g.source.head ? `as of ${g.source.head}` : ''}</span></h4>
         {showCode && (
           <pre className="code-block">
-            {(op.diff ?? op.source.split('\n').map((text) => ({ t: ' ' as const, text }))).map((l, i) => (
-              <div key={i} className={`dl dl-${l.t === '+' ? 'add' : l.t === '-' ? 'del' : 'ctx'}`}>{l.t} {l.text}</div>
-            ))}
+            {op.source.split('\n').map((l, i) => <div key={i} className="dl dl-ctx">{l}</div>)}
           </pre>
         )}
       </section>
     </div>
   );
+}
+
+/** Which checkout the shown code is from: reviewers comparing against files need the head, not main. */
+function revisionNote(g: ModuleGraph): string {
+  const s = g.source;
+  if (s.mode === 'snapshot') return 'current tree';
+  if (s.mode === 'uncommitted') return 'working tree';
+  return `on ${s.head} (not ${s.base})`;
 }
 
 function EntryCard({ g, id }: { g: ModuleGraph; id: string }) {

@@ -1,9 +1,22 @@
 [
   {
+    "id": "demo-kyc-risk-tiers",
+    "title": "KYC: risk tiers, manual review, async rescreen (multi-file)",
+    "mode": "branch",
+    "generatedAt": "2026-11-04T00:42:49.073Z",
+    "stats": {
+      "files": 5,
+      "linesAdded": 74,
+      "linesRemoved": 8,
+      "contractChanges": 3,
+      "entryPointsAffected": 6
+    }
+  },
+  {
     "id": "demo-birthinfo-consent",
     "title": "BirthInfo: consented data wins over documents",
     "mode": "branch",
-    "generatedAt": "2026-11-03T22:15:18.990Z",
+    "generatedAt": "2026-11-04T00:42:43.640Z",
     "stats": {
       "files": 7,
       "linesAdded": 57,
@@ -16,7 +29,7 @@
     "id": "snapshot-main",
     "title": "Snapshot: identity-profile-service (main)",
     "mode": "snapshot",
-    "generatedAt": "2026-11-03T22:15:13.471Z",
+    "generatedAt": "2026-11-04T00:42:38.250Z",
     "stats": {
       "files": 0,
       "linesAdded": 0,

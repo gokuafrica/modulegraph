@@ -101,8 +101,10 @@ export interface Operation {
   /** True when this op or anything it reaches changed. Tells the reviewer to drill in. */
   containsChanges: boolean;
   delta?: ContractDelta;
-  /** Line diff of this operation (base vs head), when changed. */
+  /** Line diff of this operation's own method (base vs head), when changed. */
   diff?: DiffLine[];
+  /** Every changed function behind this operation: its own method plus inlined helpers, possibly in other files. */
+  changes?: CodeChange[];
   /** Real calls recorded while running the scenario on the head revision (up to 3 distinct). */
   examples?: Example[];
   source: string;
@@ -118,6 +120,24 @@ export interface Example {
 export interface DiffLine {
   t: '+' | '-' | ' ';
   text: string;
+  /** Line number in the base file (context and removed lines). */
+  a?: number;
+  /** Line number in the head file (context and added lines). */
+  b?: number;
+}
+
+/** One changed function inside a scope. Large changes are reviewed function by function, not as one blob. */
+export interface CodeChange {
+  /** "resolve", or the inlined helper, e.g. "riskTier" or "KycModule.persist". */
+  name: string;
+  role: 'operation' | 'handler' | 'helper';
+  file: string;
+  /** First line of the function (head; base when removed). */
+  line: number;
+  status: 'added' | 'removed' | 'modified';
+  added: number;
+  removed: number;
+  diff: DiffLine[];
 }
 
 export interface ContractDelta {
@@ -145,6 +165,8 @@ export interface EntryPoint {
   containsChanges: boolean;
   effectsAdded?: Effect[];
   effectsRemoved?: Effect[];
+  /** Changed functions behind the handler (handler + inlined helpers). */
+  changes?: CodeChange[];
 }
 
 export interface Scope {
@@ -153,6 +175,10 @@ export interface Scope {
   returns?: TypeShape;
   steps: Step[];
   edges: Edge[];
+  /** Steps the base revision had that the head no longer has (drawn as ghosts). Ids are prefixed "rm:". */
+  removedSteps?: Step[];
+  /** Base edges that touched a removed step, mapped onto head step ids. */
+  removedEdges?: Edge[];
 }
 
 export interface Step {
@@ -168,6 +194,10 @@ export interface Step {
   loop?: boolean;
   /** Non-module helper the step was inlined from. */
   via?: string;
+  /** Set when comparing with a base: the step is new in this scope, or (in removedSteps) gone. */
+  delta?: 'added' | 'removed';
+  /** The step's guard on the base revision, when it changed ("" = had none). */
+  conditionBefore?: string;
 }
 
 export interface Edge {

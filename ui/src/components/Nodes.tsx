@@ -1,13 +1,17 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { createContext, useContext } from 'react';
-import type { DiffLine, Effect, Example, Param } from '../../../schema/modulegraph.ts';
+import type { CodeChange, Effect, Example, Param } from '../../../schema/modulegraph.ts';
 import type { Chip } from '../graph/model.ts';
+import { FunctionDiff } from './DiffView.tsx';
+import { exampleLabels, ObjectTree } from './ObjectTree.tsx';
 
 export interface Actions {
   drill: (opId: string) => void;
   zoomOut: (opId: string) => void;
   openEntry: (entryId: string) => void;
   expandGroup: (groupId: string) => void;
+  /** Open the code-changes drawer for an operation or entry point. */
+  showDiff: (id: string) => void;
 }
 export const ActionsContext = createContext<Actions>(null!);
 
@@ -35,13 +39,18 @@ export function ExampleLines({ value, added }: { value: unknown; added?: Set<str
   return <div className="example-line" title={JSON.stringify(value, null, 2)}><span className="v">{compact(value)}</span></div>;
 }
 
-function ExampleTabs({ examples }: { examples: Example[] }) {
+/** Call picker shared by the input and output ends of a flow: both always show the same recorded call. */
+export function ExampleTabs({ examples }: { examples: Example[] }) {
   const { index, setIndex } = useContext(ExampleContext);
   if (examples.length < 2) return null;
+  const labels = exampleLabels(examples.map((e) => e.input));
   return (
     <span className="example-tabs nodrag">
       {examples.map((_, i) => (
-        <button key={i} className={i === index % examples.length ? 'on' : ''} onClick={(e) => { e.stopPropagation(); setIndex(i); }}>{i + 1}</button>
+        <button key={i} className={i === index % examples.length ? 'on' : ''} title={labels[i] ? `call ${i + 1}: ${labels[i]}` : `call ${i + 1}`}
+          onClick={(e) => { e.stopPropagation(); setIndex(i); }}>
+          {i + 1}{labels[i] && <span className="tab-label"> {labels[i]}</span>}
+        </button>
       ))}
     </span>
   );
@@ -85,6 +94,16 @@ export function EffectChip({ chip }: { chip: Chip }) {
   );
 }
 
+/** What the change did to this step of the flow: new call, removed call (ghost), or a changed guard. */
+function StepDelta({ delta, conditionBefore, ghost }: { delta?: string; conditionBefore?: string; ghost?: boolean }) {
+  if (ghost) return <div className="step-delta del">− removed by this change</div>;
+  if (delta === 'added') return <div className="step-delta add">+ new call in this change</div>;
+  if (conditionBefore !== undefined) {
+    return <div className="step-delta cond" title={conditionBefore ? `was: ${conditionBefore}` : 'ran unconditionally before'}>guard {conditionBefore ? `changed (was ${conditionBefore})` : 'added: ran always before'}</div>;
+  }
+  return null;
+}
+
 /** "changes inside" only means something in a flow: it tells you which box to drill into. In the zoom-out
  *  view every node is there because it reaches the change, so the badge is suppressed. */
 function ChangeBadge({ change, containsChanges }: { change: string; containsChanges?: boolean }) {
@@ -98,14 +117,16 @@ export function ModuleNode({ data, selected }: NodeProps) {
     opId: string; title: string; operation: string; change: string; containsChanges: boolean; chips: Chip[];
     condition?: string; loop?: boolean; via?: string; focus?: boolean; onPath?: boolean; hasInternals: boolean; reach?: number;
     compact?: boolean; inImpact?: boolean; totalEffects: number; ops?: string[]; opIds?: string[];
+    delta?: string; conditionBefore?: string; ghost?: boolean; hasDiff?: boolean;
   };
   const inside = d.containsChanges && !d.compact && !d.inImpact;
   const actions = useContext(ActionsContext);
   const extra = d.chips.length - 6;
   return (
-    <div className={`node module ${d.compact ? 'compact' : ''} c-${d.change} ${inside ? 'has-changes' : ''} ${d.focus ? 'focus' : ''} ${d.onPath ? 'on-path' : ''} ${selected ? 'selected' : ''}`}>
+    <div className={`node module ${d.compact ? 'compact' : ''} c-${d.change} ${inside ? 'has-changes' : ''} ${d.focus ? 'focus' : ''} ${d.onPath ? 'on-path' : ''} ${d.ghost ? 'ghost' : ''} ${d.delta === 'added' ? 'step-added' : ''} ${selected ? 'selected' : ''}`}>
       <Handles />
       {d.condition && <div className="cond" title={d.condition}>{d.condition}</div>}
+      <StepDelta delta={d.delta} conditionBefore={d.conditionBefore} ghost={d.ghost} />
       <div className="module-head">
         <div>
           <div className="module-title">{d.title}{d.loop && <span className="loop" title="Runs once per item">⟳ each</span>}</div>
@@ -133,6 +154,9 @@ export function ModuleNode({ data, selected }: NodeProps) {
         {d.hasInternals || d.change !== 'unchanged' ? (
           <button className="link nodrag" onClick={(e) => { e.stopPropagation(); actions.drill(d.opId); }}>drill in ⤵</button>
         ) : <span />}
+        {d.hasDiff && !d.ghost && (
+          <button className="link nodrag diff-link" onClick={(e) => { e.stopPropagation(); actions.showDiff(d.opId); }} title="Code changes, function by function">diff ±</button>
+        )}
         <button className="link nodrag" onClick={(e) => { e.stopPropagation(); actions.zoomOut(d.opId); }}>
           zoom out ⤴{d.reach !== undefined ? ` (${d.reach})` : ''}
         </button>
@@ -142,12 +166,13 @@ export function ModuleNode({ data, selected }: NodeProps) {
 }
 
 export function EffectNode({ data, selected }: NodeProps) {
-  const d = data as { effect: Effect; condition?: string; loop?: boolean; via?: string };
+  const d = data as { effect: Effect; condition?: string; loop?: boolean; via?: string; delta?: string; conditionBefore?: string; ghost?: boolean };
   const meta = EFFECT_META[d.effect.kind];
   return (
-    <div className={`node effect ${meta.cls} ${selected ? 'selected' : ''}`}>
+    <div className={`node effect ${meta.cls} ${d.ghost ? 'ghost' : ''} ${d.delta === 'added' ? 'step-added' : ''} ${selected ? 'selected' : ''}`}>
       <Handles />
       {d.condition && <div className="cond">{d.condition}</div>}
+      <StepDelta delta={d.delta} conditionBefore={d.conditionBefore} ghost={d.ghost} />
       <div className="effect-body">
         <span className="effect-icon">{meta.icon}</span>
         <div>
@@ -183,12 +208,8 @@ export function EntryNode({ data, selected }: NodeProps) {
       {d.via && <div className="via">via {d.via}</div>}
       {example && (
         <div className="example">
-          <div className="example-head"><span>e.g. input</span><ExampleTabs examples={d.examples!} /></div>
-          {d.exampleParams!.map((p) => (
-            <div key={p} className="example-line" title={JSON.stringify(example.input[p], null, 2)}>
-              <span className="k">{p}:</span> <span className="v">{compact(example.input[p], 44)}</span>
-            </div>
-          ))}
+          <div className="example-head"><span>example call {d.examples!.length > 1 ? (index % d.examples!.length) + 1 : ''} · input</span><ExampleTabs examples={d.examples!} /></div>
+          <ObjectTree value={Object.fromEntries(d.exampleParams!.map((p) => [p, example.input[p]]))} flat />
         </div>
       )}
       {(d.effectsAdded?.length ?? 0) > 0 && (
@@ -211,8 +232,10 @@ export function ExitNode({ data }: NodeProps) {
       <div className="entry-kind">⇥ {d.label}</div>
       {example && (
         <div className="example">
-          <div className="example-head"><span>e.g. output{d.examples!.length > 1 ? ` · call ${(index % d.examples!.length) + 1}` : ''}</span><ExampleTabs examples={d.examples!} /></div>
-          {example.error ? <div className="example-line"><span className="v">throws {compact(example.error)}</span></div> : <ExampleLines value={example.output} added={added} />}
+          <div className="example-head"><span>example call {d.examples!.length > 1 ? (index % d.examples!.length) + 1 : ''} · output</span><ExampleTabs examples={d.examples!} /></div>
+          {example.error
+            ? <div className="example-line"><span className="v">throws {compact(example.error)}</span></div>
+            : <ObjectTree value={example.output} added={added} flat />}
         </div>
       )}
       {example && <div className="example-head" style={{ marginTop: 6 }}><span>shape</span></div>}
@@ -269,16 +292,33 @@ export function DecisionNode({ data }: NodeProps) {
   );
 }
 
+/** Leaf of the drill-in: no submodules or side effects left, only code. Changed code is summarised per function. */
 export function CodeNode({ data }: NodeProps) {
-  const d = data as { source: string; diff?: DiffLine[] };
-  const lines = d.diff ?? d.source.split('\n').map((text) => ({ t: ' ', text }) as DiffLine);
+  const d = data as { opId: string; source: string; changes: CodeChange[] };
+  const actions = useContext(ActionsContext);
+  if (!d.changes.length) {
+    return (
+      <div className="node code nowheel">
+        <Handles />
+        <div className="entry-kind">internal logic: no submodules or side effects</div>
+        <pre>{d.source.split('\n').map((l, i) => <div key={i} className="dl dl-ctx">{l}</div>)}</pre>
+      </div>
+    );
+  }
+  const files = new Set(d.changes.map((c) => c.file)).size;
   return (
     <div className="node code nowheel">
       <Handles />
-      <div className="entry-kind">internal logic: no submodules or side effects</div>
-      <pre>
-        {lines.map((l, i) => <div key={i} className={`dl dl-${l.t === '+' ? 'add' : l.t === '-' ? 'del' : 'ctx'}`}>{l.t} {l.text}</div>)}
-      </pre>
+      <div className="entry-kind code-head">
+        <span>internal logic changed: {d.changes.length} function{d.changes.length > 1 ? 's' : ''}{files > 1 ? ` in ${files} files` : ''}</span>
+        <button className="link nodrag" onClick={(e) => { e.stopPropagation(); actions.showDiff(d.opId); }}>open diff ▸</button>
+      </div>
+      <div className="code-fns">
+        {d.changes.map((c) => (
+          <div key={c.name} className="code-fn"><span className={`st st-${c.status}`}>{c.status[0].toUpperCase()}</span> {c.name} <span className="muted">{c.file.split('/').pop()}</span> <span className="plus">+{c.added}</span> <span className="minus">−{c.removed}</span></div>
+        ))}
+      </div>
+      <FunctionDiff change={d.changes[0]} compact />
     </div>
   );
 }

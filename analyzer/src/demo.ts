@@ -23,3 +23,12 @@ run([
   '--title', 'BirthInfo: consented data wins over documents',
   '--intent', 'BirthInfo: prefer user-consented birth data (birth_info_consents) over document data; add consent endpoint.',
 ]);
+// A change spread over several files of one module: new helper file, changed helpers, added/removed steps.
+run([
+  '--head', 'feature/kyc-risk-tiers',
+  '--base', 'main',
+  '--examples', scenario,
+  '--name', 'demo-kyc-risk-tiers',
+  '--title', 'KYC: risk tiers, manual review, async rescreen (multi-file)',
+  '--intent', 'KYC: add risk tiers from sanctions score, birth country and nationality; send high-risk users to manual review (outbox kyc.manual_review_requested); make the nightly rescreen asynchronous via kyc.recheck_requested.',
+]);

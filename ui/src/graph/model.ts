@@ -1,7 +1,7 @@
 import type { Effect, EntryPoint, ModuleGraph, Operation, Param, Step } from '../../../schema/modulegraph.ts';
 
 export type NodeKind = 'module' | 'effect' | 'entry' | 'exit' | 'resource' | 'entrygroup' | 'code' | 'decision';
-export type EdgeKind = 'data' | 'control' | 'call' | 'read' | 'write' | 'branch';
+export type EdgeKind = 'data' | 'control' | 'call' | 'read' | 'write' | 'branch' | 'removed';
 
 export interface VNode {
   id: string;
@@ -57,7 +57,8 @@ function moduleNode(g: ModuleGraph, id: string, opId: string, extra: Record<stri
   const chips = extra.compact && !extra.focus ? all.filter((c) => c.delta) : all;
   const shown = Math.min(chips.length, 6);
   const opsLines = Array.isArray(extra.ops) ? Math.ceil((extra.ops as string[]).length / 2) : 0;
-  const height = (extra.compact ? 56 : 62) + (extra.compact ? shown : Math.ceil(shown / 2)) * 24 + (extra.condition ? 20 : 0) + (extra.via ? 16 : 0) + opsLines * 16;
+  const deltaLine = extra.delta || extra.conditionBefore !== undefined ? 18 : 0;
+  const height = (extra.compact ? 56 : 62) + (extra.compact ? shown : Math.ceil(shown / 2)) * 24 + (extra.condition ? 20 : 0) + (extra.via ? 16 : 0) + opsLines * 16 + deltaLine;
   return {
     id,
     type: 'module',
@@ -73,6 +74,7 @@ function moduleNode(g: ModuleGraph, id: string, opId: string, extra: Record<stri
       chips,
       totalEffects: all.length,
       hasInternals: (g.scopes[opId]?.steps.length ?? 0) > 0,
+      hasDiff: !!op?.changes?.length,
       ...extra,
       chipsOverride: undefined,
     },
@@ -159,9 +161,13 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
   for (const step of scope.steps) {
     nodes.push(stepNode(g, branchOf.has(step.id) ? { ...step, condition: undefined } : step, opts.focusOp, opts.focusPath));
   }
+  // Steps the base had and the head dropped stay visible as ghosts, so a removed call is as easy to spot as an added one.
+  for (const step of scope.removedSteps ?? []) nodes.push(stepNode(g, step, undefined, undefined, true));
   if (scope.steps.length === 0 && innerOp) {
     const lines = innerOp.source.split('\n').length;
-    nodes.push({ id: '__code', type: 'code', width: 420, height: Math.min(60 + lines * 15, 340), data: { opId: innerOp.id, source: innerOp.source, diff: innerOp.diff } });
+    const changes = innerOp.changes ?? [];
+    const height = changes.length ? Math.min(70 + changes.length * 22 + Math.min(changes[0].diff.length, 14) * 16, 420) : Math.min(60 + lines * 15, 340);
+    nodes.push({ id: '__code', type: 'code', width: changes.length ? 560 : 440, height, data: { opId: innerOp.id, source: innerOp.source, changes } });
     edges.push({ id: 'e:in-code', source: '__entry', target: '__code', kind: 'control' }, { id: 'e:code-out', source: '__code', target: '__exit', kind: 'control' });
   }
 
@@ -191,12 +197,19 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
     }
     edges.push({ id: `e:${e.from}-${e.to}`, source: mapId(e.from), target: mapId(e.to), kind: e.kind, label: e.label });
   }
+  for (const e of scope.removedEdges ?? []) {
+    edges.push({ id: `e:${e.from}-${e.to}`, source: mapId(e.from), target: mapId(e.to), kind: 'removed', label: e.label });
+  }
   for (const id of decisions.values()) {
     if (!edges.some((e) => e.target === id)) edges.push({ id: `e:entry-${id}`, source: '__entry', target: id, kind: 'control' });
   }
   for (const [stepId, { dec, branch }] of branchOf) {
     edges.push({ id: `e:${dec}-${stepId}`, source: dec, target: stepId, kind: 'branch', label: branch });
   }
+
+  const reduced = reduceEdges(edges, new Set(nodes.filter((n) => n.type === 'effect' || n.type === 'decision').map((n) => n.id)));
+  edges.length = 0;
+  edges.push(...reduced);
 
   if (opts.showResources) {
     const seen = new Set<string>();
@@ -215,12 +228,41 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
   return { nodes, edges: [...new Map(edges.map((e) => [e.id, e])).values()], chain };
 }
 
-function stepNode(g: ModuleGraph, step: Step, focusOp?: string, focusPath?: Set<string>): VNode {
+/**
+ * Transitive reduction where it only adds noise: an edge out of the input, or into the exit, a side effect or a
+ * decision, is dropped when another path already connects the same two nodes (e.g. `result` built from five steps
+ * doesn't need five arrows into the write that stores it). Module-to-module data edges are kept: they say which
+ * module uses whose output. Branch (yes/no) and removed edges are never dropped.
+ */
+function reduceEdges(edges: VEdge[], sinks: Set<string>): VEdge[] {
+  const out = new Map<string, string[]>();
+  for (const e of edges) out.set(e.source, [...(out.get(e.source) ?? []), e.target]);
+  const reachableWithout = (from: string, to: string): boolean => {
+    const seen = new Set<string>();
+    const stack = (out.get(from) ?? []).filter((t) => t !== to);
+    while (stack.length) {
+      const n = stack.pop()!;
+      if (n === to) return true;
+      if (seen.has(n)) continue;
+      seen.add(n);
+      stack.push(...(out.get(n) ?? []));
+    }
+    return false;
+  };
+  return edges.filter((e) => {
+    if (e.kind === 'branch' || e.kind === 'removed') return true;
+    const candidate = e.source === '__entry' || e.target === '__exit' || sinks.has(e.target);
+    return !candidate || !reachableWithout(e.source, e.target);
+  });
+}
+
+function stepNode(g: ModuleGraph, step: Step, focusOp?: string, focusPath?: Set<string>, ghost = false): VNode {
   const focus = !!focusOp && step.target === focusOp;
   const onPath = !focus && !!step.target && !!focusPath?.has(step.target);
-  const extra = { condition: step.condition, loop: step.loop, via: step.via, line: step.line, file: step.file, focus, onPath };
+  const extra = { condition: step.condition, loop: step.loop, via: step.via, line: step.line, file: step.file, focus, onPath, delta: step.delta, conditionBefore: step.conditionBefore, ghost };
   if (step.kind === 'call') return moduleNode(g, step.id, step.target!, extra);
-  return { id: step.id, type: 'effect', width: 230, height: 50 + (step.condition ? 18 : 0), data: { ...extra, effect: step.effect } };
+  const deltaLine = step.delta || step.conditionBefore !== undefined ? 18 : 0;
+  return { id: step.id, type: 'effect', width: 230, height: 50 + (step.condition ? 18 : 0) + deltaLine, data: { ...extra, effect: step.effect } };
 }
 
 export function resourceId(e: Effect): string {
