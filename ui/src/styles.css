@@ -155,7 +155,12 @@ input, select { font: inherit; border: 1px solid var(--line); border-radius: 6px
 }
 .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; padding: 0 14px; background: var(--topbar-bg); color: var(--topbar-fg); border-bottom: 1px solid var(--line); }
 .topbar .muted { color: #94a3b8; }
-.topbar select { max-width: 380px; }
+.review-title { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.review-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 520px; }
+.review-title .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 520px; }
+.refresh { background: transparent; color: var(--topbar-fg); border-color: #334155; font-size: 12px; white-space: nowrap; }
+.refresh.stale { border-color: #f59e0b; color: #fcd34d; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25); }
+.refresh:disabled { opacity: 0.6; }
 .theme-toggle { background: transparent; color: var(--topbar-fg); border-color: #334155; }
 .brand { font-weight: 700; letter-spacing: 0.2px; }
 .spacer { flex: 1; }

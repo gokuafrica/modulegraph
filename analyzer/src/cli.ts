@@ -11,8 +11,8 @@ import { compare } from './compare.ts';
 import { findProfile, loadConfig } from './config.ts';
 import { brief } from './brief.ts';
 import { LazySession } from './lazy.ts';
-import { serve } from './server.ts';
-import { commitMessages, diffBetween, fetchPullRequest, filesAtRef, git, mergeBase, repoRootOf, revParse, type RawDiff } from './git.ts';
+import { type RefreshResult, serve } from './server.ts';
+import { commitMessages, currentBranch, diffBetween, fetchPullRequest, filesAtRef, git, hasLocalChanges, mergeBase, repoRootOf, revParse, workingStateKey, type RawDiff } from './git.ts';
 import { architectureFindings, changeFindings, markNew, modulesOfFile, opLabel, reviewSummary } from './rules.ts';
 
 const HELP = `modulegraph: module-level review graph for a service
@@ -20,9 +20,13 @@ const HELP = `modulegraph: module-level review graph for a service
 usage: modulegraph --project <dir> [mode] [options]
 
 modes (default: --uncommitted)
-  --uncommitted            working tree (incl. untracked) vs HEAD
-  --head <ref> [--base <ref>]   branch/worktree ref vs merge-base with base (default base: main)
-  --pr <number>            GitHub PR via gh (fetches head, uses PR description as intent)
+  --uncommitted            working tree (incl. untracked) vs HEAD: only what isn't committed yet
+  --base <ref>             the branch checked out in --project, committed AND uncommitted, vs merge-base with
+                           <ref>: "my branch as I edit it"
+  --head <ref> [--base <ref>]   branch ref vs merge-base with base (default base: main). Read from git, no
+                           checkout needed. If <ref> is checked out in --project and has uncommitted edits
+                           (you are fixing the PR locally), they are included; --committed reads the commit only
+  --pr <number>            GitHub PR via gh (fetches head, uses PR description as intent); like --head
   --snapshot               current tree, no diff
 
 options
@@ -46,7 +50,9 @@ lazy analysis (large codebases)
                            this change, list the rest without analyzing them
   --seeds <n>              entry points to analyze up front (default 2)
   --seed-entries <a,b>     entry point ids or label fragments to analyze up front (e.g. an agent's pick)
-  --serve [--port 5174]    keep running and answer the UI's expand requests (callers, flows, drill-ins)
+  --serve [--port 5174]    keep running and answer the UI's expand and refresh requests. Refresh re-reads only
+                           the files that changed since the last analysis and keeps the base side's analysis
+                           (npm run review = --lazy --serve)
 `;
 
 const { values: args } = parseArgs({
@@ -58,6 +64,7 @@ const { values: args } = parseArgs({
     uncommitted: { type: 'boolean' },
     pr: { type: 'string' },
     snapshot: { type: 'boolean' },
+    committed: { type: 'boolean' },
     intent: { type: 'string' },
     examples: { type: 'string' },
     config: { type: 'string' },
@@ -121,59 +128,108 @@ console.log(`frameworks: ${frameworkList || "none recognised; only the profile's
 const open = (files?: Map<string, string>) => analyzer.open({ repo, projectDir, config, files });
 const filesAt = (ref: string) => filesAtRef(repo, ref, projectRel, analyzer.sourceFile);
 
-let headProject: RevisionAnalysis;
-let baseProject: RevisionAnalysis | undefined;
-let diff: RawDiff | undefined;
-let intent = args.intent;
-let intentSource: Source['intentSource'] = intent ? 'flag' : undefined;
-let source: Source;
-/** Commit the head side was read from; undefined = working tree. */
-let headSha: string | undefined;
+/**
+ * What is being reviewed, read from git (cheap: no analysis). Run again on every refresh.
+ *
+ * The head side is a commit, or the working tree when the reviewed branch is the one checked out in --project and
+ * has uncommitted edits: fixing a PR locally shows the fixes in its review. `--committed` reads the commit only.
+ */
+interface Revisions {
+  /** Commit the head side is read from; undefined = the working tree. */
+  headSha?: string;
+  /** Commit the base side is read from (merge-base, or HEAD for --uncommitted); undefined = no base (snapshot). */
+  baseSha?: string;
+  diff?: RawDiff;
+  source: Source;
+  intent?: string;
+}
 
-if (args.snapshot) {
-  headProject = open();
-  source = { mode: 'snapshot', repo, project: projectRel, files: [] };
-} else if (args.pr || args.head) {
-  let headRef = args.head!;
-  let baseRef = args.base ?? 'main';
-  let title = args.title;
-  if (args.pr) {
-    const pr = fetchPullRequest(repo, Number(args.pr));
-    headRef = pr.headRef;
-    baseRef = pr.baseRef;
-    title ??= `PR #${pr.number}: ${pr.title}`;
-    if (!intent) {
-      intent = `${pr.title}\n${pr.body}`;
-      intentSource = 'pr';
+function resolveRevisions(): Revisions {
+  let intent = args.intent;
+  let intentSource: Source['intentSource'] = intent ? 'flag' : undefined;
+  let r: Revisions;
+  if (args.snapshot) {
+    r = { source: { mode: 'snapshot', repo, project: projectRel, files: [] } };
+  } else if (args.pr || args.head || args.base) {
+    // --base alone: the branch checked out in --project, with whatever is not committed yet.
+    let headRef = args.head ?? currentBranch(repo);
+    let baseRef = args.base ?? 'main';
+    let title = args.title;
+    if (args.pr) {
+      const pr = fetchPullRequest(repo, Number(args.pr));
+      headRef = pr.headRef;
+      baseRef = pr.baseRef;
+      title ??= `PR #${pr.number}: ${pr.title}`;
+      if (!intent) {
+        intent = `${pr.title}\n${pr.body}`;
+        intentSource = 'pr';
+      }
     }
-  }
-  const mb = mergeBase(repo, baseRef, headRef);
-  if (!intent || !title) {
-    // No PR text given: the branch's own commit messages say what it is for.
-    const fromCommits = commitMessages(repo, mb, headRef);
-    title ??= fromCommits.title ?? headRef;
-    if (!intent && fromCommits.intent) {
-      intent = fromCommits.intent;
-      intentSource = 'commits';
+    const mb = mergeBase(repo, baseRef, headRef);
+    if (!intent || !title) {
+      // No PR text given: the branch's own commit messages say what it is for.
+      const fromCommits = commitMessages(repo, mb, headRef);
+      title ??= fromCommits.title ?? headRef;
+      if (!intent && fromCommits.intent) {
+        intent = fromCommits.intent;
+        intentSource = 'commits';
+      }
     }
+    const sha = revParse(repo, headRef);
+    const workingTree = !args.committed && revParse(repo, 'HEAD') === sha && hasLocalChanges(repo, projectRel);
+    const diff = diffBetween(repo, mb, workingTree ? undefined : sha, projectRel);
+    r = {
+      headSha: workingTree ? undefined : sha,
+      baseSha: mb,
+      diff,
+      source: { mode: args.pr ? 'pr' : 'branch', repo, project: projectRel, base: baseRef, head: args.pr ? `#${args.pr}` : headRef, title, files: diff.files, ...(workingTree ? { workingTree: true } : {}) },
+    };
+  } else {
+    const diff = diffBetween(repo, 'HEAD', undefined, projectRel);
+    r = { baseSha: revParse(repo, 'HEAD'), diff, source: { mode: 'uncommitted', repo, project: projectRel, base: 'HEAD', head: 'working tree', files: diff.files, workingTree: true } };
   }
-  headSha = revParse(repo, headRef);
-  headProject = open(filesAt(headSha));
-  baseProject = open(filesAt(mb));
-  diff = diffBetween(repo, mb, headRef, projectRel);
-  source = { mode: args.pr ? 'pr' : 'branch', repo, project: projectRel, base: baseRef, head: args.pr ? `#${args.pr}` : headRef, title, files: diff.files };
-} else {
-  headProject = open();
-  baseProject = open(filesAt('HEAD'));
-  diff = diffBetween(repo, 'HEAD', undefined, projectRel);
-  source = { mode: 'uncommitted', repo, project: projectRel, base: 'HEAD', head: 'working tree', files: diff.files };
+  r.source.title ??= args.title;
+  r.source.analyzer = { id: analyzer.id, language: analyzer.language, frameworks: detectedFrameworks };
+  if (intent) {
+    r.source.intent = intent;
+    r.source.intentSource = intentSource;
+    r.intent = intent;
+  }
+  return r;
 }
-source.title ??= args.title;
-source.analyzer = { id: analyzer.id, language: analyzer.language, frameworks: detectedFrameworks };
-if (intent) {
-  source.intent = intent;
-  source.intentSource = intentSource;
+
+/** Source files of a commit, re-reading from git only what changed since the commit `prev` was read from. */
+const fileCache = new Map<string, Map<string, string>>();
+function filesOf(sha: string, prevSha?: string): Map<string, string> {
+  const cached = fileCache.get(sha);
+  if (cached) return cached;
+  const prev = prevSha ? fileCache.get(prevSha) : undefined;
+  let files: Map<string, string>;
+  if (prev) {
+    files = new Map(prev);
+    for (const path of git(repo, ['diff', '--name-only', prevSha!, sha, '--', projectRel]).split('\n').filter((p) => p && analyzer.sourceFile(p))) {
+      const abs = join(repo, path).replace(/\\/g, '/');
+      try {
+        files.set(abs, git(repo, ['show', `${sha}:${path}`]));
+      } catch {
+        files.delete(abs);
+      }
+    }
+  } else {
+    files = filesAt(sha);
+  }
+  fileCache.set(sha, files);
+  return files;
 }
+
+let revisions = resolveRevisions();
+let source = revisions.source;
+let intent = revisions.intent;
+/** Commit the head side was read from; undefined = working tree. */
+let headSha = revisions.headSha;
+let diff = revisions.diff;
+let headProject: RevisionAnalysis = open(headSha ? filesOf(headSha) : undefined);
+let baseProject: RevisionAnalysis | undefined = revisions.baseSha ? open(filesOf(revisions.baseSha)) : undefined;
 
 const here = dirname(fileURLToPath(import.meta.url));
 const graphsDir = resolve(here, '../../ui/public/graphs');
@@ -267,7 +323,62 @@ if (output.lazy) {
 console.log(`\nwrote ${relative(process.cwd(), outFile)}`);
 console.log(`wrote ${relative(process.cwd(), briefFile)}   <- review facts for agents and people: start here`);
 
-if (args.serve && session) serve(session, write, id, Number(args.port ?? 5174));
+if (args.serve && session) {
+  const live = session;
+  let stateKey = currentStateKey();
+  serve(live, { persist: write, graphId: id, port: Number(args.port ?? 5174), refresh: () => refresh(live), stale: () => currentStateKey() !== stateKey });
+
+  /** Re-analyze after the code changed: re-read only changed files, keep the base side when it didn't move. */
+  function refresh(s: LazySession): RefreshResult {
+    const t = performance.now();
+    const key = currentStateKey();
+    const next = resolveRevisions();
+    const reopen = (prev: RevisionAnalysis, files?: Map<string, string>) =>
+      analyzer.reopen ? analyzer.reopen(prev, { repo, projectDir, config, files }) : { analysis: open(files), changedFiles: undefined };
+    const head = next.headSha === headSha && headSha ? { analysis: headProject, changedFiles: [] as string[] } : reopen(headProject, next.headSha ? filesOf(next.headSha, headSha) : undefined);
+    const base = !next.baseSha || !baseProject ? undefined : next.baseSha === revisions.baseSha ? { analysis: baseProject, changedFiles: [] as string[] } : reopen(baseProject, filesOf(next.baseSha, revisions.baseSha));
+    const files = [...new Set([...(head.changedFiles ?? ['(all files)']), ...(base?.changedFiles ?? [])])].map((f) => relative(repo, f).replace(/\\/g, '/'));
+    // The analysis fills in each file's modules, so compare what was read from git, not the filled-in copy.
+    const meta = (x: Source) => JSON.stringify({ ...x, files: undefined });
+    const same = next.diff?.patch === diff?.patch && meta(next.source) === meta(source);
+    stateKey = key;
+    const served = () => {
+      const g = s.graph();
+      g.lazy!.api = '/api';
+      return g;
+    };
+    if (!files.length && same) return { changed: false, files: [], ms: Math.round(performance.now() - t), graph: served() };
+    revisions = next;
+    source = next.source;
+    intent = next.intent;
+    headSha = next.headSha;
+    diff = next.diff;
+    // Same text on a side (e.g. the fix was just committed): keep that side's analysis as it is.
+    if (head.changedFiles?.length !== 0) headProject = head.analysis;
+    if (base?.changedFiles?.length !== 0) baseProject = base?.analysis;
+    s.refresh({ head: headProject, base: baseProject, diff, source, intent });
+    // Examples run the code: record them again only when the code that runs changed.
+    if (args.examples && files.length) s.examples = recordExamples(args.examples, s.exampleTargets());
+    const graph = served();
+    write(graph);
+    const ms = Math.round(performance.now() - t);
+    console.log(`refresh: ${files.length} file${files.length === 1 ? '' : 's'} changed (${files.join(', ') || 'diff only'}), base ${base && base.analysis === baseProject && !base.changedFiles?.length ? 'kept' : 're-read'}, ${ms} ms`);
+    return { changed: true, files, baseKept: !!base && !base.changedFiles?.length, ms, graph };
+  }
+}
+
+/** Fingerprint of the code this review reads; changes when commits move or files in the checkout are edited. */
+function currentStateKey(): string {
+  const refs = [args.head, args.base, args.pr ? `refs/modulegraph/pr-${args.pr}` : undefined, 'HEAD'].filter((r): r is string => !!r);
+  const head = args.head ?? (args.pr ? `refs/modulegraph/pr-${args.pr}` : 'HEAD');
+  let checkedOut = !args.committed && !args.snapshot;
+  try {
+    checkedOut &&= revParse(repo, 'HEAD') === revParse(repo, head);
+  } catch {
+    checkedOut = false;
+  }
+  return workingStateKey(repo, refs, projectRel, checkedOut || args.snapshot === true);
+}
 
 if (args.check && findings.some((f) => f.isNew && f.severity === 'error')) {
   console.error('\nmodulegraph check failed: the change introduces error-level findings');

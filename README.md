@@ -48,6 +48,39 @@ npm run demo        # regenerate demo graphs from this repo's git history, then 
 
 Open http://localhost:5173. `npm run dev` starts only the UI.
 
+### Reviewing a change, and fixing it as you go
+
+```bash
+npm run review -- --project <service dir> --base main     # the branch checked out there, committed + uncommitted
+npm run review -- --project <service dir> --head <branch> --base main   # a branch, read straight from git
+npm run review -- --project <service dir> --pr 123        # a GitHub PR (needs gh)
+```
+
+`npm run review` analyzes lazily and keeps serving the review; open http://localhost:5173 (the UI opens the review
+being served; there is no list to pick from). What it reads:
+
+| You review | Head side | Base side |
+|---|---|---|
+| `--head <branch>` / `--pr <n>`, branch not checked out in `--project` | the branch's last commit, from git (no checkout) | merge-base with `--base` |
+| the same, branch checked out in `--project` with uncommitted edits | the working tree: the PR **plus your local fixes** | merge-base |
+| `--base main` alone | the branch checked out in `--project`, committed + uncommitted | merge-base |
+| `--uncommitted` | the working tree | HEAD: only what isn't committed |
+
+So finding a problem in a PR and fixing it locally needs no new mode: check the PR's branch out (`gh pr checkout`,
+or a worktree), point `--project` at it, and the review includes your edits. The top bar says
+`feature/x vs main + uncommitted edits`. `--committed` reads the commit only.
+
+**Refresh.** Edit, save, and the top bar's button turns into `↻ code changed: refresh` (a cheap git check when the
+window regains focus and every few seconds; nothing is analyzed until you click). A refresh:
+- re-reads only the files whose text changed (new commits: only the files those commits touched); unchanged
+  files are not parsed again and the type checker reuses them;
+- keeps the base side's analysis as it is when the base didn't move (it doesn't, while you fix a PR);
+- analyzes the new head to the same extent as before: the changed code, the seeds, and every flow, drill-in and
+  caller list you had opened, so the view you are on stays open and only what the edit changed moves.
+
+On the demos a refresh takes 0.4–1.5 s against 2–7 s for the first analysis. `npm run lazy-check` edits each demo
+branch and checks the refreshed graph equals a full analysis of the edited code.
+
 Analyze a change in any TypeScript service (the NestJS demo needs nothing but the project folder):
 
 ```bash
@@ -65,7 +98,7 @@ npm run analyze -- --project sample-service --config $C/modulegraph.config.json 
 npm run analyze -- --project sample-service --config $C/modulegraph.config.json --head my-branch --examples $C/scenario.ts
 ```
 
-Each run writes `ui/public/graphs/<id>.json` and adds it to the UI's selector. It also writes
+Each run writes `ui/public/graphs/<id>.json` (open it with `http://localhost:5173/#g=<id>`). It also writes
 `<id>.brief.md`, the **review facts** as plain Markdown:
 - the verdict (blocking or not);
 - every contract change with the behaviour changes inside it (new and removed steps, changed guards) and the
@@ -97,7 +130,7 @@ On a large service, analyzing every flow up front wastes time and buries the cha
 ```bash
 npm run live            # live lazy analysis of all three live demos (BirthInfo, KYC, NestJS); open http://localhost:5173
 npm run live -- orders  # just one of them: birthinfo | kyc | orders
-npm run analyze -- --project <dir> --config <cfg> --head <branch> --lazy --serve
+npm run review -- --project <dir> --head <branch>   # = analyze --lazy --serve
 npm run lazy-check --workspace analyzer   # proves lazy == full on everything lazy analyzed
 ```
 

@@ -23,7 +23,7 @@ operations, entry points and side effects of one revision are.
 |---|---|
 | `Snapshot` | modules, operations, entry points and their scopes (steps + data edges), fingerprints, function parts |
 | `RevisionAnalysis` | one revision: `run()` for everything; `init` / `listEntryPoints` / `ensureOp` / `ensureEntry` / `callersOf` / `scopesForLines` for lazy analysis |
-| `LanguageAnalyzer` | `detect(projectDir)`, `sourceFile(path)` (what to read from git), `frameworks()`, `open({ files })` |
+| `LanguageAnalyzer` | `detect(projectDir)`, `sourceFile(path)` (what to read from git), `frameworks()`, `open({ files })`; optional `reopen(prev, { files })` for the UI's refresh: re-read only changed files and return them (TypeScript keeps the parsed program). Without it, refresh calls `open` again |
 
 Selection: the first backend whose `detect` matches the project, or `--analyzer <id>` / `"analyzer"` in the
 profile. With no matching backend the CLI says which language it found (`go.mod`, `pom.xml`, …) and points to

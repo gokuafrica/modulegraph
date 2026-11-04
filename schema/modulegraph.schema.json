@@ -269,6 +269,10 @@
         "head": {
           "type": "string"
         },
+        "workingTree": {
+          "type": "boolean",
+          "description": "The head side is the working tree, not a commit: `head`'s last commit plus uncommitted edits in the checkout\n(a PR being fixed locally, or --uncommitted)."
+        },
         "title": {
           "type": "string"
         },

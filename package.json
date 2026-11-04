@@ -13,6 +13,7 @@
     "dev": "npm run dev --workspace ui",
     "demo": "npm run demo --workspace analyzer && npm run dev --workspace ui",
     "check": "npm run typecheck --workspaces --if-present",
-    "live": "npm run live --workspace analyzer --"
+    "live": "npm run live --workspace analyzer --",
+    "review": "npm run analyze --workspace analyzer -- --lazy --serve"
   }
 }

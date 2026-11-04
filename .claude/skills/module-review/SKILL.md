@@ -19,9 +19,15 @@ Pick the mode from what the user said:
 
 | User says | Command |
 |---|---|
-| "branch X" / "worktree X" (committed) | `npm run analyze -- --project <service dir> --head X --base main` |
-| "my changes", "uncommitted", a worktree with edits | `npm run analyze -- --project <service dir inside that worktree> --uncommitted` |
+| "branch X" / "worktree X" | `npm run analyze -- --project <service dir> --head X --base main` |
+| "my branch", "this worktree", "the PR I'm fixing" (committed + uncommitted) | `npm run analyze -- --project <service dir inside that checkout> --base main` |
+| "my changes", "uncommitted" (only what isn't committed) | `npm run analyze -- --project <service dir inside that worktree> --uncommitted` |
 | "PR 123" | `npm run analyze -- --project <service dir> --pr 123` (needs `gh`) |
+
+With `--head`/`--pr`, a branch that is checked out in `--project` with uncommitted edits is read from the working
+tree (the brief says "with its uncommitted edits"); `--committed` reads the commit only. For a person reviewing in
+the UI, use `npm run review` with the same arguments: it keeps serving, and the UI's refresh button re-analyzes
+only what changed after each edit.
 
 - `<service dir>` is the folder with the service's `package.json` (e.g. `sample-service`, or
   `.worktrees/review-test/sample-service`).

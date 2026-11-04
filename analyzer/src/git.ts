@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { FileChange } from '../../schema/modulegraph.ts';
 
@@ -129,6 +129,37 @@ export function hunks(patch: string): FileHunks[] {
 
 export function mergeBase(repo: string, a: string, b: string): string {
   return git(repo, ['merge-base', a, b]).trim();
+}
+
+/** The branch checked out in `repo` (a worktree has its own), or HEAD when detached. */
+export function currentBranch(repo: string): string {
+  const name = git(repo, ['rev-parse', '--abbrev-ref', 'HEAD']).trim();
+  return name === 'HEAD' ? 'HEAD' : name;
+}
+
+/** Uncommitted edits (incl. untracked files) under `path` in the checkout. */
+export function hasLocalChanges(repo: string, path: string): boolean {
+  return git(repo, ['status', '--porcelain', '--untracked-files=all', '--', path]).trim().length > 0;
+}
+
+/**
+ * Cheap fingerprint of what a review reads: the commits, plus the uncommitted edits (file list with sizes and
+ * modification times). Equal fingerprints = nothing to re-analyze. No file contents are read.
+ */
+export function workingStateKey(repo: string, refs: string[], path: string, workingTree: boolean): string {
+  const shas = refs.map((r) => { try { return revParse(repo, r); } catch { return r; } });
+  if (!workingTree) return shas.join(' ');
+  const status = git(repo, ['status', '--porcelain', '--untracked-files=all', '--', path]).split('\n').filter(Boolean);
+  const stamps = status.map((line) => {
+    const file = line.slice(3).replace(/^.* -> /, '').replace(/^"|"$/g, '');
+    try {
+      const st = statSync(join(repo, file));
+      return `${line} ${st.size} ${st.mtimeMs}`;
+    } catch {
+      return line;
+    }
+  });
+  return [...shas, ...stamps].join('\n');
 }
 
 export function revParse(repo: string, ref: string): string {

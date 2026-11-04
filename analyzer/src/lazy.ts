@@ -17,6 +17,15 @@ export interface LazyOptions {
 
 export type ExpandAction = 'callers' | 'reach' | 'entry' | 'op';
 
+/** The code as it is now, for `refresh`. A side that did not change is passed as the same object. */
+export interface NextRevisions {
+  head: RevisionAnalysis;
+  base?: RevisionAnalysis;
+  diff: RawDiff | undefined;
+  source: Source;
+  intent?: string;
+}
+
 /**
  * Builds the review graph on demand instead of all at once.
  *
@@ -36,6 +45,10 @@ export class LazySession {
   private callersLoaded = new Set<string>();
   private seeds: { id: string; reason: string }[] = [];
   private ms = 0;
+  private opts: LazyOptions = { seedCount: 2 };
+  /** What the reviewer opened (and the seeds), replayed after a refresh so the graph keeps what was explored. */
+  private explored: { action: ExpandAction; id: string }[] = [];
+  private initialized = new WeakSet<RevisionAnalysis>();
 
   constructor(
     head: RevisionAnalysis,
@@ -53,15 +66,45 @@ export class LazySession {
   }
 
   init(opts: LazyOptions): void {
+    this.opts = opts;
+    this.timed(() => this.start());
+  }
+
+  /**
+   * The code changed (new commits, edits in the working tree): analyze it again, keeping what still holds. A side
+   * passed as the same object keeps its analysis (usually the base: the PR's base doesn't move while you review).
+   * The new side is analyzed to the same extent as before: the changed code, the seeds, and everything the reviewer
+   * opened, so the graph looks the same apart from what the edit changed.
+   */
+  refresh(next: NextRevisions): void {
+    this.head = next.head;
+    this.base = next.base;
+    this.diff = next.diff;
+    this.source = next.source;
+    this.intent = next.intent;
+    // Operations whose callers were listed must list them again: a new call may have appeared on the new side.
+    const callers = [...this.callersLoaded];
+    const seeds = this.seeds.map((s) => s.id);
+    this.callersLoaded = new Set();
+    this.ms = 0;
     this.timed(() => {
-      for (const x of this.sides()) {
-        x.init();
-        x.listEntryPoints();
-      }
-      const changed = this.changedScopes();
-      for (const id of changed) this.ensure(id, true);
-      this.pickSeeds(changed, opts);
+      this.start();
+      for (const id of seeds) this.ensure(id, true);
+      for (const { action, id } of this.explored) this.replay(action, id);
+      for (const id of callers) this.loadCallers(id);
     });
+  }
+
+  private start(): void {
+    for (const x of this.sides()) {
+      if (this.initialized.has(x)) continue;
+      x.init();
+      x.listEntryPoints();
+      this.initialized.add(x);
+    }
+    const changed = this.changedScopes();
+    for (const id of changed) this.ensure(id, true);
+    this.pickSeeds(changed, this.opts);
   }
 
   /** Every module method, for recording example calls (cheap: no analysis). */
@@ -70,11 +113,14 @@ export class LazySession {
   }
 
   expand(action: ExpandAction, id: string): void {
-    this.timed(() => {
-      if (action === 'callers') this.loadCallers(id);
-      else if (action === 'reach') this.loadReach(id);
-      else this.ensure(id, true);
-    });
+    this.explored.push({ action, id });
+    this.timed(() => this.replay(action, id));
+  }
+
+  private replay(action: ExpandAction, id: string): void {
+    if (action === 'callers') this.loadCallers(id);
+    else if (action === 'reach') this.loadReach(id);
+    else this.ensure(id, true);
   }
 
   graph(): ModuleGraph {

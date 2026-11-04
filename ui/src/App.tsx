@@ -2,7 +2,7 @@ import { Background, Controls, ReactFlow, useReactFlow, type Edge, type Node } f
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ModuleGraph } from '../../schema/modulegraph.ts';
 import { Inspector, type Selection } from './components/Inspector.tsx';
-import { expand, fetchLive, type ExpandAction } from './api.ts';
+import { expand, fetchLive, isStale, refresh, servedGraphs, type ExpandAction } from './api.ts';
 import { DiffPanel } from './components/DiffView.tsx';
 import { edgeTypes } from './components/Edges.tsx';
 import { ActionsContext, ExampleContext, nodeTypes, type Actions } from './components/Nodes.tsx';
@@ -19,6 +19,23 @@ interface IndexEntry {
   title: string;
   mode: string;
   generatedAt: string;
+}
+
+/** What is under review, in words: "feature/x vs main", plus the uncommitted edits when they are included. */
+function reviewTarget(g: ModuleGraph): string {
+  const s = g.source;
+  if (s.mode === 'snapshot') return 'current code, no change';
+  if (s.mode === 'uncommitted') return 'uncommitted edits vs HEAD';
+  return `${s.head} vs ${s.base}${s.workingTree ? ' + uncommitted edits' : ''}`;
+}
+
+/** The view still makes sense after a refresh: drop what the new code no longer has. */
+function stillValid(g: ModuleGraph, view: View): View | undefined {
+  const exists = (id: string) => !!(g.entryPoints[id] ?? g.operations[id]);
+  if (view.mode === 'impact') return exists(view.op) ? view : undefined;
+  const keep = view.trail.findIndex((id) => !exists(id));
+  const trail = keep < 0 ? view.trail : view.trail.slice(0, keep);
+  return trail.length ? { ...view, trail, focus: view.focus && exists(view.focus) ? view.focus : undefined } : undefined;
 }
 
 const base = import.meta.env.BASE_URL;
@@ -63,8 +80,9 @@ function hashFor(graphId: string, view: View): string {
 }
 
 export default function App() {
-  const [graphs, setGraphs] = useState<IndexEntry[]>([]);
   const [graphId, setGraphId] = useState<string>();
+  /** The code changed since the last analysis (checked when the window regains focus, and every few seconds). */
+  const [stale, setStale] = useState(false);
   const [g, setG] = useState<ModuleGraph>();
   const [view, setView] = useState<View>();
   const [canGoBack, setCanGoBack] = useState(false);
@@ -91,13 +109,14 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
-    fetch(`${base}graphs/index.json`)
-      .then((r) => r.json())
-      .then((list: IndexEntry[]) => {
-        setGraphs(list);
-        setGraphId(readHash().g ?? list[0]?.id);
-      })
-      .catch(() => setError('No analyses found. Run `npm run analyze -- --project <dir>` first.'));
+    // One review at a time: the one in the link, else the one the analysis server is serving, else the latest saved.
+    const fromLink = readHash().g;
+    Promise.all([servedGraphs(), fetch(`${base}graphs/index.json`).then((r) => r.json() as Promise<IndexEntry[]>).catch(() => [] as IndexEntry[])])
+      .then(([served, list]) => {
+        const id = fromLink ?? served[0] ?? list[0]?.id;
+        if (id) setGraphId(id);
+        else setError('Nothing to review yet. Run `npm run review -- --project <service dir> --base main`.');
+      });
   }, []);
 
   useEffect(() => {
@@ -169,6 +188,51 @@ export default function App() {
       setBusy(undefined);
     }
   }, []);
+  /** Re-analyze after code changes; the server re-reads only changed files. The current view stays open. */
+  const runRefresh = useCallback(async () => {
+    const cur = gRef.current;
+    if (!cur?.lazy) return;
+    setBusy('the code that changed');
+    try {
+      const r = await refresh(cur, graphIdRef.current!);
+      setStale(false);
+      if (!r.changed) {
+        setToast('No code changes since the last analysis.');
+        return;
+      }
+      setG(r.graph);
+      const v = viewRef.current && stillValid(r.graph, viewRef.current);
+      if (viewRef.current && !v) {
+        const top = r.graph.review.queue[0];
+        setView(top ? { mode: 'impact', op: top.operation, depth: 1 } : { mode: 'flow', trail: [Object.keys(r.graph.entryPoints)[0]] });
+      } else if (v && v !== viewRef.current) setView(v);
+      const names = r.files.map((f) => f.split('/').pop());
+      setToast(`Re-analyzed in ${(r.ms / 1000).toFixed(1)} s: ${names.length ? `${names.slice(0, 3).join(', ')}${names.length > 3 ? ` and ${names.length - 3} more` : ''} changed` : 'same code, now read from the commit'}${r.baseKept ? '; base side reused' : ''}.`);
+    } catch (err) {
+      setToast(`Refresh failed: ${String(err)}`);
+    } finally {
+      setBusy(undefined);
+    }
+  }, []);
+
+  // While live: notice edits (window focus, and a cheap git check every 5 s) so the refresh button can say so.
+  useEffect(() => {
+    if (!g?.lazy || !live || !graphId) return;
+    let cancelled = false;
+    const check = () => {
+      if (document.visibilityState !== 'visible') return;
+      void isStale(g, graphId).then((x) => !cancelled && setStale(x));
+    };
+    check();
+    const timer = setInterval(check, 5000);
+    window.addEventListener('focus', check);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      window.removeEventListener('focus', check);
+    };
+  }, [g, live, graphId]);
+
   // A flow opened from a link, a reload or Back may not be analyzed yet: ask the live server for it once.
   const autoExpanded = useRef(new Set<string>());
   useEffect(() => {
@@ -355,10 +419,16 @@ export default function App() {
       <div className={`app ${railOpen ? '' : 'no-left'} ${selection ? '' : 'no-right'}`}>
         <header className="topbar">
           <div className="brand">◇ modulegraph <span className="muted">module-level review</span></div>
-          <select value={graphId} onChange={(e) => { nextWrite.current = 'push'; history.replaceState(history.state, '', `#g=${e.target.value}`); setGraphId(e.target.value); }}>
-            {graphs.map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
-          </select>
-          <span className="muted small">{g.service} · {Object.keys(g.modules).length} modules · {Object.keys(g.entryPoints).length} entry points</span>
+          <div className="review-title" title={g.source.title}>
+            <div className="review-name">{g.source.title ?? reviewTarget(g)}</div>
+            <div className="muted small">{reviewTarget(g)} · {g.service} · {Object.keys(g.modules).length} modules · {Object.keys(g.entryPoints).length} entry points</div>
+          </div>
+          {g.lazy && live && (
+            <button className={`refresh ${stale ? 'stale' : ''}`} disabled={!!busy} onClick={() => void runRefresh()}
+              title={stale ? 'The code changed since this was analyzed. Re-analyze: only the changed files are read again.' : 'Re-analyze after editing or committing. Only the files that changed are read again.'}>
+              ↻ {stale ? 'code changed: refresh' : 'refresh'}
+            </button>
+          )}
           {g.lazy && (
             <span className={`lazy-badge ${live ? 'live' : ''}`}
               title={live

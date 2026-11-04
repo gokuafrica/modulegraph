@@ -102,7 +102,7 @@ export class Extractor implements RevisionAnalysis {
   private currentClass?: ClassDeclaration;
 
   constructor(
-    private project: Project,
+    readonly project: Project,
     private repoRoot: string,
     private projectDir: string,
     private config: Config,

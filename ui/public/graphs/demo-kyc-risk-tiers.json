@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T10:44:10.291Z",
+  "generatedAt": "2026-11-04T11:15:56.701Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
@@ -370,7 +370,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T10:44:10.148Z"
+              "extractedAt": "2026-11-04T11:15:56.559Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -394,7 +394,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T10:44:10.149Z"
+              "extractedAt": "2026-11-04T11:15:56.560Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -452,7 +452,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T10:44:10.145Z"
+              "extractedAt": "2026-11-04T11:15:56.556Z"
             }
           },
           "output": {
@@ -472,7 +472,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T10:44:10.148Z"
+              "extractedAt": "2026-11-04T11:15:56.559Z"
             }
           },
           "output": {
@@ -527,7 +527,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T10:44:10.145Z"
+              "extractedAt": "2026-11-04T11:15:56.556Z"
             }
           },
           "output": {
@@ -547,7 +547,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T10:44:10.148Z"
+              "extractedAt": "2026-11-04T11:15:56.559Z"
             }
           },
           "output": {
@@ -893,7 +893,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T10:44:10.145Z"
+            "extractedAt": "2026-11-04T11:15:56.556Z"
           }
         },
         {
@@ -910,7 +910,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T10:44:10.148Z"
+            "extractedAt": "2026-11-04T11:15:56.559Z"
           }
         }
       ]
@@ -1455,7 +1455,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T10:44:10.147Z"
+            "checkedAt": "2026-11-04T11:15:56.558Z"
           }
         },
         {
@@ -1466,7 +1466,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-04T10:44:10.149Z"
+            "checkedAt": "2026-11-04T11:15:56.559Z"
           }
         }
       ]
@@ -1587,7 +1587,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T10:44:10.147Z"
+            "checkedAt": "2026-11-04T11:15:56.558Z"
           }
         },
         {
@@ -2255,7 +2255,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T10:44:10.145Z"
+              "extractedAt": "2026-11-04T11:15:56.556Z"
             }
           },
           "output": {
@@ -2276,7 +2276,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T10:44:10.148Z"
+              "extractedAt": "2026-11-04T11:15:56.559Z"
             }
           },
           "output": {
@@ -2496,7 +2496,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T10:44:10.145Z"
+              "extractedAt": "2026-11-04T11:15:56.556Z"
             }
           },
           "output": {
@@ -2518,7 +2518,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T10:44:10.148Z"
+              "extractedAt": "2026-11-04T11:15:56.559Z"
             }
           },
           "output": {

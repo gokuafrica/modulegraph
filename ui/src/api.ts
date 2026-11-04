@@ -30,3 +30,38 @@ export async function expand(g: ModuleGraph, graphId: string, action: ExpandActi
   if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? res.statusText);
   return (await res.json()) as ModuleGraph;
 }
+
+export interface RefreshResult {
+  changed: boolean;
+  files: string[];
+  baseKept?: boolean;
+  ms: number;
+  graph: ModuleGraph;
+}
+
+/** Re-analyzes after the code changed. The server re-reads only the files whose text changed. */
+export async function refresh(g: ModuleGraph, graphId: string): Promise<RefreshResult> {
+  const res = await fetch(`${apiOf(g)}/graphs/${graphId}/refresh`, { method: 'POST' });
+  if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? res.statusText);
+  return (await res.json()) as RefreshResult;
+}
+
+/** True when the code changed since the last analysis (a cheap git check on the server, no analysis). */
+export async function isStale(g: ModuleGraph, graphId: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${apiOf(g)}/graphs/${graphId}/status`, { cache: 'no-store' });
+    return res.ok && ((await res.json()) as { stale?: boolean }).stale === true;
+  } catch {
+    return false;
+  }
+}
+
+/** The reviews the analysis server is serving right now (empty when none is running). */
+export async function servedGraphs(): Promise<string[]> {
+  try {
+    const res = await fetch('/api/health', { cache: 'no-store' });
+    return res.ok ? (((await res.json()) as { graphs?: string[] }).graphs ?? []) : [];
+  } catch {
+    return [];
+  }
+}

@@ -83,6 +83,12 @@ export interface LanguageAnalyzer {
   /** Frameworks found in the project, after the profile's `frameworks` override. */
   frameworks(projectDir: string, config: Config): DetectedFramework[];
   open(input: OpenInput): RevisionAnalysis;
+  /**
+   * Optional, for refresh: the revision as it is now, reusing what `prev` (from `open`/`reopen` of the same side)
+   * already parsed, so only changed files are read again. Returns a fresh analysis (nothing analyzed yet) and the
+   * absolute paths of the files that changed. Without it, refresh calls `open` again.
+   */
+  reopen?(prev: RevisionAnalysis, input: OpenInput): { analysis: RevisionAnalysis; changedFiles: string[] };
   /** Shown in the graph's `generator` field. */
   generator: string;
 }

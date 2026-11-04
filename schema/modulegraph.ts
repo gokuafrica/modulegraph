@@ -74,6 +74,11 @@ export interface Source {
   project: string;
   base?: string;
   head?: string;
+  /**
+   * The head side is the working tree, not a commit: `head`'s last commit plus uncommitted edits in the checkout
+   * (a PR being fixed locally, or --uncommitted).
+   */
+  workingTree?: boolean;
   title?: string;
   /** Stated intent (PR description). Used to flag undisclosed side effects. */
   intent?: string;

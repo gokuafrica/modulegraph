@@ -1,6 +1,7 @@
 /**
  * Checks that lazy analysis agrees with full analysis on everything it has analyzed, and that it really
- * analyzed less. Runs both on the demo branches, then expands the lazy graph the way a reviewer would.
+ * analyzed less. Runs both on the demo branches, then expands the lazy graph the way a reviewer would, then edits
+ * the code (a reviewer's local fix) and refreshes: the refreshed graph must match a full analysis of the edited code.
  * usage: npm run lazy-check --workspace analyzer
  */
 import { dirname, join, resolve } from 'node:path';
@@ -23,12 +24,20 @@ const fail = (msg: string) => {
 };
 const keys = (es: { kind: string; target: string }[]) => es.map((e) => effectKey(e as never)).sort().join(', ');
 
-for (const [projectRel, profile, branch, intent] of [
-  ['sample-service', 'identity-profile-service', 'feature/birthinfo-consent', 'BirthInfo: prefer user-consented birth data over document data; add consent endpoint.'],
-  ['sample-service', 'identity-profile-service', 'feature/kyc-risk-tiers', 'KYC: risk tiers, manual review, async nightly rescreen.'],
+/** A local fix per branch, as a reviewer would make it: [file, find, replace]. */
+type Fix = readonly [string, string, string];
+for (const [projectRel, profile, branch, intent, fix] of [
+  ['sample-service', 'identity-profile-service', 'feature/birthinfo-consent', 'BirthInfo: prefer user-consented birth data over document data; add consent endpoint.',
+    // drop the undisclosed outbox event
+    ['sample-service/src/modules/birth-info/BirthInfoModule.ts', "      await this.outbox.enqueue('birth_info.source_resolved', { userId: identity.userId, source: info.source });\n", '']],
+  ['sample-service', 'identity-profile-service', 'feature/kyc-risk-tiers', 'KYC: risk tiers, manual review, async nightly rescreen.',
+    // a new side effect
+    ['sample-service/src/modules/kyc/KycModule.ts', "await this.outbox.enqueue('kyc.completed', { ...result });", "await this.outbox.enqueue('kyc.completed', { ...result });\n      await this.outbox.enqueue('kyc.audited', { userId });"]],
   // NestJS: decorator entry points, framework sinks, constructor injection through @Inject* decorators
-  ['sample-nest-service', 'order-service', 'feature/order-fraud-hold', 'Orders: hold high-risk orders for fraud review; release endpoint; fraud desk decisions; loyalty discounts; carrier status from events.'],
-] as const) {
+  ['sample-nest-service', 'order-service', 'feature/order-fraud-hold', 'Orders: hold high-risk orders for fraud review; release endpoint; fraud desk decisions; loyalty discounts; carrier status from events.',
+    // a changed guard: held orders never reserved stock
+    ['sample-nest-service/src/orders/orders.service.ts', '    await this.inventory.release(order.lines);', "    if (order.status !== 'held') await this.inventory.release(order.lines);"]],
+] as const satisfies readonly (readonly [string, string, string, string, Fix])[]) {
   console.log(`\n${projectRel} ${branch}`);
   const projectDir = join(repo, projectRel).replace(/\\/g, '/');
   const config = loadConfig(projectDir, join(repo, `configs/${profile}/modulegraph.config.json`));
@@ -39,12 +48,14 @@ for (const [projectRel, profile, branch, intent] of [
   const diff = diffBetween(repo, mb, branch, projectRel);
 
   let t = performance.now();
-  const full = compare(project(headFiles).run(), project(baseFiles).run());
+  let full = compare(project(headFiles).run(), project(baseFiles).run());
   const fullMs = performance.now() - t;
 
   t = performance.now();
   const source = { mode: 'branch' as const, repo, project: projectRel, base: 'main', head: branch, files: diff.files };
-  const session = new LazySession(project(headFiles), project(baseFiles), repo, config, diff, source, intent);
+  const head = project(headFiles);
+  const base = project(baseFiles);
+  const session = new LazySession(head, base, repo, config, diff, source, intent);
   session.init({ seedCount: 2 });
   let lazy = session.graph();
   const lazyMs = performance.now() - t;
@@ -96,6 +107,37 @@ for (const [projectRel, profile, branch, intent] of [
     if (lazy.entryPoints[other.id].analysis !== 'full') fail('flow not analyzed after expand');
   }
   check(lazy, 'expanded');
+
+  // Refresh with nothing changed: no file reported.
+  const same = typescript.reopen!(head, { repo, projectDir, config, files: headFiles });
+  if (same.changedFiles.length) fail(`refresh without edits reported ${same.changedFiles.join(', ')}`);
+
+  // The reviewer fixes something locally and refreshes: only that file is re-read, the base is kept.
+  const [file, find, replace] = fix;
+  const abs = join(repo, file).replace(/\\/g, '/');
+  const edited = new Map(headFiles);
+  if (!edited.get(abs)?.includes(find)) { fail(`fix target not found in ${file}`); continue; }
+  edited.set(abs, edited.get(abs)!.replace(find, replace));
+  t = performance.now();
+  const next = typescript.reopen!(same.analysis, { repo, projectDir, config, files: edited });
+  const editedDiff = diffWithEdit(diff, file, headFiles.get(abs)!, find, replace);
+  session.refresh({ head: next.analysis, base, diff: editedDiff, source, intent });
+  lazy = session.graph();
+  const refreshMs = performance.now() - t;
+  full = compare(project(edited).run(), project(baseFiles).run());
+  const st2 = lazy.lazy!.stats;
+  console.log(`  refresh after editing ${file.split('/').pop()}: ${next.changedFiles.length} file re-read, ${Math.round(refreshMs)} ms · flows analyzed ${st2.entryPointsAnalyzed}, ops ${st2.operationsAnalyzed}`);
+  if (next.changedFiles.length !== 1) fail(`refresh re-read ${next.changedFiles.length} files, expected 1`);
+  if (st2.entryPointsAnalyzed < st.entryPointsAnalyzed) fail('refresh lost flows the reviewer had opened');
+  check(lazy, 'refreshed');
+}
+
+/** The branch's diff plus a local edit, as `git diff <merge-base>` would show it (hunk positions from the edit). */
+function diffWithEdit(diff: ReturnType<typeof diffBetween>, file: string, text: string, find: string, replace: string): ReturnType<typeof diffBetween> {
+  const at = text.indexOf(find);
+  const line = at < 0 ? 1 : text.slice(0, at).split('\n').length;
+  const added = replace.split('\n').length;
+  return { files: diff.files, patch: `${diff.patch}\ndiff --git a/${file} b/${file}\n--- a/${file}\n+++ b/${file}\n@@ -${line},0 +${line},${added} @@\n` };
 }
 
 function reaches(g: ModuleGraph, scopeId: string, opId: string, seen = new Set<string>()): boolean {
