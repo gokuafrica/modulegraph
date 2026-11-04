@@ -240,8 +240,7 @@ h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color:
 .module-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
 .module-title { font-weight: 700; font-size: 14px; }
 .module-op { font-family: ui-monospace, Consolas, monospace; color: var(--muted); font-size: 11.5px; }
-.module.compact .chips { margin-top: 4px; flex-direction: column; align-items: flex-start; }
-.module.compact .chip { max-width: 245px; }
+.module.compact .chips { margin-top: 4px; }
 .op-link { font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; margin-right: 8px; }
 .cond { font-family: ui-monospace, Consolas, monospace; font-size: 10.5px; color: var(--cond-fg); background: var(--cond-bg); border-radius: 4px; padding: 0 5px; margin: -2px 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .loop { font-size: 10px; color: var(--cond-fg); margin-left: 6px; font-weight: 600; }
@@ -249,17 +248,19 @@ h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color:
 .uses { font-size: 11px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .uses .use { color: var(--text); font-weight: 600; }
 .uses .use.changed { color: var(--inside-fg); }
-.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+.chips { display: flex; flex-direction: column; align-items: stretch; gap: 5px; margin-top: 7px; }
 .pure { font-size: 11px; color: var(--muted); font-style: italic; }
 .node-actions { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; }
 
 .decision { display: flex; align-items: center; justify-content: center; gap: 6px; border: 1.5px solid var(--cond-border); background: var(--cond-bg); color: var(--cond-fg); border-radius: 23px; padding: 4px 14px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; font-weight: 600; }
 .decision-icon { font-size: 15px; }
 
-.chip { display: inline-flex; align-items: center; gap: 3px; border-radius: 5px; padding: 1px 5px; font-size: 10.5px; border: 1px solid; max-width: 122px; white-space: nowrap; overflow: hidden; }
+.chip { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: 2px 5px; border-radius: 5px; padding: 2px 7px; font-size: 11px; border: 1px solid; border-left-width: 4px; }
+.chips .chip { width: 100%; box-sizing: border-box; }
 .chip i { font-style: normal; }
-.chip-kind { font-weight: 600; }
-.chip-target { overflow: hidden; text-overflow: ellipsis; font-family: ui-monospace, Consolas, monospace; }
+.chip-kind { font-weight: 700; text-transform: uppercase; font-size: 9.5px; letter-spacing: 0.3px; }
+.chip-target { font-family: ui-monospace, Consolas, monospace; font-weight: 600; font-size: 11.5px; overflow-wrap: anywhere; color: var(--text); }
+.legend .chip, .chip.more { width: auto; border-left-width: 1px; }
 .chip.inherited { background: transparent !important; border-style: dashed; }
 .chip.added { box-shadow: 0 0 0 2px var(--add-border); }
 .chip.added b { color: var(--add-fg); }
@@ -273,14 +274,14 @@ h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color:
 .fx-queue { background: var(--fx-queue-bg); border-color: var(--fx-queue-border); color: var(--fx-queue-fg); }
 .fx-event { background: var(--fx-event-bg); border-color: var(--fx-event-border); color: var(--fx-event-fg); }
 .effect-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 4px; }
-.effect-row .chip { max-width: 240px; }
+.effect-row .chip { max-width: 300px; }
 
 .effect { padding: 6px 10px; }
 .effect.fx-read, .effect.fx-write, .effect.fx-outbox, .effect.fx-kafka, .effect.fx-http, .effect.fx-queue, .effect.fx-event { border-width: 1.5px; }
 .effect-body, .resource { display: flex; gap: 8px; align-items: center; }
 .effect-icon { font-size: 18px; }
 .effect-kind { font-size: 10.5px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.4px; }
-.effect-target { font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+.effect-target { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; font-weight: 600; overflow-wrap: anywhere; }
 .resource { border-radius: 18px; background: var(--panel-2); }
 .r-table { border-color: var(--fx-read-border); }
 .r-outbox { border-color: var(--fx-outbox-border); }
@@ -511,3 +512,18 @@ h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color:
 .example-block:hover { border-color: var(--line); }
 .example-block.on { border-color: var(--focus); }
 .bb-requests { font-weight: 400; font-family: ui-monospace, Consolas, monospace; font-size: 10.5px; margin-top: 1px; overflow-wrap: anywhere; }
+
+/* right-click menu on a node */
+.node-menu { position: absolute; z-index: 30; min-width: 260px; max-width: 420px; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35); padding: 4px; display: flex; flex-direction: column; }
+.node-menu button { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; text-align: left; background: transparent; border: 0; color: var(--text); padding: 6px 9px; border-radius: 5px; font-size: 12.5px; cursor: pointer; }
+.node-menu button:hover { background: var(--hover); }
+.node-menu button b { font-family: ui-monospace, Consolas, monospace; font-weight: 600; }
+
+/* now / before switch on a changed flow */
+.seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: transparent; color: var(--muted); padding: 2px 10px; font-size: 12px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line-strong); }
+.seg button.on { background: var(--mode-bg); color: var(--mode-fg); font-weight: 700; }
+.seg button.on.before { background: var(--rem-bg); color: var(--rem-fg); }
+.before-note { font-size: 11.5px; color: var(--rem-fg); background: var(--rem-bg); border-radius: 4px; padding: 2px 8px; }
+.node.step-removed { outline: 2px dashed var(--rem-border); outline-offset: 3px; }

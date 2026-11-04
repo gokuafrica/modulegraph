@@ -34,11 +34,7 @@ export function ReviewBar({ g, home, onHome }: { g: ModuleGraph; home?: string; 
         if (!s) return;
         if (s.type === 'entry') actions.openEntry(s.id);
         else if (s.type === 'operation') actions.zoomOut(s.id);
-        else if (s.type === 'module') {
-          const ops = g.modules[s.id]?.operations ?? [];
-          const op = ops.find((o) => g.operations[o]?.change !== 'unchanged') ?? ops[0];
-          if (op) actions.zoomOut(op);
-        }
+        else if (s.type === 'module') actions.references(`module:${s.id}`);
       }} />
     </div>
   );
@@ -55,8 +51,12 @@ function Search({ g }: { g: ModuleGraph }) {
       .map((e) => ({ id: e.id, label: e.label, kind: e.kind as string, hint: 'flow', open: () => actions.openEntry(e.id) }));
     const ops = Object.values(g.operations)
       .filter((op) => op.change !== 'removed' && opTitle(g, op.id).toLowerCase().includes(q))
-      .map((op) => ({ id: op.id, label: opTitle(g, op.id), kind: 'module', hint: 'impact', open: () => actions.zoomOut(op.id) }));
-    return [...entries, ...ops].slice(0, 12);
+      .map((op) => ({ id: op.id, label: opTitle(g, op.id), kind: 'module', hint: 'references', open: () => actions.references(op.id) }));
+    // A whole module: references to any of its operations.
+    const mods = Object.values(g.modules)
+      .filter((m) => m.change !== 'removed' && m.name.toLowerCase().includes(q) && m.operations.length > 1)
+      .map((m) => ({ id: `module:${m.id}`, label: `${m.name} (all ${m.operations.length} operations)`, kind: 'module', hint: 'references', open: () => actions.references(`module:${m.id}`) }));
+    return [...entries, ...mods, ...ops].slice(0, 14);
   }, [g, query, actions]);
   return (
     <div className="search">

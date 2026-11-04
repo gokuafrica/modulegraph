@@ -20,14 +20,19 @@ data) or a language.
   modules it *uses* and every side effect below it), never the internals of one module. Data edges show what is
   passed (`identity` fetched once, then shared by Nationality, PersonalDetails and BirthInfo).
 - **Drill in** on any module: its own entry, submodules and exit, recursively. A leaf shows its code diff.
-- **Impact view** (*zoom out* from a module): the module and its callers, level by level, up to every entry point
-  that reaches it, grouped when there are many (the 50-APIs case).
+- **Impact view, or "show references"**: right-click any module (or select it and press Shift+F12, or use its
+  *references* link) to see who calls it, level by level, up to every entry point that reaches it, grouped when
+  there are many (the 50-APIs case). Works for one operation or a whole module (*all of BirthInfo*), changed or not.
+- **Now / before**: a changed flow has a *now | before* switch. *Before* draws the same flow as on the base branch,
+  marking what the change removes and which guards it changes (`guard changes: now if (check.ok)`); recorded
+  examples are hidden there, since they come from the new code.
 - **Never lost**: the *Changes* bar above the graph lists every changed module, riskiest first; a click opens its
   impact view. Below it, the *path* shows how you got from that change to the current view
   (`impact BirthInfo.resolve → flow GET /v1/tax/… → flow TaxResidency.assess`); every step is one click back, and
   revisiting a step cuts the path there, so it never grows into a tree.
-- **Changed modules highlighted**: modified / added / *changes inside*. Side-effect chips show
-  `+outbox …` and `+db.read …` contract deltas on every node.
+- **Changed modules highlighted**: modified / added / *changes inside*. Every node lists what it touches, one per
+  row with the full name (`DB WRITE kyc_birth_info`, `OUTBOX birth_info.source_resolved`, `Kafka topic …`); `+` / `−`
+  marks what the change adds or removes, dashed means via a submodule.
 - **Review queue and checks**: contract changes sorted by risk, plus machine-checked rules (new side effects,
   table ownership, read endpoints that write, CI weakening, side effects the PR description doesn't mention).
 - **Example data, one request throughout**: real inputs and outputs recorded by running a scenario against the

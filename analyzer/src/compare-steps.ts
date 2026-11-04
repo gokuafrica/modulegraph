@@ -73,8 +73,17 @@ export function diffScope(head: Scope, base: Scope): void {
     if ((prev.condition ?? '') !== (s.condition ?? '')) s.conditionBefore = prev.condition ?? '';
   }
   const removed = base.steps.filter((s) => !matched.has(s.id));
-  if (!removed.length) return;
   const map = (id: string) => (id === 'entry' || id === 'exit' ? id : matched.get(id) ?? `rm:${id}`);
+  // The base revision's flow, for the "before" view: same step ids where a step survived, "rm:" where it is gone.
+  const changed = removed.length || head.steps.some((s) => s.delta === 'added' || s.conditionBefore !== undefined);
+  if (changed) {
+    head.before = {
+      steps: base.steps.map((s) => ({ ...s, id: map(s.id), ...(matched.has(s.id) ? {} : { delta: 'removed' as const }) })),
+      edges: base.edges.map((e) => ({ ...e, from: map(e.from), to: map(e.to) })),
+      ...(base.returns ? { returns: base.returns } : {}),
+    };
+  }
+  if (!removed.length) return;
   const removedIds = new Set(removed.map((s) => s.id));
   head.removedSteps = removed.map((s) => ({ ...s, id: `rm:${s.id}`, delta: 'removed' }));
   head.removedEdges = base.edges

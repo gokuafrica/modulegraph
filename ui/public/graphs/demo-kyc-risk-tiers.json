@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T12:50:48.990Z",
+  "generatedAt": "2026-11-04T13:58:11.670Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
@@ -504,7 +504,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T12:50:48.862Z"
+              "extractedAt": "2026-11-04T13:58:11.535Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -531,7 +531,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T12:50:48.864Z"
+              "extractedAt": "2026-11-04T13:58:11.537Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -592,7 +592,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T12:50:48.859Z"
+              "extractedAt": "2026-11-04T13:58:11.533Z"
             }
           },
           "output": {
@@ -629,7 +629,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T12:50:48.862Z"
+              "extractedAt": "2026-11-04T13:58:11.535Z"
             }
           },
           "output": {
@@ -696,7 +696,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T12:50:48.859Z"
+              "extractedAt": "2026-11-04T13:58:11.533Z"
             }
           },
           "output": {
@@ -733,7 +733,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T12:50:48.862Z"
+              "extractedAt": "2026-11-04T13:58:11.535Z"
             }
           },
           "output": {
@@ -1160,7 +1160,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T12:50:48.859Z"
+            "extractedAt": "2026-11-04T13:58:11.533Z"
           },
           "cases": [
             "c1",
@@ -1196,7 +1196,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T12:50:48.862Z"
+            "extractedAt": "2026-11-04T13:58:11.535Z"
           },
           "cases": [
             "c11",
@@ -1755,7 +1755,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T12:50:48.862Z"
+            "checkedAt": "2026-11-04T13:58:11.535Z"
           },
           "cases": [
             "c5",
@@ -1771,7 +1771,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-04T12:50:48.863Z"
+            "checkedAt": "2026-11-04T13:58:11.536Z"
           },
           "cases": [
             "c15"
@@ -1898,7 +1898,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T12:50:48.862Z"
+            "checkedAt": "2026-11-04T13:58:11.535Z"
           },
           "cases": [
             "c6",
@@ -1922,7 +1922,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-04T12:50:48.863Z"
+            "checkedAt": "2026-11-04T13:58:11.536Z"
           },
           "cases": [
             "c16"
@@ -2602,7 +2602,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T12:50:48.859Z"
+              "extractedAt": "2026-11-04T13:58:11.533Z"
             }
           },
           "output": {
@@ -2638,7 +2638,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T12:50:48.862Z"
+              "extractedAt": "2026-11-04T13:58:11.535Z"
             }
           },
           "output": {
@@ -2872,7 +2872,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T12:50:48.859Z"
+              "extractedAt": "2026-11-04T13:58:11.533Z"
             }
           },
           "output": {
@@ -2901,7 +2901,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T12:50:48.862Z"
+              "extractedAt": "2026-11-04T13:58:11.535Z"
             }
           },
           "output": {
@@ -6104,7 +6104,158 @@
           "to": "exit",
           "kind": "control"
         }
-      ]
+      ],
+      "before": {
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "call",
+            "target": "IdentityModule.fetchIdentity",
+            "line": 30,
+            "file": "sample-service/src/modules/kyc/KycModule.ts"
+          },
+          {
+            "id": "s2",
+            "kind": "call",
+            "target": "BirthInfoModule.resolve",
+            "line": 31,
+            "file": "sample-service/src/modules/kyc/KycModule.ts"
+          },
+          {
+            "id": "s3",
+            "kind": "call",
+            "target": "NationalityModule.resolve",
+            "line": 31,
+            "file": "sample-service/src/modules/kyc/KycModule.ts"
+          },
+          {
+            "id": "s4",
+            "kind": "call",
+            "target": "SanctionsScreening.screen",
+            "line": 32,
+            "file": "sample-service/src/modules/kyc/KycModule.ts"
+          },
+          {
+            "id": "s6",
+            "kind": "effect",
+            "effect": {
+              "kind": "db.write",
+              "target": "kyc_results",
+              "file": "sample-service/src/modules/kyc/KycModule.ts",
+              "line": 38
+            },
+            "line": 38,
+            "file": "sample-service/src/modules/kyc/KycModule.ts"
+          },
+          {
+            "id": "s9",
+            "kind": "effect",
+            "effect": {
+              "kind": "outbox",
+              "target": "kyc.completed",
+              "file": "sample-service/src/modules/kyc/KycModule.ts",
+              "line": 39
+            },
+            "line": 39,
+            "file": "sample-service/src/modules/kyc/KycModule.ts"
+          }
+        ],
+        "edges": [
+          {
+            "from": "entry",
+            "to": "s1",
+            "kind": "data",
+            "label": "userId"
+          },
+          {
+            "from": "s1",
+            "to": "s2",
+            "kind": "data",
+            "label": "identity"
+          },
+          {
+            "from": "s1",
+            "to": "s3",
+            "kind": "data",
+            "label": "identity"
+          },
+          {
+            "from": "s1",
+            "to": "s4",
+            "kind": "data",
+            "label": "identity"
+          },
+          {
+            "from": "s2",
+            "to": "s4",
+            "kind": "data",
+            "label": "birth"
+          },
+          {
+            "from": "s3",
+            "to": "s4",
+            "kind": "data",
+            "label": "nationality"
+          },
+          {
+            "from": "entry",
+            "to": "s6",
+            "kind": "data",
+            "label": "result"
+          },
+          {
+            "from": "s4",
+            "to": "s6",
+            "kind": "data",
+            "label": "result"
+          },
+          {
+            "from": "entry",
+            "to": "s9",
+            "kind": "data",
+            "label": "result"
+          },
+          {
+            "from": "s4",
+            "to": "s9",
+            "kind": "data",
+            "label": "result"
+          },
+          {
+            "from": "s4",
+            "to": "exit",
+            "kind": "data",
+            "label": "result"
+          },
+          {
+            "from": "s6",
+            "to": "exit",
+            "kind": "control"
+          },
+          {
+            "from": "s9",
+            "to": "exit",
+            "kind": "control"
+          }
+        ],
+        "returns": {
+          "type": "KycResult",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
+            },
+            {
+              "name": "checkedAt",
+              "type": "string"
+            }
+          ]
+        }
+      }
     },
     "KycModule.getStatus": {
       "id": "KycModule.getStatus",
@@ -6302,6 +6453,58 @@
           "kind": "control"
         }
       ],
+      "before": {
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "effect",
+            "effect": {
+              "kind": "db.read",
+              "target": "kyc_results",
+              "file": "sample-service/src/modules/kyc/KycModule.ts",
+              "line": 55
+            },
+            "line": 55,
+            "file": "sample-service/src/modules/kyc/KycModule.ts"
+          },
+          {
+            "id": "rm:s2",
+            "kind": "call",
+            "target": "KycModule.runCheck",
+            "line": 56,
+            "file": "sample-service/src/modules/kyc/KycModule.ts",
+            "loop": true,
+            "delta": "removed"
+          }
+        ],
+        "edges": [
+          {
+            "from": "s1",
+            "to": "rm:s2",
+            "kind": "data",
+            "label": "row"
+          },
+          {
+            "from": "s1",
+            "to": "exit",
+            "kind": "data",
+            "label": "expired"
+          },
+          {
+            "from": "entry",
+            "to": "s1",
+            "kind": "control"
+          },
+          {
+            "from": "rm:s2",
+            "to": "exit",
+            "kind": "control"
+          }
+        ],
+        "returns": {
+          "type": "number"
+        }
+      },
       "removedSteps": [
         {
           "id": "rm:s2",
@@ -6404,7 +6607,49 @@
           "to": "exit",
           "kind": "control"
         }
-      ]
+      ],
+      "before": {
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "effect",
+            "effect": {
+              "kind": "http",
+              "target": "sanctions-api",
+              "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
+              "line": 15
+            },
+            "line": 15,
+            "file": "sample-service/src/modules/kyc/SanctionsScreening.ts"
+          }
+        ],
+        "edges": [
+          {
+            "from": "entry",
+            "to": "s1",
+            "kind": "data",
+            "label": "person"
+          },
+          {
+            "from": "s1",
+            "to": "exit",
+            "kind": "data"
+          }
+        ],
+        "returns": {
+          "type": "ScreeningResult",
+          "fields": [
+            {
+              "name": "hit",
+              "type": "boolean [false | true]"
+            },
+            {
+              "name": "listVersion",
+              "type": "string"
+            }
+          ]
+        }
+      }
     },
     "NationalityModule.resolve": {
       "id": "NationalityModule.resolve",

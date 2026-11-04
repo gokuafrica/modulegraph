@@ -61,6 +61,10 @@ function OpCard({ g, op }: { g: ModuleGraph; op: Operation }) {
         </div>
         {mod.summary && <p className="summary">{mod.summary}</p>}
         <div className="file" title="The diagram shows this revision of the code">{op.file}:{op.line} <span className="muted">· {revisionNote(g)}</span></div>
+        <div className="insp-actions">
+          <button onClick={() => actions.references(op.id)} title="Impact view: everything that calls this operation, up to the entry points (Shift+F12)">Show references ⤴</button>
+          {mod.operations.length > 1 && <button onClick={() => actions.references(`module:${mod.id}`)} title="Impact view: everything that calls any operation of this module">all of {mod.name} ⤴</button>}
+        </div>
       </div>
 
       <section>

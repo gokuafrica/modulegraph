@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T12:50:42.392Z",
+  "generatedAt": "2026-11-04T13:58:05.145Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
@@ -575,7 +575,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T12:50:42.261Z"
+              "extractedAt": "2026-11-04T13:58:05.010Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -603,7 +603,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T12:50:42.263Z"
+              "extractedAt": "2026-11-04T13:58:05.012Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -1149,7 +1149,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T12:50:42.258Z"
+              "extractedAt": "2026-11-04T13:58:05.007Z"
             }
           },
           "output": {
@@ -1187,7 +1187,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T12:50:42.261Z"
+              "extractedAt": "2026-11-04T13:58:05.010Z"
             }
           },
           "output": {
@@ -1463,7 +1463,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T12:50:42.258Z"
+              "extractedAt": "2026-11-04T13:58:05.007Z"
             }
           },
           "output": {
@@ -1929,7 +1929,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T12:50:42.258Z"
+            "extractedAt": "2026-11-04T13:58:05.007Z"
           },
           "cases": [
             "c1",
@@ -1965,7 +1965,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T12:50:42.261Z"
+            "extractedAt": "2026-11-04T13:58:05.010Z"
           },
           "cases": [
             "c11",
@@ -2116,7 +2116,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-04T12:50:42.260Z"
+            "checkedAt": "2026-11-04T13:58:05.009Z"
           },
           "cases": [
             "c5",
@@ -2131,7 +2131,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-04T12:50:42.261Z"
+            "checkedAt": "2026-11-04T13:58:05.010Z"
           },
           "cases": [
             "c15"
@@ -2197,7 +2197,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-04T12:50:42.260Z"
+            "checkedAt": "2026-11-04T13:58:05.009Z"
           },
           "cases": [
             "c6"
@@ -2210,7 +2210,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-04T12:50:42.261Z"
+            "checkedAt": "2026-11-04T13:58:05.010Z"
           },
           "cases": [
             "c16"
@@ -2559,7 +2559,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T12:50:42.258Z"
+              "extractedAt": "2026-11-04T13:58:05.007Z"
             }
           },
           "output": {
@@ -2595,7 +2595,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T12:50:42.261Z"
+              "extractedAt": "2026-11-04T13:58:05.010Z"
             }
           },
           "output": {
@@ -2829,7 +2829,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T12:50:42.258Z"
+              "extractedAt": "2026-11-04T13:58:05.007Z"
             }
           },
           "output": {
@@ -2858,7 +2858,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T12:50:42.261Z"
+              "extractedAt": "2026-11-04T13:58:05.010Z"
             }
           },
           "output": {
@@ -6347,7 +6347,44 @@
           "to": "exit",
           "kind": "control"
         }
-      ]
+      ],
+      "before": {
+        "steps": [
+          {
+            "id": "s3",
+            "kind": "call",
+            "target": "DocumentBirthExtractor.fromIdentity",
+            "line": 12,
+            "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts"
+          }
+        ],
+        "edges": [
+          {
+            "from": "entry",
+            "to": "s3",
+            "kind": "data",
+            "label": "identity"
+          },
+          {
+            "from": "s3",
+            "to": "exit",
+            "kind": "data"
+          }
+        ],
+        "returns": {
+          "type": "BirthInfo",
+          "fields": [
+            {
+              "name": "countryOfBirth",
+              "type": "string"
+            },
+            {
+              "name": "cityOfBirth",
+              "type": "string"
+            }
+          ]
+        }
+      }
     },
     "BirthInfoModule.recordConsent": {
       "id": "BirthInfoModule.recordConsent",

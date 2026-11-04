@@ -6,12 +6,13 @@ import { expand, fetchLive, isStale, refresh, servedGraphs, type ExpandAction } 
 import { DiffPanel } from './components/DiffView.tsx';
 import { edgeTypes } from './components/Edges.tsx';
 import { ActionsContext, casesOf, ExampleContext, exampleFor, nodeTypes, type Actions } from './components/Nodes.tsx';
+import { NodeMenu, type MenuTarget } from './components/NodeMenu.tsx';
 import { ReviewBar } from './components/ReviewBar.tsx';
 import { layout, type Theme } from './graph/layout.ts';
-import { buildIndex, flowModel, impactModel, opTitle } from './graph/model.ts';
+import { buildIndex, flowModel, impactModel, MODULE_TARGET, opTitle, targetOps } from './graph/model.ts';
 
 type View =
-  | { mode: 'flow'; trail: string[]; focus?: string }
+  | { mode: 'flow'; trail: string[]; focus?: string; before?: boolean }
   | { mode: 'impact'; op: string; depth: number };
 
 interface IndexEntry {
@@ -45,7 +46,7 @@ function extendPath(path: View[], next: View): View[] {
 
 /** The view still makes sense after a refresh: drop what the new code no longer has. */
 function stillValid(g: ModuleGraph, view: View): View | undefined {
-  const exists = (id: string) => !!(g.entryPoints[id] ?? g.operations[id]);
+  const exists = (id: string) => !!(g.entryPoints[id] ?? g.operations[id] ?? (id.startsWith(MODULE_TARGET) && g.modules[id.slice(MODULE_TARGET.length)]));
   if (view.mode === 'impact') return exists(view.op) ? view : undefined;
   const keep = view.trail.findIndex((id) => !exists(id));
   const trail = keep < 0 ? view.trail : view.trail.slice(0, keep);
@@ -85,6 +86,7 @@ function hashFor(graphId: string, view: View): string {
     p.set('v', 'flow');
     p.set('t', view.trail.join('|'));
     if (view.focus) p.set('f', view.focus);
+    if (view.before) p.set('b', '1');
   } else {
     p.set('v', 'impact');
     p.set('op', view.op);
@@ -109,13 +111,15 @@ export default function App() {
   const [collapsePassthrough, setCollapse] = useState(true);
   const [showResources, setShowResources] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  const [canvas, setCanvas] = useState<{ nodes: Node[]; edges: Edge[]; key: string; meta?: { maxDepth: number; shown: number; total: number; frontier: string[] }; chain?: string[] }>();
+  const [canvas, setCanvas] = useState<{ nodes: Node[]; edges: Edge[]; key: string; meta?: { maxDepth: number; shown: number; total: number; frontier: string[] }; chain?: string[]; addedCount?: number }>();
   const [error, setError] = useState<string>();
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('modulegraph-theme') as Theme) ?? 'dark');
   /** The example request every node shows (one scenario request, followed through every module it reached). */
   const [caseId, setCaseId] = useState<string>();
   /** How you got here from the change you started at: every step is a view you can click back to. */
   const [path, setPath] = useState<View[]>([]);
+  /** Right-click menu on a node. */
+  const [menu, setMenu] = useState<MenuTarget>();
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -151,7 +155,7 @@ export default function App() {
         const h = readHash();
         if (h.g === graphId && h.v === 'flow' && h.t) {
           const trail = h.t.split('|');
-          setView({ mode: 'flow', trail, focus: h.f });
+          setView({ mode: 'flow', trail, focus: h.f, before: h.b === '1' || undefined });
         }
         else if (h.g === graphId && h.v === 'impact' && h.op) {
           setView({ mode: 'impact', op: h.op, depth: Number(h.d ?? 1) });
@@ -328,7 +332,7 @@ export default function App() {
         // A hash edited by hand (or a link to another view): read the view from the URL and adopt the entry.
         const h = readHash();
         const fromHash: View | undefined =
-          h.v === 'flow' && h.t ? { mode: 'flow', trail: h.t.split('|'), focus: h.f }
+          h.v === 'flow' && h.t ? { mode: 'flow', trail: h.t.split('|'), focus: h.f, before: h.b === '1' || undefined }
           : h.v === 'impact' && h.op ? { mode: 'impact', op: h.op, depth: Number(h.d ?? 1) } : undefined;
         if (h.g && h.g !== graphIdRef.current) {
           nextWrite.current = 'replace';
@@ -351,6 +355,22 @@ export default function App() {
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
+  // Shift+F12, as in an IDE: show references to the selected module.
+  const selectionRef = useRef<Selection>(undefined);
+  selectionRef.current = selection;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'F12' || !e.shiftKey) return;
+      const sel = selectionRef.current;
+      if (sel?.type !== 'op') return;
+      e.preventDefault();
+      nextWrite.current = 'push';
+      setView({ mode: 'impact', op: sel.id, depth: 1 });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  useEffect(() => setMenu(undefined), [view, graphId]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setDiffFor(undefined);
     window.addEventListener('keydown', onKey);
@@ -368,12 +388,12 @@ export default function App() {
     let cancelled = false;
     if (view.mode === 'flow') {
       const scopeId = view.trail.at(-1)!;
-      const model = flowModel(g, scopeId, { collapsePassthrough, showResources, focusOp: view.focus, focusPath: view.focus ? ancestors(index, view.focus) : undefined });
+      const model = flowModel(g, scopeId, { collapsePassthrough, showResources, focusOp: view.focus, focusPath: view.focus ? ancestors(index, targetOps(g, view.focus)) : undefined, before: view.before });
       for (const n of model.nodes) if (n.type === 'module') n.data.reach = index.reach.get(n.data.opId as string)?.size ?? 0;
       // Keep following the same request when this flow was part of it (drilling in from a caller); else its first.
       const shown = model.nodes.find((n) => n.id === '__entry')?.data.examples as Parameters<typeof exampleFor>[0];
       if (shown?.length) setCaseId((cur) => (exampleFor(shown, cur) ? cur : casesOf(shown[0], 0)[0]));
-      layout(model, theme).then((res) => !cancelled && setCanvas({ ...res, key: `${graphId}|${view.trail.join('>')}|${collapsePassthrough}|${showResources}|${theme}|${Object.keys(g.scopes).length}`, chain: model.chain }));
+      layout(model, theme).then((res) => !cancelled && setCanvas({ ...res, key: `${graphId}|${view.trail.join('>')}|${view.before ? 'before' : 'now'}|${collapsePassthrough}|${showResources}|${theme}|${Object.keys(g.scopes).length}`, chain: model.chain, addedCount: model.addedCount }));
     } else {
       const model = impactModel(g, index, view.op, { depth: view.depth, groupThreshold: 12, expandedGroups });
       if (view.depth > model.maxDepth && model.maxDepth > 0) {
@@ -400,7 +420,7 @@ export default function App() {
         }
         const cur = viewRef.current;
         const trail = cur?.mode === 'flow' ? [...cur.trail.slice(0, -1), ...(chainRef.current ?? cur.trail.slice(-1))] : [];
-        navigate({ mode: 'flow', trail: [...trail.filter((t) => t !== opId), opId], focus: cur?.mode === 'flow' ? cur.focus : undefined });
+        navigate({ mode: 'flow', trail: [...trail.filter((t) => t !== opId), opId], focus: cur?.mode === 'flow' ? cur.focus : undefined, before: cur?.mode === 'flow' ? cur.before : undefined });
       },
       zoomOut: (opId) => {
         const cur = viewRef.current;
@@ -411,6 +431,7 @@ export default function App() {
         }
         navigate({ mode: 'impact', op: opId, depth: 1 });
       },
+      references: (target) => navigate({ mode: 'impact', op: target, depth: 1 }),
       openEntry: async (entryId) => {
         const cg = gRef.current;
         if (cg?.lazy && cg.entryPoints[entryId]?.analysis !== 'full') {
@@ -432,12 +453,27 @@ export default function App() {
   if (error) return <div className="splash">{error}</div>;
   if (!g || !index || !view) return <div className="splash">Loading…</div>;
 
-  const onNodeClick = (_: unknown, node: Node) => {
+  const selectionFor = (node: Node): Selection => {
     const d = node.data as Record<string, string>;
-    if (d.opId) setSelection({ type: 'op', id: d.opId });
-    else if (d.entryId) setSelection({ type: 'entry', id: d.entryId });
-    else if (node.type === 'resource') setSelection({ type: 'resource', id: node.id });
-    else if (node.id === '__entry' && view.mode === 'flow' && g.entryPoints[view.trail[0]] && view.trail.length === 1) setSelection({ type: 'entry', id: view.trail[0] });
+    if (d.opId) return { type: 'op', id: d.opId };
+    if (d.entryId) return { type: 'entry', id: d.entryId };
+    if (node.type === 'resource') return { type: 'resource', id: node.id };
+    if (node.id === '__entry' && view.mode === 'flow' && g.entryPoints[view.trail[0]] && view.trail.length === 1) return { type: 'entry', id: view.trail[0] };
+    if (node.id === '__entry' && view.mode === 'flow' && g.operations[view.trail.at(-1)!]) return { type: 'op', id: view.trail.at(-1)! };
+    return undefined;
+  };
+  const onNodeContextMenu = (e: React.MouseEvent, node: Node) => {
+    e.preventDefault();
+    const d = node.data as { opId?: string; opIds?: string[]; entryId?: string };
+    const sel = selectionFor(node);
+    const opIds = d.opIds ?? (d.opId ? [d.opId] : sel?.type === 'op' ? [sel.id] : undefined);
+    const entryId = d.entryId ?? (sel?.type === 'entry' ? sel.id : undefined);
+    const box = (e.currentTarget as HTMLElement).closest('.canvas')!.getBoundingClientRect();
+    setMenu({ x: e.clientX - box.left, y: e.clientY - box.top, opIds, entryId, resourceId: node.type === 'resource' ? node.id : undefined, selection: sel });
+  };
+  const onNodeClick = (_: unknown, node: Node) => {
+    const sel = selectionFor(node);
+    if (sel) setSelection(sel);
   };
   const onNodeDoubleClick = (_: unknown, node: Node) => {
     const d = node.data as Record<string, string>;
@@ -507,7 +543,27 @@ export default function App() {
                 {(() => {
                   const scopeId = canvas?.chain?.at(-1) ?? view.trail.at(-1)!;
                   const n = (g.operations[scopeId]?.changes ?? g.entryPoints[scopeId]?.changes)?.length ?? 0;
-                  return n ? <button className="diff-crumb" onClick={() => setDiffFor(scopeId)} title="Code changes behind this flow, function by function">code changes ± ({n})</button> : null;
+                  const owner = g.operations[scopeId] ?? g.entryPoints[scopeId];
+                  // Now / before: the same flow as on the base revision, for a modified operation or entry point.
+                  const canCompare = owner?.change === 'modified' && g.source.mode !== 'snapshot';
+                  const steps = g.scopes[scopeId]?.before ? 'steps differ' : 'same steps; code inside changed';
+                  const base = g.source.base ?? 'HEAD';
+                  return (
+                    <>
+                      {(canCompare || view.before) && (
+                        <span className="seg" title={`Compare this flow with ${base}: ${steps}`}>
+                          <button className={view.before ? '' : 'on'} onClick={() => setView({ ...view, before: undefined })}>now</button>
+                          <button className={view.before ? 'on before' : ''} onClick={() => setView({ ...view, before: true })}>before</button>
+                        </span>
+                      )}
+                      {n ? <button className="diff-crumb" onClick={() => setDiffFor(scopeId)} title="Code changes behind this flow, function by function">code changes ± ({n})</button> : null}
+                      {view.before && (
+                        <span className="before-note">
+                          as on {base}{canCompare ? `: ${steps}` : ''}{canvas?.addedCount ? ` · ${canvas.addedCount} step${canvas.addedCount > 1 ? 's' : ''} this change adds not shown` : ''} · examples hidden (recorded on the new code)
+                        </span>
+                      )}
+                    </>
+                  );
                 })()}
                 {(canvas?.chain?.length ?? 0) > 1 && (
                   <span className="muted small">
@@ -534,7 +590,7 @@ export default function App() {
                 <button
                   disabled={!!canvas?.meta && view.depth >= canvas.meta.maxDepth && !canvas.meta.frontier.length}
                   onClick={async () => {
-                    if (g.lazy && !(await runExpand('reach', view.op, `every entry point that reaches ${opTitle(g, view.op)}`))) return;
+                    for (const op of g.lazy ? targetOps(g, view.op) : []) if (!(await runExpand('reach', op, `every entry point that reaches ${opTitle(g, op)}`))) return;
                     setView({ ...view, depth: 99 });
                   }}>all entry points</button>
                 {expandedGroups.size > 0 && <button onClick={() => setExpandedGroups(new Set())}>regroup</button>}
@@ -552,6 +608,7 @@ export default function App() {
               nodesDraggable={false}
               onNodeClick={onNodeClick}
               onNodeDoubleClick={onNodeDoubleClick}
+              onNodeContextMenu={onNodeContextMenu}
               onPaneClick={() => setSelection(undefined)}
               fitView
               fitViewOptions={FIT}
@@ -563,6 +620,7 @@ export default function App() {
               <FitOnResize />
             </ReactFlow>
           )}
+          {menu && <NodeMenu g={g} at={menu} onClose={() => setMenu(undefined)} onDetails={() => setSelection(menu.selection)} />}
           <Legend />
           {toast && <div className="toast">{toast}</div>}
           {busy && <div className="busy">⏳ analyzing {busy}…</div>}
@@ -596,10 +654,10 @@ function Legend() {
   );
 }
 
-/** Operations that (transitively) call `opId`: the path to highlight in a flow. */
-function ancestors(index: ReturnType<typeof buildIndex>, opId: string): Set<string> {
+/** Operations that (transitively) call these: the path to highlight in a flow. */
+function ancestors(index: ReturnType<typeof buildIndex>, opIds: string[]): Set<string> {
   const out = new Set<string>();
-  const queue = [opId];
+  const queue = [...opIds];
   while (queue.length) {
     for (const c of index.callers.get(queue.pop()!) ?? []) {
       if (!out.has(c)) {

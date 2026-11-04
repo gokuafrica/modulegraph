@@ -8,6 +8,8 @@ import { exampleLabels, ObjectTree } from './ObjectTree.tsx';
 export interface Actions {
   drill: (opId: string) => void;
   zoomOut: (opId: string) => void;
+  /** Impact view of an operation, or of a whole module ("module:<id>"): who calls it, up to the entry points. */
+  references: (target: string) => void;
   openEntry: (entryId: string) => void;
   expandGroup: (groupId: string) => void;
   /** Open the code-changes drawer for an operation or entry point. */
@@ -100,13 +102,18 @@ function ExampleLine({ examples }: { examples?: Example[] }) {
 }
 
 export const EFFECT_META: Record<Effect['kind'], { icon: string; label: string; cls: string }> = {
-  'db.read': { icon: '⛁', label: 'read', cls: 'fx-read' },
-  'db.write': { icon: '⛁', label: 'write', cls: 'fx-write' },
+  'db.read': { icon: '⛁', label: 'DB read', cls: 'fx-read' },
+  'db.write': { icon: '⛁', label: 'DB write', cls: 'fx-write' },
   outbox: { icon: '✉', label: 'outbox', cls: 'fx-outbox' },
-  kafka: { icon: '⇶', label: 'kafka', cls: 'fx-kafka' },
-  http: { icon: '⇄', label: 'http', cls: 'fx-http' },
+  kafka: { icon: '⇶', label: 'Kafka', cls: 'fx-kafka' },
+  http: { icon: '⇄', label: 'HTTP', cls: 'fx-http' },
   queue: { icon: '☰', label: 'queue', cls: 'fx-queue' },
   event: { icon: '⚡', label: 'event', cls: 'fx-event' },
+};
+
+/** What an effect step is, in words: the table, topic or event name follows it. */
+const FX_NOUN: Record<Effect['kind'], string> = {
+  'db.read': 'reads table', 'db.write': 'writes table', outbox: 'outbox event', kafka: 'Kafka topic', http: 'HTTP call', queue: 'queue job', event: 'event',
 };
 
 const KIND_META: Record<string, { icon: string; label: string; cls: string }> = {
@@ -141,8 +148,15 @@ export function EffectChip({ chip }: { chip: Chip }) {
   );
 }
 
-/** What the change did to this step of the flow: new call, removed call (ghost), or a changed guard. */
-function StepDelta({ delta, conditionBefore, ghost }: { delta?: string; conditionBefore?: string; ghost?: boolean }) {
+/**
+ * What the change did to this step of the flow: new call, removed call (ghost), or a changed guard. In the
+ * "before" view the same marks read the other way: this step goes away, or its guard becomes something else.
+ */
+function StepDelta({ delta, conditionBefore, ghost, beforeMark, conditionNow }: { delta?: string; conditionBefore?: string; ghost?: boolean; beforeMark?: string; conditionNow?: string }) {
+  if (beforeMark === 'removed') return <div className="step-delta del">− this change removes it</div>;
+  if (beforeMark === 'guard') {
+    return <div className="step-delta cond" title={conditionNow ? `now: ${conditionNow}` : 'now runs always'}>guard changes: {conditionNow ? `now ${conditionNow}` : 'now runs always'}</div>;
+  }
   if (ghost) return <div className="step-delta del">− removed by this change</div>;
   if (delta === 'added') return <div className="step-delta add">+ new call in this change</div>;
   if (conditionBefore !== undefined) {
@@ -166,15 +180,18 @@ export function ModuleNode({ data, selected }: NodeProps) {
     compact?: boolean; inImpact?: boolean; totalEffects: number; ops?: string[]; opIds?: string[];
     delta?: string; conditionBefore?: string; ghost?: boolean; hasDiff?: boolean; stub?: boolean; partial?: boolean; reachPartial?: boolean;
     examples?: Example[];
+    /** Impact view of a whole module: references go one level further up for the module, not one operation. */
+    zoomTarget?: string;
+    beforeMark?: string; conditionNow?: string;
   };
   const inside = d.containsChanges && !d.compact && !d.inImpact;
   const actions = useContext(ActionsContext);
   const extra = d.chips.length - 6;
   return (
-    <div className={`node module ${d.compact ? 'compact' : ''} c-${d.change} ${inside ? 'has-changes' : ''} ${d.focus ? 'focus' : ''} ${d.onPath ? 'on-path' : ''} ${d.ghost ? 'ghost' : ''} ${d.delta === 'added' ? 'step-added' : ''} ${selected ? 'selected' : ''}`}>
+    <div className={`node module ${d.compact ? 'compact' : ''} c-${d.change} ${inside ? 'has-changes' : ''} ${d.focus ? 'focus' : ''} ${d.onPath ? 'on-path' : ''} ${d.ghost ? 'ghost' : ''} ${d.delta === 'added' ? 'step-added' : ''} ${d.beforeMark === 'removed' ? 'step-removed' : ''} ${selected ? 'selected' : ''}`}>
       <Handles />
       {d.condition && <div className="cond" title={d.condition}>{d.condition}</div>}
-      <StepDelta delta={d.delta} conditionBefore={d.conditionBefore} ghost={d.ghost} />
+      <StepDelta delta={d.delta} conditionBefore={d.conditionBefore} ghost={d.ghost} beforeMark={d.beforeMark} conditionNow={d.conditionNow} />
       <div className="module-head">
         <div>
           <div className="module-title">{d.title}{d.loop && <span className="loop" title="Runs once per item">⟳ each</span>}</div>
@@ -220,8 +237,9 @@ export function ModuleNode({ data, selected }: NodeProps) {
         {d.hasDiff && !d.ghost && (
           <button className="link nodrag diff-link" onClick={(e) => { e.stopPropagation(); actions.showDiff(d.opId); }} title="Code changes, function by function">diff ±</button>
         )}
-        <button className="link nodrag" onClick={(e) => { e.stopPropagation(); actions.zoomOut(d.opId); }}>
-          zoom out ⤴{d.reach !== undefined ? ` (${d.reachPartial ? '≥' : ''}${d.reach})` : ''}
+        <button className="link nodrag" onClick={(e) => { e.stopPropagation(); actions.zoomOut(d.zoomTarget ?? d.opId); }}
+          title={`Show references: everything that calls this, up to the ${d.reach ?? ''} entry points that reach it (impact view). Right-click for more.`}>
+          references ⤴{d.reach !== undefined ? ` (${d.reachPartial ? '≥' : ''}${d.reach})` : ''}
         </button>
       </div>
     </div>
@@ -229,17 +247,17 @@ export function ModuleNode({ data, selected }: NodeProps) {
 }
 
 export function EffectNode({ data, selected }: NodeProps) {
-  const d = data as { effect: Effect; condition?: string; loop?: boolean; via?: string; delta?: string; conditionBefore?: string; ghost?: boolean };
+  const d = data as { effect: Effect; condition?: string; loop?: boolean; via?: string; delta?: string; conditionBefore?: string; ghost?: boolean; beforeMark?: string; conditionNow?: string };
   const meta = EFFECT_META[d.effect.kind];
   return (
-    <div className={`node effect ${meta.cls} ${d.ghost ? 'ghost' : ''} ${d.delta === 'added' ? 'step-added' : ''} ${selected ? 'selected' : ''}`}>
+    <div className={`node effect ${meta.cls} ${d.ghost ? 'ghost' : ''} ${d.delta === 'added' ? 'step-added' : ''} ${d.beforeMark === 'removed' ? 'step-removed' : ''} ${selected ? 'selected' : ''}`}>
       <Handles />
       {d.condition && <div className="cond">{d.condition}</div>}
-      <StepDelta delta={d.delta} conditionBefore={d.conditionBefore} ghost={d.ghost} />
+      <StepDelta delta={d.delta} conditionBefore={d.conditionBefore} ghost={d.ghost} beforeMark={d.beforeMark} conditionNow={d.conditionNow} />
       <div className="effect-body">
         <span className="effect-icon">{meta.icon}</span>
         <div>
-          <div className="effect-kind">{d.effect.kind}{d.loop && <span className="loop">⟳ each</span>}</div>
+          <div className="effect-kind">{FX_NOUN[d.effect.kind]}{d.loop && <span className="loop">⟳ each</span>}</div>
           <div className="effect-target">{d.effect.target}</div>
         </div>
       </div>
@@ -375,13 +393,13 @@ export function DecisionNode({ data }: NodeProps) {
 
 /** Leaf of the drill-in: no submodules or side effects left, only code. Changed code is summarised per function. */
 export function CodeNode({ data }: NodeProps) {
-  const d = data as { opId: string; source: string; changes: CodeChange[] };
+  const d = data as { opId: string; source: string; changes: CodeChange[]; before?: boolean };
   const actions = useContext(ActionsContext);
   if (!d.changes.length) {
     return (
       <div className="node code nowheel">
         <Handles />
-        <div className="entry-kind">internal logic: no submodules or side effects</div>
+        <div className="entry-kind">{d.before ? 'internal logic before this change' : 'internal logic: no submodules or side effects'}</div>
         <pre>{d.source.split('\n').map((l, i) => <div key={i} className="dl dl-ctx">{l}</div>)}</pre>
       </div>
     );

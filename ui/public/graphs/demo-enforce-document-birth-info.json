@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "birth-info-service",
-  "generatedAt": "2026-11-04T12:51:25.301Z",
+  "generatedAt": "2026-11-04T13:58:47.853Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
@@ -702,7 +702,7 @@
             "kyc": {
               "countryOfBirth": "IND",
               "placeOfBirth": "Mumbai",
-              "updatedAt": "2026-11-04T12:51:25.148Z"
+              "updatedAt": "2026-11-04T13:58:47.696Z"
             }
           },
           "cases": [
@@ -720,7 +720,7 @@
             "kyc": {
               "countryOfBirth": "DEU",
               "placeOfBirth": "Berlin",
-              "updatedAt": "2026-11-04T12:51:25.148Z"
+              "updatedAt": "2026-11-04T13:58:47.696Z"
             }
           },
           "cases": [
@@ -740,7 +740,7 @@
             "kyc": {
               "countryOfBirth": "NGA",
               "placeOfBirth": "lagos",
-              "updatedAt": "2026-11-04T12:51:25.148Z"
+              "updatedAt": "2026-11-04T13:58:47.696Z"
             }
           },
           "cases": [
@@ -983,7 +983,7 @@
             "kyc": {
               "countryOfBirth": "PRT",
               "placeOfBirth": "Porto",
-              "updatedAt": "2026-11-04T12:51:25.147Z"
+              "updatedAt": "2026-11-04T13:58:47.695Z"
             }
           },
           "cases": [
@@ -1019,7 +1019,7 @@
             "kyc": {
               "countryOfBirth": "IND",
               "placeOfBirth": "Mumbai",
-              "updatedAt": "2026-11-04T12:51:25.148Z"
+              "updatedAt": "2026-11-04T13:58:47.696Z"
             }
           },
           "cases": [
@@ -1053,7 +1053,7 @@
             "kyc": {
               "countryOfBirth": "DEU",
               "placeOfBirth": "Berlin",
-              "updatedAt": "2026-11-04T12:51:25.148Z"
+              "updatedAt": "2026-11-04T13:58:47.696Z"
             }
           },
           "cases": [
@@ -1076,7 +1076,7 @@
             "kyc": {
               "countryOfBirth": "NGA",
               "placeOfBirth": "lagos",
-              "updatedAt": "2026-11-04T12:51:25.148Z"
+              "updatedAt": "2026-11-04T13:58:47.696Z"
             }
           },
           "cases": [
@@ -1208,7 +1208,7 @@
             "userId": "u-2",
             "countryOfBirth": "IND",
             "placeOfBirth": "Mumbai",
-            "updatedAt": "2026-11-04T12:51:25.148Z"
+            "updatedAt": "2026-11-04T13:58:47.696Z"
           },
           "cases": [
             "c11",
@@ -1223,7 +1223,7 @@
             "userId": "u-3",
             "countryOfBirth": "DEU",
             "placeOfBirth": "Berlin",
-            "updatedAt": "2026-11-04T12:51:25.148Z"
+            "updatedAt": "2026-11-04T13:58:47.696Z"
           },
           "cases": [
             "c13",
@@ -1238,7 +1238,7 @@
             "userId": "u-4",
             "countryOfBirth": "NGA",
             "placeOfBirth": "lagos",
-            "updatedAt": "2026-11-04T12:51:25.148Z"
+            "updatedAt": "2026-11-04T13:58:47.696Z"
           },
           "cases": [
             "c14",
@@ -1318,7 +1318,7 @@
             "userId": "u-1",
             "countryOfBirth": "PRT",
             "placeOfBirth": "Porto",
-            "updatedAt": "2026-11-04T12:51:25.147Z"
+            "updatedAt": "2026-11-04T13:58:47.695Z"
           },
           "cases": [
             "c9"
@@ -1336,7 +1336,7 @@
             "userId": "u-2",
             "countryOfBirth": "IND",
             "placeOfBirth": "Mumbai",
-            "updatedAt": "2026-11-04T12:51:25.148Z"
+            "updatedAt": "2026-11-04T13:58:47.696Z"
           },
           "cases": [
             "c11"
@@ -1354,7 +1354,7 @@
             "userId": "u-3",
             "countryOfBirth": "DEU",
             "placeOfBirth": "Berlin",
-            "updatedAt": "2026-11-04T12:51:25.148Z"
+            "updatedAt": "2026-11-04T13:58:47.696Z"
           },
           "cases": [
             "c13"
@@ -1372,7 +1372,7 @@
             "userId": "u-4",
             "countryOfBirth": "NGA",
             "placeOfBirth": "lagos",
-            "updatedAt": "2026-11-04T12:51:25.148Z"
+            "updatedAt": "2026-11-04T13:58:47.696Z"
           },
           "cases": [
             "c14"
@@ -2082,7 +2082,89 @@
           "to": "exit",
           "kind": "control"
         }
-      ]
+      ],
+      "before": {
+        "steps": [
+          {
+            "id": "s3",
+            "kind": "call",
+            "target": "KycBirthInfoStore.save",
+            "line": 27,
+            "file": "sample-birth-service/src/birth-info/birth-info.service.ts"
+          },
+          {
+            "id": "s4",
+            "kind": "effect",
+            "effect": {
+              "kind": "event",
+              "target": "kyc.birth_info.updated",
+              "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+              "line": 28
+            },
+            "line": 28,
+            "file": "sample-birth-service/src/birth-info/birth-info.service.ts"
+          },
+          {
+            "id": "s5",
+            "kind": "call",
+            "target": "BirthInfoService.get",
+            "line": 29,
+            "file": "sample-birth-service/src/birth-info/birth-info.service.ts"
+          }
+        ],
+        "edges": [
+          {
+            "from": "entry",
+            "to": "s3",
+            "kind": "data",
+            "label": "userId, dto.countryOfBirth.trim, dto.placeOfBirth.trim"
+          },
+          {
+            "from": "entry",
+            "to": "s4",
+            "kind": "data",
+            "label": "userId"
+          },
+          {
+            "from": "entry",
+            "to": "s5",
+            "kind": "data",
+            "label": "userId"
+          },
+          {
+            "from": "s5",
+            "to": "exit",
+            "kind": "data"
+          },
+          {
+            "from": "s3",
+            "to": "exit",
+            "kind": "control"
+          },
+          {
+            "from": "s4",
+            "to": "exit",
+            "kind": "control"
+          }
+        ],
+        "returns": {
+          "type": "BirthInfoView",
+          "fields": [
+            {
+              "name": "userId",
+              "type": "string"
+            },
+            {
+              "name": "document",
+              "type": "BirthPlace | null"
+            },
+            {
+              "name": "kyc",
+              "type": "(KycBirthInfoDto & { updatedAt: string; }) | null"
+            }
+          ]
+        }
+      }
     },
     "KycBirthInfoStore.find": {
       "id": "KycBirthInfoStore.find",

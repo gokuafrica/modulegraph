@@ -1,4 +1,4 @@
-import type { Effect, EntryPoint, ModuleGraph, Operation, Param, Step } from '../../../schema/modulegraph.ts';
+import type { Effect, EntryPoint, ModuleGraph, Operation, Param, Scope, Step } from '../../../schema/modulegraph.ts';
 
 export type NodeKind = 'module' | 'effect' | 'entry' | 'exit' | 'resource' | 'entrygroup' | 'code' | 'decision' | 'frontier';
 export type EdgeKind = 'data' | 'control' | 'call' | 'read' | 'write' | 'branch' | 'removed';
@@ -35,8 +35,22 @@ export interface Chip {
 export const effectKey = (e: Effect) => `${e.kind} ${e.target}`;
 
 export function opTitle(g: ModuleGraph, opId: string): string {
+  if (opId.startsWith(MODULE_TARGET)) {
+    const id = opId.slice(MODULE_TARGET.length);
+    return `${g.modules[id]?.name ?? id} (all operations)`;
+  }
   const op = g.operations[opId];
   return op ? `${g.modules[op.moduleId]?.name ?? op.moduleId}.${op.name}` : opId;
+}
+
+/** Impact views can start at a whole module ("module:<id>"): the references to any of its operations. */
+export const MODULE_TARGET = 'module:';
+
+/** The operations an impact view starts at: the one operation, or every operation of the module. */
+export function targetOps(g: ModuleGraph, target: string): string[] {
+  if (!target.startsWith(MODULE_TARGET)) return [target];
+  const id = target.slice(MODULE_TARGET.length);
+  return Object.values(g.operations).filter((o) => o.moduleId === id && o.change !== 'removed').map((o) => o.id);
 }
 
 /** Effect chips for an operation: transitive effects, direct ones solid, plus +/− contract delta. */
@@ -49,6 +63,36 @@ export function chipsFor(op: Operation): Chip[] {
   return chips.sort((a, b) => order(a) - order(b));
 }
 
+/** An operation's side effects as they were on the base revision (for the "before" view). */
+export function chipsBefore(op: Operation): Chip[] {
+  const direct = new Set(op.directEffects.map(effectKey));
+  if (op.change === 'removed') return op.effects.map((e) => ({ kind: e.kind, target: e.target, direct: direct.has(effectKey(e)) }));
+  const added = new Set(op.delta?.effectsAdded.map(effectKey));
+  const effects = [...op.effects.filter((e) => !added.has(effectKey(e))), ...(op.delta?.effectsRemoved ?? [])];
+  return [...new Map(effects.map((e) => [effectKey(e), { kind: e.kind, target: e.target, direct: direct.has(effectKey(e)) }])).values()]
+    .sort((a, b) => Number(b.direct) - Number(a.direct));
+}
+
+/** The scope's flow on the base revision: what the "before" view draws. Unchanged flows are their own before. */
+function scopeBefore(raw: Scope): Scope & { addedCount: number } {
+  const now = new Map(raw.steps.map((s) => [s.id, s]));
+  const steps = (raw.before?.steps ?? raw.steps).map((s) => {
+    const head = now.get(s.id);
+    // Mark what this change does to the step: removes it, or guards it differently.
+    const mark = s.delta === 'removed' ? { beforeMark: 'removed' } : head?.conditionBefore !== undefined ? { beforeMark: 'guard', conditionNow: head.condition ?? '' } : {};
+    return { ...s, delta: undefined, conditionBefore: undefined, ...mark } as Step;
+  });
+  return {
+    ...raw,
+    steps,
+    edges: raw.before?.edges ?? raw.edges,
+    returns: raw.before ? raw.before.returns : raw.returns,
+    removedSteps: undefined,
+    removedEdges: undefined,
+    addedCount: raw.steps.filter((s) => s.delta === 'added').length,
+  };
+}
+
 function moduleNode(g: ModuleGraph, id: string, opId: string, extra: Record<string, unknown> = {}): VNode {
   const op = g.operations[opId];
   // Lazy graphs can reference operations that are not analyzed yet: name them from their class.
@@ -57,10 +101,12 @@ function moduleNode(g: ModuleGraph, id: string, opId: string, extra: Record<stri
   // Compact (zoom-out) nodes only show what the change did to their effects; the full list is in the inspector.
   const chips = extra.compact && !extra.focus ? all.filter((c) => c.delta) : all;
   const shown = Math.min(chips.length, 6);
+  // One effect per row with its full table / topic / event name; long names wrap onto a second line.
+  const chipLines = chips.slice(0, 6).reduce((n, c) => n + Math.ceil((c.target.length + 10) / 34), 0);
   const opsLines = Array.isArray(extra.ops) ? Math.ceil((extra.ops as string[]).length / 2) : 0;
-  const deltaLine = extra.delta || extra.conditionBefore !== undefined ? 18 : 0;
+  const deltaLine = extra.delta || extra.conditionBefore !== undefined || extra.beforeMark ? 18 : 0;
   const uses = extra.compact ? [] : usesOf(g, opId);
-  const height = (extra.compact ? 56 : 62) + (extra.compact ? shown : Math.ceil(shown / 2)) * 24 + (extra.condition ? 20 : 0) + (extra.via ? 16 : 0) + (extra.through ? 16 : 0) + (uses.length ? 18 : 0) + opsLines * 16 + deltaLine;
+  const height = (extra.compact ? 56 : 62) + chipLines * 19 + shown * 5 + (chips.length > 6 ? 22 : 0) + (extra.condition ? 20 : 0) + (extra.via ? 16 : 0) + (extra.through ? 16 : 0) + (uses.length ? 18 : 0) + opsLines * 16 + deltaLine;
   return {
     id,
     type: 'module',
@@ -149,6 +195,8 @@ export interface FlowOptions {
   showResources: boolean;
   focusOp?: string;
   focusPath?: Set<string>;
+  /** Draw the flow as it was on the base revision. */
+  before?: boolean;
 }
 
 /**
@@ -156,9 +204,12 @@ export interface FlowOptions {
  * calls: opening an endpoint shows the controller handing the request to its module(s), and drilling into a module
  * shows its sub-modules and its own side effects. That keeps every level module-sized, however complex the API.
  */
-export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): Model & { chain: string[] } {
+export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): Model & { chain: string[]; addedCount?: number } {
   const chain = [scopeId];
-  const raw = g.scopes[scopeId];
+  const current = g.scopes[scopeId];
+  const was = opts.before && current ? scopeBefore(current) : undefined;
+  const raw = was ?? current;
+  const before = !!was;
   const scope = raw && opts.collapsePassthrough
     ? {
         ...raw,
@@ -180,7 +231,8 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
   const handedTo = rootEntry && scope.steps.length === 1 && scope.steps[0].kind === 'call' ? g.operations[scope.steps[0].target!] : undefined;
   const contractOp = innerOp ?? handedTo;
 
-  const examples = contractOp?.examples;
+  // Recorded examples are from the head revision: the "before" view doesn't show them.
+  const examples = before ? undefined : contractOp?.examples;
   const exampleParams = contractOp && examples?.length ? contractOp.params.map((p) => p.name) : [];
   if (rootEntry) {
     const node = entryNode(g, rootEntry, '__entry', { via: via.join(' › ') || undefined, examples, exampleParams });
@@ -192,7 +244,7 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
       type: 'entry',
       width: 260,
       height: 50 + scope.params.length * 18 + (exampleParams.length ? 38 + exampleParams.length * 16 : 0),
-      data: { kind: 'input', label: `${opTitle(g, chain.at(-1)!)}(…)`, params: scope.params, change: 'unchanged', paramsDelta: innerOp?.delta?.params, examples, exampleParams },
+      data: { kind: 'input', label: `${opTitle(g, chain.at(-1)!)}(…)`, params: before && innerOp?.delta?.params ? innerOp.delta.params.before : scope.params, change: 'unchanged', paramsDelta: before ? undefined : innerOp?.delta?.params, examples, exampleParams },
     });
   }
 
@@ -214,20 +266,22 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
     nodes.push({ id, type: 'decision', width: Math.max(130, cond.length * 7.5 + 40), height: 46, data: { label: `${cond}?` } });
   }
   for (const step of scope.steps) {
-    nodes.push(stepNode(g, branchOf.has(step.id) ? { ...step, condition: undefined } : step, opts.focusOp, opts.focusPath));
+    nodes.push(stepNode(g, branchOf.has(step.id) ? { ...step, condition: undefined } : step, opts.focusOp, opts.focusPath, false, before));
   }
   // Steps the base had and the head dropped stay visible as ghosts, so a removed call is as easy to spot as an added one.
   for (const step of scope.removedSteps ?? []) nodes.push(stepNode(g, step, undefined, undefined, true));
   if (scope.steps.length === 0 && innerOp) {
-    const lines = innerOp.source.split('\n').length;
-    const changes = innerOp.changes ?? [];
+    // Before: the base revision's code, read back from the line diff.
+    const source = before && innerOp.diff?.length ? innerOp.diff.filter((l) => l.t !== '+').map((l) => l.text).join('\n') : innerOp.source;
+    const lines = source.split('\n').length;
+    const changes = before ? [] : innerOp.changes ?? [];
     const height = changes.length ? Math.min(70 + changes.length * 22 + Math.min(changes[0].diff.length, 14) * 16, 420) : Math.min(60 + lines * 15, 340);
-    nodes.push({ id: '__code', type: 'code', width: changes.length ? 560 : 440, height, data: { opId: innerOp.id, source: innerOp.source, changes } });
+    nodes.push({ id: '__code', type: 'code', width: changes.length ? 560 : 440, height, data: { opId: innerOp.id, source, changes, before } });
     edges.push({ id: 'e:in-code', source: '__entry', target: '__code', kind: 'control' }, { id: 'e:code-out', source: '__code', target: '__exit', kind: 'control' });
   }
 
-  const returns = scope.returns;
-  const before = contractOp?.delta?.returns?.before.fields;
+  const returns = before && contractOp?.delta?.returns ? contractOp.delta.returns.before : scope.returns;
+  const returnsBefore = contractOp?.delta?.returns?.before.fields;
   const exampleKeys = Math.max(0, ...(examples ?? []).map((e) => exampleKeyCount(e.output ?? e.error)));
   nodes.push({
     id: '__exit',
@@ -238,7 +292,7 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
       examples,
       label: rootEntry ? exitLabel[rootEntry.kind] : 'returns',
       type: returns?.type ?? 'void',
-      fields: fieldsWithDelta(returns?.fields, contractOp?.delta?.returns ? before : undefined),
+      fields: fieldsWithDelta(returns?.fields, contractOp?.delta?.returns && !before ? returnsBefore : undefined),
     },
   });
 
@@ -280,7 +334,7 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
       }
     }
   }
-  return { nodes, edges: [...new Map(edges.map((e) => [e.id, e])).values()], chain };
+  return { nodes, edges: [...new Map(edges.map((e) => [e.id, e])).values()], chain, addedCount: was?.addedCount };
 }
 
 /**
@@ -311,20 +365,23 @@ function reduceEdges(edges: VEdge[], sinks: Set<string>): VEdge[] {
   });
 }
 
-function stepNode(g: ModuleGraph, step: Step, focusOp?: string, focusPath?: Set<string>, ghost = false): VNode {
-  const focus = !!focusOp && step.target === focusOp;
+function stepNode(g: ModuleGraph, step: Step, focusOp?: string, focusPath?: Set<string>, ghost = false, before = false): VNode {
+  const focus = !!focusOp && !!step.target && (step.target === focusOp || (focusOp.startsWith(MODULE_TARGET) && g.operations[step.target]?.moduleId === focusOp.slice(MODULE_TARGET.length)));
   const onPath = !focus && !!step.target && !!focusPath?.has(step.target);
   const through = (step as Step & { through?: string }).through;
-  const extra = { condition: step.condition, loop: step.loop, via: step.via, through, line: step.line, file: step.file, focus, onPath, delta: step.delta, conditionBefore: step.conditionBefore, ghost };
+  const marks = step as Step & { beforeMark?: string; conditionNow?: string };
+  const extra = { condition: step.condition, loop: step.loop, via: step.via, through, line: step.line, file: step.file, focus, onPath, delta: step.delta, conditionBefore: step.conditionBefore, ghost, beforeMark: marks.beforeMark, conditionNow: marks.conditionNow };
   if (step.kind === 'call') {
     // What the module got and returned in the request being followed: one extra line pair on the node.
-    const examples = ghost ? undefined : g.operations[step.target!]?.examples;
-    const node = moduleNode(g, step.id, step.target!, { ...extra, examples });
+    const examples = ghost || before ? undefined : g.operations[step.target!]?.examples;
+    const op = g.operations[step.target!];
+    const node = moduleNode(g, step.id, step.target!, { ...extra, examples, ...(before && op ? { chipsOverride: chipsBefore(op), change: 'unchanged', containsChanges: false, hasDiff: false, beforeView: true } : {}) });
     if (examples?.length) node.height += 40;
     return node;
   }
-  const deltaLine = step.delta || step.conditionBefore !== undefined ? 18 : 0;
-  return { id: step.id, type: 'effect', width: 230, height: 50 + (step.condition ? 18 : 0) + deltaLine, data: { ...extra, effect: step.effect } };
+  const deltaLine = step.delta || step.conditionBefore !== undefined || marks.beforeMark ? 18 : 0;
+  const nameLines = Math.max(1, Math.ceil((step.effect?.target.length ?? 0) / 24));
+  return { id: step.id, type: 'effect', width: 230, height: 50 + (nameLines - 1) * 17 + (step.condition ? 18 : 0) + deltaLine, data: { ...extra, effect: step.effect } };
 }
 
 export function resourceId(e: Effect): string {
@@ -392,16 +449,22 @@ export interface ImpactModel extends Model {
   entriesTotal: number;
 }
 
-/** Start at an operation and walk callers outwards, `depth` levels, until entry points. */
+/**
+ * Start at an operation (or every operation of a module) and walk callers outwards, `depth` levels, until entry
+ * points: "show references", like an IDE's, but up to the APIs and consumers that end up here.
+ */
 export function impactModel(g: ModuleGraph, index: CallerIndex, opId: string, opts: ImpactOptions): ImpactModel {
-  const level = new Map<string, number>([[opId, 0]]);
+  const starts = targetOps(g, opId);
+  const startSet = new Set(starts);
+  const level = new Map<string, number>(starts.map((s) => [s, 0]));
   const edges: VEdge[] = [];
-  let frontier = [opId];
+  let frontier = [...starts];
   let maxDepth = 0;
   for (let d = 1; frontier.length; d++) {
     const next: string[] = [];
     for (const callee of frontier) {
       for (const caller of index.callers.get(callee) ?? []) {
+        if (startSet.has(caller)) continue; // the module calling itself
         if (d <= opts.depth) edges.push({ id: `c:${caller}->${callee}`, source: caller, target: callee, kind: 'call', highlight: true });
         if (level.has(caller)) continue;
         level.set(caller, d);
@@ -410,7 +473,7 @@ export function impactModel(g: ModuleGraph, index: CallerIndex, opId: string, op
     }
     frontier = next;
   }
-  maxDepth = Math.max(...level.values());
+  maxDepth = level.size ? Math.max(...level.values()) : 0;
   const visible = [...level.entries()].filter(([, l]) => l <= opts.depth).map(([id]) => id);
   const visibleSet = new Set(visible);
   const nodes: VNode[] = [];
@@ -456,13 +519,24 @@ export function impactModel(g: ModuleGraph, index: CallerIndex, opId: string, op
 
   // Callers are shown per module (reviewers think in modules); the focus operation stays on its own.
   const nodeOf = (id: string) =>
-    g.entryPoints[id] ? groupFor.get(id) ?? id : id === opId ? id : `mod:${g.operations[id]?.moduleId ?? id}`;
+    g.entryPoints[id] ? groupFor.get(id) ?? id : startSet.has(id) ? opId : `mod:${g.operations[id]?.moduleId ?? id}`;
+  const reachOf = (ids: string[]) => new Set(ids.flatMap((o) => [...(index.reach.get(o) ?? [])]));
   const opsByModule = new Map<string, string[]>();
   for (const id of visible) {
     if (g.entryPoints[id]) {
       if (!groupFor.has(id)) nodes.push(entryNode(g, g.entryPoints[id], id, { compact: true }));
     } else if (id === opId) {
       nodes.push(moduleNode(g, id, id, { focus: true, inImpact: true, reach: index.reach.get(id)?.size ?? 0 }));
+    } else if (startSet.has(id)) {
+      if (id !== starts[0]) continue;
+      // The whole module: one node listing its operations, with what the change did to any of them.
+      const chips = new Map<string, Chip>();
+      for (const o of starts) for (const c of chipsFor(g.operations[o])) chips.set(`${c.kind}${c.target}${c.delta ?? ''}`, c);
+      const changed = starts.find((o) => g.operations[o].change !== 'unchanged');
+      nodes.push(moduleNode(g, opId, changed ?? starts[0], {
+        focus: true, inImpact: true, ops: starts.map((o) => g.operations[o].name), opIds: starts,
+        chipsOverride: [...chips.values()], reach: reachOf(starts).size, zoomTarget: opId,
+      }));
     } else {
       opsByModule.set(nodeOf(id), [...(opsByModule.get(nodeOf(id)) ?? []), id]);
     }
@@ -470,7 +544,7 @@ export function impactModel(g: ModuleGraph, index: CallerIndex, opId: string, op
   for (const [nid, ops] of opsByModule) {
     const chips = new Map<string, Chip>();
     for (const o of ops) for (const c of chipsFor(g.operations[o])) if (c.delta) chips.set(`${c.kind}${c.target}${c.delta}`, c);
-    const reach = new Set(ops.flatMap((o) => [...(index.reach.get(o) ?? [])]));
+    const reach = reachOf(ops);
     const changed = ops.find((o) => g.operations[o].change !== 'unchanged');
     nodes.push(
       moduleNode(g, nid, changed ?? ops[0], {
@@ -505,7 +579,7 @@ export function impactModel(g: ModuleGraph, index: CallerIndex, opId: string, op
     frontier: unloaded,
     maxDepth,
     entriesShown: entries.length,
-    entriesTotal: index.reach.get(opId)?.size ?? 0,
+    entriesTotal: reachOf(starts).size,
   };
 }
 

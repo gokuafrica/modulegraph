@@ -234,6 +234,11 @@ export interface Scope {
   removedSteps?: Step[];
   /** Base edges that touched a removed step, mapped onto head step ids. */
   removedEdges?: Edge[];
+  /**
+   * The base revision's steps, when they differ (a call added, removed or guarded differently): the flow as it was,
+   * for a before/after toggle. Steps that survived keep their head ids; the ones gone are "rm:" with delta removed.
+   */
+  before?: { steps: Step[]; edges: Edge[]; returns?: TypeShape };
 }
 
 export interface Step {

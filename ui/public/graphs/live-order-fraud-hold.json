@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "order-service",
-  "generatedAt": "2026-11-04T12:51:16.456Z",
+  "generatedAt": "2026-11-04T14:00:11.197Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -4810,7 +4810,102 @@
           "kind": "data",
           "label": "risk"
         }
-      ]
+      ],
+      "before": {
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "call",
+            "target": "CustomersService.profile",
+            "line": 32,
+            "file": "sample-nest-service/src/orders/orders.service.ts"
+          },
+          {
+            "id": "s2",
+            "kind": "call",
+            "target": "PricingService.quote",
+            "line": 33,
+            "file": "sample-nest-service/src/orders/orders.service.ts"
+          },
+          {
+            "id": "s3",
+            "kind": "call",
+            "target": "ShippingService.rates",
+            "line": 34,
+            "file": "sample-nest-service/src/orders/orders.service.ts"
+          }
+        ],
+        "edges": [
+          {
+            "from": "entry",
+            "to": "s1",
+            "kind": "data",
+            "label": "dto.customerId"
+          },
+          {
+            "from": "entry",
+            "to": "s2",
+            "kind": "data",
+            "label": "dto.lines, dto.country"
+          },
+          {
+            "from": "entry",
+            "to": "s3",
+            "kind": "data",
+            "label": "dto.country, dto.lines"
+          },
+          {
+            "from": "s2",
+            "to": "exit",
+            "kind": "data",
+            "label": "quote"
+          },
+          {
+            "from": "s3",
+            "to": "exit",
+            "kind": "data",
+            "label": "shippingCost"
+          },
+          {
+            "from": "s1",
+            "to": "exit",
+            "kind": "control"
+          }
+        ],
+        "returns": {
+          "type": "QuotePreview",
+          "fields": [
+            {
+              "name": "shippingCost",
+              "type": "number"
+            },
+            {
+              "name": "grandTotal",
+              "type": "number"
+            },
+            {
+              "name": "subtotal",
+              "type": "number"
+            },
+            {
+              "name": "discount",
+              "type": "number"
+            },
+            {
+              "name": "tax",
+              "type": "number"
+            },
+            {
+              "name": "total",
+              "type": "number"
+            },
+            {
+              "name": "promotionIds",
+              "type": "string[]"
+            }
+          ]
+        }
+      }
     },
     "CustomersService.profile": {
       "id": "CustomersService.profile",
@@ -6546,7 +6641,256 @@
           "to": "exit",
           "kind": "control"
         }
-      ]
+      ],
+      "before": {
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "call",
+            "target": "CustomersService.profile",
+            "line": 39,
+            "file": "sample-nest-service/src/orders/orders.service.ts"
+          },
+          {
+            "id": "s2",
+            "kind": "call",
+            "target": "PricingService.quote",
+            "line": 40,
+            "file": "sample-nest-service/src/orders/orders.service.ts"
+          },
+          {
+            "id": "s3",
+            "kind": "call",
+            "target": "ShippingService.rates",
+            "line": 41,
+            "file": "sample-nest-service/src/orders/orders.service.ts"
+          },
+          {
+            "id": "s5",
+            "kind": "call",
+            "target": "InventoryService.reserve",
+            "line": 42,
+            "file": "sample-nest-service/src/orders/orders.service.ts"
+          },
+          {
+            "id": "s6",
+            "kind": "effect",
+            "effect": {
+              "kind": "db.write",
+              "target": "orders",
+              "file": "sample-nest-service/src/orders/orders.service.ts",
+              "line": 43
+            },
+            "line": 43,
+            "file": "sample-nest-service/src/orders/orders.service.ts"
+          },
+          {
+            "id": "s7",
+            "kind": "effect",
+            "effect": {
+              "kind": "db.write",
+              "target": "order_lines",
+              "file": "sample-nest-service/src/orders/orders.service.ts",
+              "line": 46
+            },
+            "line": 46,
+            "file": "sample-nest-service/src/orders/orders.service.ts"
+          },
+          {
+            "id": "s8",
+            "kind": "call",
+            "target": "PricingService.redeem",
+            "line": 47,
+            "file": "sample-nest-service/src/orders/orders.service.ts"
+          },
+          {
+            "id": "s10",
+            "kind": "effect",
+            "effect": {
+              "kind": "kafka",
+              "target": "orders.created",
+              "file": "sample-nest-service/src/orders/orders.service.ts",
+              "line": 48
+            },
+            "line": 48,
+            "file": "sample-nest-service/src/orders/orders.service.ts"
+          },
+          {
+            "id": "s11",
+            "kind": "effect",
+            "effect": {
+              "kind": "event",
+              "target": "order.created",
+              "file": "sample-nest-service/src/orders/orders.service.ts",
+              "line": 49
+            },
+            "line": 49,
+            "file": "sample-nest-service/src/orders/orders.service.ts"
+          }
+        ],
+        "edges": [
+          {
+            "from": "entry",
+            "to": "s1",
+            "kind": "data",
+            "label": "dto.customerId"
+          },
+          {
+            "from": "entry",
+            "to": "s2",
+            "kind": "data",
+            "label": "dto.lines, dto.country"
+          },
+          {
+            "from": "entry",
+            "to": "s3",
+            "kind": "data",
+            "label": "dto.country, dto.lines"
+          },
+          {
+            "from": "entry",
+            "to": "s5",
+            "kind": "data",
+            "label": "dto.lines"
+          },
+          {
+            "from": "s1",
+            "to": "s6",
+            "kind": "data",
+            "label": "customer"
+          },
+          {
+            "from": "entry",
+            "to": "s6",
+            "kind": "data",
+            "label": "dto.country"
+          },
+          {
+            "from": "s3",
+            "to": "s6",
+            "kind": "data",
+            "label": "shippingCost"
+          },
+          {
+            "from": "s2",
+            "to": "s6",
+            "kind": "data",
+            "label": "quote"
+          },
+          {
+            "from": "entry",
+            "to": "s7",
+            "kind": "data",
+            "label": "dto.lines.map"
+          },
+          {
+            "from": "s6",
+            "to": "s7",
+            "kind": "data",
+            "label": "order"
+          },
+          {
+            "from": "s6",
+            "to": "s8",
+            "kind": "data",
+            "label": "order"
+          },
+          {
+            "from": "s1",
+            "to": "s8",
+            "kind": "data",
+            "label": "customer"
+          },
+          {
+            "from": "s2",
+            "to": "s8",
+            "kind": "data",
+            "label": "quote"
+          },
+          {
+            "from": "s6",
+            "to": "s10",
+            "kind": "data",
+            "label": "order"
+          },
+          {
+            "from": "s6",
+            "to": "s11",
+            "kind": "data",
+            "label": "order"
+          },
+          {
+            "from": "s1",
+            "to": "s11",
+            "kind": "data",
+            "label": "customer"
+          },
+          {
+            "from": "s6",
+            "to": "exit",
+            "kind": "data",
+            "label": "order"
+          },
+          {
+            "from": "s5",
+            "to": "exit",
+            "kind": "control"
+          },
+          {
+            "from": "s7",
+            "to": "exit",
+            "kind": "control"
+          },
+          {
+            "from": "s8",
+            "to": "exit",
+            "kind": "control"
+          },
+          {
+            "from": "s10",
+            "to": "exit",
+            "kind": "control"
+          },
+          {
+            "from": "s11",
+            "to": "exit",
+            "kind": "control"
+          }
+        ],
+        "returns": {
+          "type": "Order",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "customerId",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "OrderStatus [\"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+            },
+            {
+              "name": "country",
+              "type": "string"
+            },
+            {
+              "name": "shippingCost",
+              "type": "number"
+            },
+            {
+              "name": "total",
+              "type": "number"
+            },
+            {
+              "name": "createdAt",
+              "type": "Date"
+            }
+          ]
+        }
+      }
     },
     "PricingService.redeem": {
       "id": "PricingService.redeem",
@@ -6826,7 +7170,166 @@
           "to": "exit",
           "kind": "control"
         }
-      ]
+      ],
+      "before": {
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "effect",
+            "effect": {
+              "kind": "db.read",
+              "target": "orders",
+              "file": "sample-nest-service/src/orders/orders.service.ts",
+              "line": 96
+            },
+            "line": 96,
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "via": "OrdersService.load"
+          },
+          {
+            "id": "s2",
+            "kind": "effect",
+            "effect": {
+              "kind": "db.read",
+              "target": "order_lines",
+              "file": "sample-nest-service/src/orders/orders.service.ts",
+              "line": 102
+            },
+            "line": 102,
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "condition": "if (order)",
+            "via": "OrdersService.linesOf"
+          },
+          {
+            "id": "s4",
+            "kind": "call",
+            "target": "CustomersService.profile",
+            "line": 55,
+            "file": "sample-nest-service/src/orders/orders.service.ts"
+          },
+          {
+            "id": "s5",
+            "kind": "call",
+            "target": "ShippingService.tracking",
+            "line": 56,
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "condition": "if (order.status === 'shipped')"
+          }
+        ],
+        "edges": [
+          {
+            "from": "entry",
+            "to": "s1",
+            "kind": "data",
+            "label": "id"
+          },
+          {
+            "from": "entry",
+            "to": "s2",
+            "kind": "data",
+            "label": "id"
+          },
+          {
+            "from": "s1",
+            "to": "s4",
+            "kind": "data",
+            "label": "order"
+          },
+          {
+            "from": "s2",
+            "to": "s4",
+            "kind": "data",
+            "label": "order"
+          },
+          {
+            "from": "entry",
+            "to": "s5",
+            "kind": "data",
+            "label": "id"
+          },
+          {
+            "from": "s1",
+            "to": "s5",
+            "kind": "control",
+            "label": "guards"
+          },
+          {
+            "from": "s2",
+            "to": "s5",
+            "kind": "control",
+            "label": "guards"
+          },
+          {
+            "from": "s1",
+            "to": "exit",
+            "kind": "data",
+            "label": "order, tracking"
+          },
+          {
+            "from": "s2",
+            "to": "exit",
+            "kind": "data",
+            "label": "order, tracking"
+          },
+          {
+            "from": "s4",
+            "to": "exit",
+            "kind": "data",
+            "label": "customer"
+          },
+          {
+            "from": "s5",
+            "to": "exit",
+            "kind": "data",
+            "label": "tracking"
+          }
+        ],
+        "returns": {
+          "type": "OrderView",
+          "fields": [
+            {
+              "name": "customer",
+              "type": "{ name: string; tier: Tier; }"
+            },
+            {
+              "name": "tracking",
+              "type": "Tracking | undefined"
+            },
+            {
+              "name": "lines",
+              "type": "OrderLine[]"
+            },
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "customerId",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "OrderStatus [\"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+            },
+            {
+              "name": "country",
+              "type": "string"
+            },
+            {
+              "name": "shippingCost",
+              "type": "number"
+            },
+            {
+              "name": "total",
+              "type": "number"
+            },
+            {
+              "name": "createdAt",
+              "type": "Date"
+            }
+          ]
+        }
+      }
     },
     "ShippingService.tracking": {
       "id": "ShippingService.tracking",
@@ -6885,6 +7388,78 @@
           "label": "shipment"
         }
       ],
+      "before": {
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "effect",
+            "effect": {
+              "kind": "db.read",
+              "target": "shipments",
+              "file": "sample-nest-service/src/shipping/shipping.service.ts",
+              "line": 64
+            },
+            "line": 64,
+            "file": "sample-nest-service/src/shipping/shipping.service.ts"
+          },
+          {
+            "id": "rm:s2",
+            "kind": "call",
+            "target": "CarrierClient.status",
+            "line": 66,
+            "file": "sample-nest-service/src/shipping/shipping.service.ts",
+            "condition": "if (shipment)",
+            "delta": "removed"
+          }
+        ],
+        "edges": [
+          {
+            "from": "entry",
+            "to": "s1",
+            "kind": "data",
+            "label": "orderId"
+          },
+          {
+            "from": "s1",
+            "to": "rm:s2",
+            "kind": "data",
+            "label": "shipment"
+          },
+          {
+            "from": "s1",
+            "to": "exit",
+            "kind": "data",
+            "label": "shipment"
+          },
+          {
+            "from": "rm:s2",
+            "to": "exit",
+            "kind": "data",
+            "label": "live"
+          }
+        ],
+        "returns": {
+          "type": "Tracking | undefined",
+          "fields": [
+            {
+              "name": "carrier",
+              "type": "string"
+            },
+            {
+              "name": "trackingNo",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "string"
+            },
+            {
+              "name": "eta",
+              "type": "string | undefined"
+            }
+          ]
+        }
+      },
       "removedSteps": [
         {
           "id": "rm:s2",
@@ -6992,7 +7567,81 @@
           "to": "exit",
           "kind": "control"
         }
-      ]
+      ],
+      "before": {
+        "steps": [
+          {
+            "id": "s1",
+            "kind": "effect",
+            "effect": {
+              "kind": "db.write",
+              "target": "payments",
+              "file": "sample-nest-service/src/payments/payments.service.ts",
+              "line": 47
+            },
+            "line": 47,
+            "file": "sample-nest-service/src/payments/payments.service.ts"
+          },
+          {
+            "id": "s2",
+            "kind": "effect",
+            "effect": {
+              "kind": "queue",
+              "target": "receipts",
+              "file": "sample-nest-service/src/payments/payments.service.ts",
+              "line": 48
+            },
+            "line": 48,
+            "file": "sample-nest-service/src/payments/payments.service.ts"
+          }
+        ],
+        "edges": [
+          {
+            "from": "entry",
+            "to": "s1",
+            "kind": "data",
+            "label": "event.paymentId, event.orderId, status, event.amount"
+          },
+          {
+            "from": "s1",
+            "to": "s2",
+            "kind": "data",
+            "label": "payment"
+          },
+          {
+            "from": "s1",
+            "to": "exit",
+            "kind": "data",
+            "label": "payment"
+          },
+          {
+            "from": "s2",
+            "to": "exit",
+            "kind": "control"
+          }
+        ],
+        "returns": {
+          "type": "Payment",
+          "fields": [
+            {
+              "name": "id",
+              "type": "string"
+            },
+            {
+              "name": "orderId",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "\"refunded\" | \"authorized\" | \"succeeded\" | \"failed\""
+            },
+            {
+              "name": "amount",
+              "type": "number"
+            }
+          ]
+        }
+      }
     },
     "CarrierClient.status": {
       "id": "CarrierClient.status",
@@ -7326,7 +7975,8 @@
       "entryPointsReached": 0,
       "operationsKnown": 33,
       "operationsAnalyzed": 23,
-      "ms": 5128
-    }
+      "ms": 5099
+    },
+    "api": "/api"
   }
 }
