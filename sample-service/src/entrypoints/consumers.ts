@@ -6,6 +6,10 @@ export function registerConsumers(consumer: KafkaConsumer, kafka: KafkaProducer,
     await m.kyc.runCheck(msg.userId as string);
   });
 
+  consumer.subscribe('kyc.recheck_requested', async (msg) => {
+    await m.kyc.runCheck(msg.userId as string);
+  });
+
   consumer.subscribe('user.profile.changed', async (msg) => {
     const profile = await m.profile.getProfile(msg.userId as string);
     await kafka.produce('profile.snapshot.v1', profile);

@@ -18,7 +18,10 @@ export async function seed(app: App): Promise<void> {
       ? { fullName: 'Ana Silva', dateOfBirth: '1990-04-12', nationality: 'PRT', countryOfBirth: 'PRT', cityOfBirth: 'Porto' }
       : { fullName: 'Raj Patel', dateOfBirth: '1988-09-30', nationality: 'IND', countryOfBirth: 'IND', cityOfBirth: 'Bombay' };
   });
-  http.stub('sanctions-api', () => ({ hit: false, listVersion: '2026-10' }));
+  http.stub('sanctions-api', (_path, body) => {
+    const name = (body as { name: string }).name;
+    return { hit: false, score: name.startsWith('RAJ') ? 0.31 : 0.04, listVersion: '2026-11' };
+  });
   http.stub('visa-rules-service', () => ({ visaRequired: false }));
   http.stub('regulator-reporting', () => ({ accepted: true }));
 }
