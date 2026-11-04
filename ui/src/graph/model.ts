@@ -59,7 +59,8 @@ function moduleNode(g: ModuleGraph, id: string, opId: string, extra: Record<stri
   const shown = Math.min(chips.length, 6);
   const opsLines = Array.isArray(extra.ops) ? Math.ceil((extra.ops as string[]).length / 2) : 0;
   const deltaLine = extra.delta || extra.conditionBefore !== undefined ? 18 : 0;
-  const height = (extra.compact ? 56 : 62) + (extra.compact ? shown : Math.ceil(shown / 2)) * 24 + (extra.condition ? 20 : 0) + (extra.via ? 16 : 0) + opsLines * 16 + deltaLine;
+  const uses = extra.compact ? [] : usesOf(g, opId);
+  const height = (extra.compact ? 56 : 62) + (extra.compact ? shown : Math.ceil(shown / 2)) * 24 + (extra.condition ? 20 : 0) + (extra.via ? 16 : 0) + (extra.through ? 16 : 0) + (uses.length ? 18 : 0) + opsLines * 16 + deltaLine;
   return {
     id,
     type: 'module',
@@ -73,6 +74,7 @@ function moduleNode(g: ModuleGraph, id: string, opId: string, extra: Record<stri
       moduleChange: mod?.change,
       containsChanges: op?.containsChanges ?? false,
       chips,
+      uses,
       totalEffects: all.length,
       hasInternals: (g.scopes[opId]?.steps.length ?? 0) > 0,
       hasDiff: !!op?.changes?.length,
@@ -83,6 +85,41 @@ function moduleNode(g: ModuleGraph, id: string, opId: string, extra: Record<stri
       chipsOverride: undefined,
     },
   };
+}
+
+/** Other modules an operation calls directly (its sub-modules), in call order. */
+export function usesOf(g: ModuleGraph, opId: string): { opId: string; module: string; changed: boolean }[] {
+  const op = g.operations[opId];
+  const out = new Map<string, { opId: string; module: string; changed: boolean }>();
+  for (const step of g.scopes[opId]?.steps ?? []) {
+    if (step.kind !== 'call' || !step.target) continue;
+    const callee = g.operations[step.target];
+    const moduleId = callee?.moduleId ?? step.target.split('.')[0];
+    if (op && moduleId === op.moduleId) continue;
+    const name = g.modules[moduleId]?.name ?? moduleId;
+    const changed = !!callee && (callee.change !== 'unchanged' || callee.containsChanges) || step.delta === 'added';
+    const prev = out.get(name);
+    out.set(name, { opId: prev?.opId ?? step.target, module: name, changed: (prev?.changed ?? false) || changed });
+  }
+  return [...out.values()];
+}
+
+/**
+ * A call to an operation that only forwards to another operation of the same module (`cancel(id)` → `this.cancelWith(id, …)`)
+ * shows the operation doing the work, with the wrapper named. Wrappers across modules stay: they are module boundaries.
+ */
+function skipWrappers(g: ModuleGraph, target: string): { target: string; through: string[] } {
+  const through: string[] = [];
+  let cur = target;
+  for (;;) {
+    const steps = g.scopes[cur]?.steps ?? [];
+    const next = steps.length === 1 && steps[0].kind === 'call' ? steps[0].target : undefined;
+    if (!next || through.includes(next) || next === target || !g.scopes[next]?.steps.length) break;
+    if (g.operations[next]?.moduleId !== g.operations[cur]?.moduleId) break;
+    through.push(opTitle(g, cur));
+    cur = next;
+  }
+  return { target: cur, through };
 }
 
 function entryNode(g: ModuleGraph, entry: EntryPoint, id = `entry:${entry.id}`, extra: Record<string, unknown> = {}): VNode {
@@ -114,27 +151,37 @@ export interface FlowOptions {
   focusPath?: Set<string>;
 }
 
-/** Entry → steps → exit for one scope (entry point or operation). */
+/**
+ * Entry → modules → exit for one scope (entry point or operation). The scope itself is never replaced by what it
+ * calls: opening an endpoint shows the controller handing the request to its module(s), and drilling into a module
+ * shows its sub-modules and its own side effects. That keeps every level module-sized, however complex the API.
+ */
 export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): Model & { chain: string[] } {
   const chain = [scopeId];
-  let scope = g.scopes[scopeId];
-  if (opts.collapsePassthrough) {
-    while (scope && scope.steps.length === 1 && scope.steps[0].kind === 'call' && g.scopes[scope.steps[0].target!]?.steps.length) {
-      const next = scope.steps[0].target!;
-      if (chain.includes(next)) break;
-      chain.push(next);
-      scope = g.scopes[next];
-    }
-  }
+  const raw = g.scopes[scopeId];
+  const scope = raw && opts.collapsePassthrough
+    ? {
+        ...raw,
+        steps: raw.steps.map((s) => {
+          if (s.kind !== 'call' || !s.target) return s;
+          const { target, through } = skipWrappers(g, s.target);
+          return through.length ? { ...s, target, through: through.join(' › ') } : s;
+        }),
+      }
+    : raw;
   const nodes: VNode[] = [];
   const edges: VEdge[] = [];
   if (!scope) return { nodes, edges, chain };
   const via = chain.slice(1).map((id) => opTitle(g, id));
   const rootEntry = g.entryPoints[scopeId];
   const innerOp = g.operations[chain.at(-1)!];
+  // An entry point that hands the request to one module answers with that module's result: its recorded calls and
+  // output delta belong on the input and the response.
+  const handedTo = rootEntry && scope.steps.length === 1 && scope.steps[0].kind === 'call' ? g.operations[scope.steps[0].target!] : undefined;
+  const contractOp = innerOp ?? handedTo;
 
-  const examples = innerOp?.examples;
-  const exampleParams = innerOp && examples?.length ? innerOp.params.map((p) => p.name) : [];
+  const examples = contractOp?.examples;
+  const exampleParams = contractOp && examples?.length ? contractOp.params.map((p) => p.name) : [];
   if (rootEntry) {
     const node = entryNode(g, rootEntry, '__entry', { via: via.join(' › ') || undefined, examples, exampleParams });
     node.height += exampleParams.length ? 22 + exampleParams.length * 16 : 0;
@@ -156,8 +203,12 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
   for (const step of scope.steps) {
     const m = /^(if|unless) \((.+)\)$/.exec(step.condition ?? '');
     if (!m || step.condition!.includes(') and ')) continue;
-    if (!decisions.has(m[2])) decisions.set(m[2], `__dec${decisions.size}`);
-    branchOf.set(step.id, { dec: decisions.get(m[2])!, branch: m[1] === 'if' ? 'yes' : 'no' });
+    // `if (!x)` is the "no" branch of `x?`: one decision per test, not one per spelling
+    const negated = /^!\s*([\w.$]+|\(.*\))$/.exec(m[2]);
+    const test = negated ? negated[1].replace(/^\((.*)\)$/, '$1') : m[2];
+    const yes = (m[1] === 'if') !== !!negated;
+    if (!decisions.has(test)) decisions.set(test, `__dec${decisions.size}`);
+    branchOf.set(step.id, { dec: decisions.get(test)!, branch: yes ? 'yes' : 'no' });
   }
   for (const [cond, id] of decisions) {
     nodes.push({ id, type: 'decision', width: Math.max(130, cond.length * 7.5 + 40), height: 46, data: { label: `${cond}?` } });
@@ -176,7 +227,7 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
   }
 
   const returns = scope.returns;
-  const before = innerOp?.delta?.returns?.before.fields;
+  const before = contractOp?.delta?.returns?.before.fields;
   const exampleKeys = Math.max(0, ...(examples ?? []).map((e) => exampleKeyCount(e.output ?? e.error)));
   nodes.push({
     id: '__exit',
@@ -187,7 +238,7 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
       examples,
       label: rootEntry ? exitLabel[rootEntry.kind] : 'returns',
       type: returns?.type ?? 'void',
-      fields: fieldsWithDelta(returns?.fields, innerOp?.delta?.returns ? before : undefined),
+      fields: fieldsWithDelta(returns?.fields, contractOp?.delta?.returns ? before : undefined),
     },
   });
 
@@ -263,7 +314,8 @@ function reduceEdges(edges: VEdge[], sinks: Set<string>): VEdge[] {
 function stepNode(g: ModuleGraph, step: Step, focusOp?: string, focusPath?: Set<string>, ghost = false): VNode {
   const focus = !!focusOp && step.target === focusOp;
   const onPath = !focus && !!step.target && !!focusPath?.has(step.target);
-  const extra = { condition: step.condition, loop: step.loop, via: step.via, line: step.line, file: step.file, focus, onPath, delta: step.delta, conditionBefore: step.conditionBefore, ghost };
+  const through = (step as Step & { through?: string }).through;
+  const extra = { condition: step.condition, loop: step.loop, via: step.via, through, line: step.line, file: step.file, focus, onPath, delta: step.delta, conditionBefore: step.conditionBefore, ghost };
   if (step.kind === 'call') return moduleNode(g, step.id, step.target!, extra);
   const deltaLine = step.delta || step.conditionBefore !== undefined ? 18 : 0;
   return { id: step.id, type: 'effect', width: 230, height: 50 + (step.condition ? 18 : 0) + deltaLine, data: { ...extra, effect: step.effect } };

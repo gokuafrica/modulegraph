@@ -15,8 +15,10 @@ node-cron, TypeORM, Prisma, Mongoose, axios and fetch** from `package.json`, so 
 platform rules at all. See [docs/analyzers.md](docs/analyzers.md) for adding a framework (often just profile
 data) or a language.
 
-- **Flow view**: an API / gRPC / Kafka consumer / cron entry point → the chain of modules → the response.
-  Data edges show what is passed (`identity` fetched once, then shared by Nationality, PersonalDetails and BirthInfo).
+- **Flow view**: an API / gRPC / Kafka consumer / cron entry point → the modules it hands the request to → the
+  response. Every level is module-sized: an endpoint shows the module(s) its controller calls (each node lists the
+  modules it *uses* and every side effect below it), never the internals of one module. Data edges show what is
+  passed (`identity` fetched once, then shared by Nationality, PersonalDetails and BirthInfo).
 - **Drill in** on any module: its own entry, submodules and exit, recursively. A leaf shows its code diff.
 - **Zoom out** from a changed module: callers level by level up to every entry point that reaches it,
   grouped when there are many (the 50-APIs case).
@@ -129,11 +131,14 @@ Things to try:
    *zoom out +* adds one caller level at a time; *all entry points* shows all 21, grouped.
 3. **Checks**: BirthInfo now performs an outbox write that runs on 8 read-only endpoints, and the PR
    description never mentions it.
-4. **A NestJS service** (`sample-nest-service`, "Orders (NestJS): hold high-risk orders for fraud review"):
-   controllers, Kafka `@EventPattern` handlers, a gRPC method, BullMQ processors, `@OnEvent` listeners and
-   `@Cron` jobs, found without any rules in its profile. The change adds a fraud check: `Orders.create` now holds
-   risky orders (guards changed on stock reservation and `orders.created`), a new release endpoint, and an
-   undisclosed `order_views` write on `GET /api/orders/:id`. Code map: [sample-nest-service/README.md](sample-nest-service/README.md).
+4. **A NestJS service** (`sample-nest-service`, "Orders (NestJS): hold high-risk orders for fraud review"): 13
+   modules and 18 entry points (controllers, Kafka `@EventPattern` handlers, a gRPC method, BullMQ processors,
+   `@OnEvent` listeners, `@Cron` jobs), found without any rules in its profile. Every flow crosses several modules:
+   `POST /api/orders` → Orders → Customers, Pricing (→ Promotions, TaxApi), Shipping (→ CarrierApi), Inventory.
+   The change touches 6 modules: a new Fraud module, held orders (guards changed on stock reservation and
+   `orders.created`), a release endpoint and a fraud-desk consumer, a loyalty discount, tracking from carrier events
+   instead of the carrier API, and two writes nobody mentioned (`order_views` on `GET /api/orders/:id`,
+   `fraud_checks` on the read-only quote preview). Code map: [sample-nest-service/README.md](sample-nest-service/README.md).
 5. **A change spread over several files** (`feature/kyc-risk-tiers`, "KYC: risk tiers … (multi-file)"):
    - KycCheck.runCheck now uses a new helper file (`riskTier.ts`) and a new private `persist`, and gets a
      manual-review branch.

@@ -108,15 +108,17 @@ export function architectureFindings(g: Graphish, config: Config): Finding[] {
   };
   for (const mod of deps.keys()) visit(mod, [mod]);
 
-  // The same read twice in one operation is redundant I/O (a common pattern in generated code).
+  // The same read twice in one operation is redundant I/O (a common pattern in generated code). Reads on
+  // exclusive branches (`if (x)` here, `unless (x)` there) never both run, so they don't count together.
   for (const op of live) {
-    const counts = new Map<string, number>();
+    const byKey = new Map<string, (string | undefined)[]>();
     for (const step of g.scopes[op.id]?.steps ?? []) {
       if (!step.effect || step.loop || (step.effect.kind !== 'db.read' && step.effect.kind !== 'http')) continue;
       const key = effectKey(step.effect);
-      counts.set(key, (counts.get(key) ?? 0) + 1);
+      byKey.set(key, [...(byKey.get(key) ?? []), step.condition]);
     }
-    for (const [key, n] of counts) {
+    for (const [key, conditions] of byKey) {
+      const n = mostTogether(conditions);
       if (n > 1) {
         findings.push({
           rule: 'duplicate-read',
@@ -254,7 +256,9 @@ export function changeFindings(g: Graphish, diff: RawDiff, config: Config, inten
   // R9: side effects added by the change but not mentioned in the stated intent.
   if (intent) {
     const text = intent.toLowerCase();
-    const added = dedupeEffects(contractChanges.flatMap((op) => op.delta!.effectsAdded.filter((e) => op.directEffects.some((d) => effectKey(d) === effectKey(e)))));
+    const added = dedupeEffects(contractChanges.flatMap((op) => op.delta!.effectsAdded.filter((e) =>
+      // a new operation reading its data is implied by the operation; an existing one that starts reading is not
+      (e.kind !== 'db.read' || op.change === 'modified') && op.directEffects.some((d) => effectKey(d) === effectKey(e)))));
     for (const effect of added.filter((e) => !mentions(intent, e.target))) {
       findings.push({
         rule: 'undisclosed-effect',
@@ -268,13 +272,37 @@ export function changeFindings(g: Graphish, diff: RawDiff, config: Config, inten
   return findings;
 }
 
+/** Guards of a step as `{ test, holds }`: `if (a) and unless (b)` → a holds, b does not. */
+function guards(condition: string | undefined): { test: string; holds: boolean }[] {
+  return (condition ?? '').split(/\) and (?=(?:if|unless) \()/).map((part) => /^(if|unless) \((.+?)\)?$/.exec(part.trim())).filter(Boolean)
+    .map((m) => ({ test: m![2], holds: m![1] === 'if' }));
+}
+
+/** The largest number of these guarded steps that can run in the same call. */
+function mostTogether(conditions: (string | undefined)[]): number {
+  const gs = conditions.map(guards);
+  const exclusive = (a: number, b: number) => gs[a].some((x) => gs[b].some((y) => x.test === y.test && x.holds !== y.holds));
+  if (gs.length > 12) return gs.length;
+  let best = 0;
+  for (let mask = 1; mask < 1 << gs.length; mask++) {
+    const picked = gs.map((_, i) => i).filter((i) => mask & (1 << i));
+    if (picked.length > best && picked.every((a) => picked.every((b) => a >= b || !exclusive(a, b)))) best = picked.length;
+  }
+  return best;
+}
+
 const GENERIC = new Set([
   'requested', 'request', 'created', 'updated', 'changed', 'completed', 'event', 'events', 'resolved', 'ready', 'table', 'api', 'service',
   // host names: "the risk API" discloses risk.example.com
   'com', 'net', 'org', 'dev', 'www', 'svc', 'http', 'https', 'internal', 'local', 'cluster', 'example',
 ]);
+const stem = (w: string) => {
+  let s = w.replace(/(ies|s)$/, (m) => (m === 'ies' ? 'y' : ''));
+  if (s.length > 5) s = s.replace(/(ed|ing)$/, '').replace(/([b-df-hj-np-tv-z])\1$/, '$1');
+  return s;
+};
 const words = (t: string) =>
-  t.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 3).map((w) => w.replace(/(ies|s)$/, (m) => (m === 'ies' ? 'y' : '')));
+  t.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 3).map(stem);
 
 /** The intent mentions an effect target literally, or names all of its meaningful words close together ("manual review" for kyc.manual_review_requested). */
 export function mentions(intent: string, target: string): boolean {

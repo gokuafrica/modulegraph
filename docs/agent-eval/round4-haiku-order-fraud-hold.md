@@ -1,5 +1,8 @@
 # Round 4: Haiku on the NestJS branch `feature/order-fraud-hold`
 
+> Run on the first, smaller version of the sample (branch commit `080abdf`: 7 modules, 5 contract changes). The
+> sample and branch have since grown (13 modules, 10 contract changes); see [sample-nest-service/README.md](../../sample-nest-service/README.md).
+
 Prompt: "review the branch feature/order-fraud-hold of the service in sample-nest-service at module level.
 Follow .claude/skills/module-review/SKILL.md. Reply with only the final brief." No other context.
 

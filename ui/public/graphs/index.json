@@ -4,13 +4,13 @@
     "title": "Live (lazy, NestJS): hold high-risk orders for fraud review",
     "mode": "branch",
     "lazy": true,
-    "generatedAt": "2026-11-04T08:42:29.997Z",
+    "generatedAt": "2026-11-04T09:25:12.549Z",
     "stats": {
-      "files": 7,
-      "linesAdded": 78,
-      "linesRemoved": 8,
-      "contractChanges": 5,
-      "entryPointsAffected": 6
+      "files": 9,
+      "linesAdded": 178,
+      "linesRemoved": 24,
+      "contractChanges": 10,
+      "entryPointsAffected": 4
     }
   },
   {
@@ -18,13 +18,13 @@
     "title": "Orders (NestJS): hold high-risk orders for fraud review",
     "mode": "branch",
     "lazy": false,
-    "generatedAt": "2026-11-04T08:41:53.949Z",
+    "generatedAt": "2026-11-04T09:25:05.257Z",
     "stats": {
-      "files": 7,
-      "linesAdded": 78,
-      "linesRemoved": 8,
-      "contractChanges": 5,
-      "entryPointsAffected": 6
+      "files": 9,
+      "linesAdded": 178,
+      "linesRemoved": 24,
+      "contractChanges": 10,
+      "entryPointsAffected": 8
     }
   },
   {
@@ -32,7 +32,7 @@
     "title": "Live (lazy): KYC risk tiers, manual review, async rescreen",
     "mode": "branch",
     "lazy": true,
-    "generatedAt": "2026-11-04T08:41:47.251Z",
+    "generatedAt": "2026-11-04T09:24:58.932Z",
     "stats": {
       "files": 5,
       "linesAdded": 74,
@@ -46,7 +46,7 @@
     "title": "Live (lazy): BirthInfo consented data wins over documents",
     "mode": "branch",
     "lazy": true,
-    "generatedAt": "2026-11-04T08:41:40.975Z",
+    "generatedAt": "2026-11-04T09:24:52.763Z",
     "stats": {
       "files": 7,
       "linesAdded": 57,
@@ -60,7 +60,7 @@
     "title": "KYC: risk tiers, manual review, async rescreen (multi-file)",
     "mode": "branch",
     "lazy": false,
-    "generatedAt": "2026-11-04T08:41:34.536Z",
+    "generatedAt": "2026-11-04T09:24:46.455Z",
     "stats": {
       "files": 5,
       "linesAdded": 74,
@@ -74,7 +74,7 @@
     "title": "BirthInfo: consented data wins over documents",
     "mode": "branch",
     "lazy": false,
-    "generatedAt": "2026-11-04T08:41:28.492Z",
+    "generatedAt": "2026-11-04T09:24:40.598Z",
     "stats": {
       "files": 7,
       "linesAdded": 57,
@@ -88,7 +88,7 @@
     "title": "Snapshot: identity-profile-service (main)",
     "mode": "snapshot",
     "lazy": false,
-    "generatedAt": "2026-11-04T08:41:22.667Z",
+    "generatedAt": "2026-11-04T09:24:34.968Z",
     "stats": {
       "files": 0,
       "linesAdded": 0,

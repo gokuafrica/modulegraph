@@ -244,6 +244,9 @@ h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color:
 .cond { font-family: ui-monospace, Consolas, monospace; font-size: 10.5px; color: var(--cond-fg); background: var(--cond-bg); border-radius: 4px; padding: 0 5px; margin: -2px 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .loop { font-size: 10px; color: var(--cond-fg); margin-left: 6px; font-weight: 600; }
 .via { font-size: 10.5px; color: var(--muted); font-style: italic; margin-top: 1px; }
+.uses { font-size: 11px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.uses .use { color: var(--text); font-weight: 600; }
+.uses .use.changed { color: var(--inside-fg); }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
 .pure { font-size: 11px; color: var(--muted); font-style: italic; }
 .node-actions { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; }

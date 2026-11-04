@@ -27,7 +27,7 @@ for (const [projectRel, profile, branch, intent] of [
   ['sample-service', 'identity-profile-service', 'feature/birthinfo-consent', 'BirthInfo: prefer user-consented birth data over document data; add consent endpoint.'],
   ['sample-service', 'identity-profile-service', 'feature/kyc-risk-tiers', 'KYC: risk tiers, manual review, async nightly rescreen.'],
   // NestJS: decorator entry points, framework sinks, constructor injection through @Inject* decorators
-  ['sample-nest-service', 'order-service', 'feature/order-fraud-hold', 'Orders: hold high-risk orders for fraud review; release endpoint.'],
+  ['sample-nest-service', 'order-service', 'feature/order-fraud-hold', 'Orders: hold high-risk orders for fraud review; release endpoint; fraud desk decisions; loyalty discounts; carrier status from events.'],
 ] as const) {
   console.log(`\n${projectRel} ${branch}`);
   const projectDir = join(repo, projectRel).replace(/\\/g, '/');
@@ -57,7 +57,7 @@ for (const [projectRel, profile, branch, intent] of [
       if (op.lazy?.calleesLoaded) {
         if (keys(op.effects) !== keys(f.effects)) fail(`${stage}: ${op.id} effects differ: ${keys(op.effects)} ≠ ${keys(f.effects)}`);
         if ((op.delta?.risk ?? 'none') !== (f.delta?.risk ?? 'none')) fail(`${stage}: ${op.id} risk ${op.delta?.risk} ≠ ${f.delta?.risk}`);
-        if (JSON.stringify(op.changes ?? []) !== JSON.stringify(f.changes ?? [])) fail(`${stage}: ${op.id} code changes differ`);
+        if (JSON.stringify(op.changes ?? []) !== JSON.stringify(f.changes ?? [])) fail(`${stage}: ${op.id} code changes differ: lazy ${(op.changes ?? []).map((c) => c.name).join(', ')} ≠ full ${(f.changes ?? []).map((c) => c.name).join(', ')}`);
       }
     }
     for (const e of Object.values(g.entryPoints)) {

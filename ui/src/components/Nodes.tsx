@@ -121,7 +121,7 @@ function ChangeBadge({ change, containsChanges }: { change: string; containsChan
 export function ModuleNode({ data, selected }: NodeProps) {
   const d = data as {
     opId: string; title: string; operation: string; change: string; containsChanges: boolean; chips: Chip[];
-    condition?: string; loop?: boolean; via?: string; focus?: boolean; onPath?: boolean; hasInternals: boolean; reach?: number;
+    condition?: string; loop?: boolean; via?: string; through?: string; uses?: { opId: string; module: string; changed: boolean }[]; focus?: boolean; onPath?: boolean; hasInternals: boolean; reach?: number;
     compact?: boolean; inImpact?: boolean; totalEffects: number; ops?: string[]; opIds?: string[];
     delta?: string; conditionBefore?: string; ghost?: boolean; hasDiff?: boolean; stub?: boolean; partial?: boolean; reachPartial?: boolean;
   };
@@ -149,6 +149,18 @@ export function ModuleNode({ data, selected }: NodeProps) {
         <ChangeBadge change={d.change} containsChanges={inside} />
       </div>
       {d.via && <div className="via">inlined from {d.via}</div>}
+      {d.through && <div className="via" title="Same-module wrapper, skipped (untick “skip pass-through wrappers” to see it)">through {d.through}()</div>}
+      {!!d.uses?.length && (
+        <div className="uses" title="Modules this one calls. Drill in to see how.">
+          uses{' '}
+          {d.uses.map((u, i) => (
+            <span key={u.module}>
+              {i > 0 && ' · '}
+              <span className={u.changed ? 'use changed' : 'use'}>{u.module}</span>
+            </span>
+          ))}
+        </div>
+      )}
       <div className="chips">
         {d.chips.slice(0, 6).map((c) => <EffectChip key={`${c.kind}${c.target}${c.delta}`} chip={c} />)}
         {extra > 0 && <span className="chip more">+{extra} more</span>}

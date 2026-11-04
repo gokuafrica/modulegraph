@@ -196,7 +196,7 @@ export class LazySession {
       const reasons: string[] = [];
       let score = -d;
       if (hinted(id)) { score += 100; reasons.push('picked for this review'); }
-      if (d === 0) { score += 4; reasons.push(this.head.snapshot.entryPoints[id] && !this.base?.snapshot.entryPoints[id] ? 'added by this change' : 'its handler changed'); }
+      if (d === 0) { score += 4; reasons.push(this.head.snapshot.entryPoints[id] && !this.base?.snapshot.entryPoints[id] ? 'added by this change' : 'its handler or a type it uses changed'); }
       if (hits.length) { score += 2 * Math.min(hits.length, 3); reasons.push(`matches the PR: ${hits.join(', ')}`); }
       const reached = changedReached(id);
       if (reached > 1) { score += Math.min(reached - 1, 3); reasons.push(`reaches ${reached} changed operations`); }
@@ -247,6 +247,14 @@ export class LazySession {
         for (const opId of Object.keys(a.snapshot.operations)) {
           if (!b.snapshot.operations[opId] && b.ensureOp(opId, a.deep.has(opId))) changed = true;
           else if (a.deep.has(opId) && !b.deep.has(opId) && b.snapshot.operations[opId]) { b.ensureOp(opId, true); changed = true; }
+        }
+        // A scope that inlines another operation of its class (`resolveHold` → `this.cancel`) diffs that code against
+        // the other revision's copy, so that revision needs it analyzed too.
+        const known = new Set(b.knownOperations());
+        for (const parts of Object.values(a.snapshot.parts)) {
+          for (const p of parts) {
+            if (p.role === 'helper' && known.has(p.name) && !b.snapshot.operations[p.name] && b.ensureOp(p.name, false)) changed = true;
+          }
         }
         for (const entryId of Object.keys(a.snapshot.scopes)) {
           if (a.snapshot.entryPoints[entryId] && b.snapshot.entryPoints[entryId] && !b.snapshot.scopes[entryId]) {

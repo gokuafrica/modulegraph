@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T08:41:47.251Z",
+  "generatedAt": "2026-11-04T09:24:58.932Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -171,8 +171,8 @@
       "declaredEffects": [],
       "operations": [
         "KycModule.runCheck",
-        "KycModule.override",
         "KycModule.getStatus",
+        "KycModule.override",
         "KycModule.recheckExpired"
       ],
       "change": "modified"
@@ -812,7 +812,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T08:41:47.129Z"
+            "checkedAt": "2026-11-04T09:24:58.815Z"
           }
         },
         {
@@ -823,7 +823,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-04T08:41:47.130Z"
+            "checkedAt": "2026-11-04T09:24:58.817Z"
           }
         }
       ],
@@ -919,7 +919,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T08:41:47.127Z"
+            "extractedAt": "2026-11-04T09:24:58.813Z"
           }
         },
         {
@@ -936,7 +936,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T08:41:47.130Z"
+            "extractedAt": "2026-11-04T09:24:58.817Z"
           }
         }
       ],
@@ -1168,7 +1168,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T08:41:47.127Z"
+              "extractedAt": "2026-11-04T09:24:58.813Z"
             }
           },
           "output": {
@@ -1188,7 +1188,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T08:41:47.130Z"
+              "extractedAt": "2026-11-04T09:24:58.817Z"
             }
           },
           "output": {
@@ -1247,7 +1247,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T08:41:47.127Z"
+              "extractedAt": "2026-11-04T09:24:58.813Z"
             }
           },
           "output": {
@@ -1267,7 +1267,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T08:41:47.130Z"
+              "extractedAt": "2026-11-04T09:24:58.817Z"
             }
           },
           "output": {
@@ -1344,7 +1344,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T08:41:47.127Z"
+              "extractedAt": "2026-11-04T09:24:58.813Z"
             }
           },
           "output": {
@@ -1365,7 +1365,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T08:41:47.130Z"
+              "extractedAt": "2026-11-04T09:24:58.817Z"
             }
           },
           "output": {
@@ -1656,6 +1656,136 @@
         "calleesLoaded": true
       }
     },
+    "KycModule.getStatus": {
+      "id": "KycModule.getStatus",
+      "moduleId": "KycModule",
+      "name": "getStatus",
+      "file": "sample-service/src/modules/kyc/KycModule.ts",
+      "line": 53,
+      "endLine": 56,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "KycResult | undefined",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
+          },
+          {
+            "name": "riskTier",
+            "type": "RiskTier | undefined [\"low\" | \"medium\" | \"high\"]"
+          },
+          {
+            "name": "checkedAt",
+            "type": "string"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async getStatus(userId: string): Promise<KycResult | undefined> {\n  const [latest] = await this.db.select<KycResult & Record<string, unknown>>('kyc_results', { userId });\n  return latest;\n}",
+      "delta": {
+        "risk": "medium",
+        "returns": {
+          "before": {
+            "type": "KycResult | undefined",
+            "fields": [
+              {
+                "name": "userId",
+                "type": "string"
+              },
+              {
+                "name": "status",
+                "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
+              },
+              {
+                "name": "checkedAt",
+                "type": "string"
+              }
+            ]
+          },
+          "after": {
+            "type": "KycResult | undefined",
+            "fields": [
+              {
+                "name": "userId",
+                "type": "string"
+              },
+              {
+                "name": "status",
+                "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
+              },
+              {
+                "name": "riskTier",
+                "type": "RiskTier | undefined [\"low\" | \"medium\" | \"high\"]"
+              },
+              {
+                "name": "checkedAt",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "effectsAdded": [],
+        "effectsRemoved": [],
+        "callsAdded": [],
+        "callsRemoved": [],
+        "implementationOnly": false
+      },
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          }
+        },
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "status": "passed",
+            "riskTier": "low",
+            "checkedAt": "2026-11-04T09:24:58.815Z"
+          }
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          }
+        }
+      ],
+      "lazy": {
+        "callersLoaded": true,
+        "calleesLoaded": true
+      }
+    },
     "KycModule.override": {
       "id": "KycModule.override",
       "moduleId": "KycModule",
@@ -1798,136 +1928,6 @@
           "output": {
             "userId": "u-2",
             "status": "passed"
-          }
-        }
-      ],
-      "lazy": {
-        "callersLoaded": true,
-        "calleesLoaded": true
-      }
-    },
-    "KycModule.getStatus": {
-      "id": "KycModule.getStatus",
-      "moduleId": "KycModule",
-      "name": "getStatus",
-      "file": "sample-service/src/modules/kyc/KycModule.ts",
-      "line": 53,
-      "endLine": 56,
-      "params": [
-        {
-          "name": "userId",
-          "type": "string"
-        }
-      ],
-      "returns": {
-        "type": "KycResult | undefined",
-        "fields": [
-          {
-            "name": "userId",
-            "type": "string"
-          },
-          {
-            "name": "status",
-            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
-          },
-          {
-            "name": "riskTier",
-            "type": "RiskTier | undefined [\"low\" | \"medium\" | \"high\"]"
-          },
-          {
-            "name": "checkedAt",
-            "type": "string"
-          }
-        ]
-      },
-      "directEffects": [
-        {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        }
-      ],
-      "effects": [
-        {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        }
-      ],
-      "calls": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "source": "async getStatus(userId: string): Promise<KycResult | undefined> {\n  const [latest] = await this.db.select<KycResult & Record<string, unknown>>('kyc_results', { userId });\n  return latest;\n}",
-      "delta": {
-        "risk": "medium",
-        "returns": {
-          "before": {
-            "type": "KycResult | undefined",
-            "fields": [
-              {
-                "name": "userId",
-                "type": "string"
-              },
-              {
-                "name": "status",
-                "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
-              },
-              {
-                "name": "checkedAt",
-                "type": "string"
-              }
-            ]
-          },
-          "after": {
-            "type": "KycResult | undefined",
-            "fields": [
-              {
-                "name": "userId",
-                "type": "string"
-              },
-              {
-                "name": "status",
-                "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
-              },
-              {
-                "name": "riskTier",
-                "type": "RiskTier | undefined [\"low\" | \"medium\" | \"high\"]"
-              },
-              {
-                "name": "checkedAt",
-                "type": "string"
-              }
-            ]
-          }
-        },
-        "effectsAdded": [],
-        "effectsRemoved": [],
-        "callsAdded": [],
-        "callsRemoved": [],
-        "implementationOnly": false
-      },
-      "examples": [
-        {
-          "input": {
-            "userId": "u-1"
-          }
-        },
-        {
-          "input": {
-            "userId": "u-1"
-          },
-          "output": {
-            "userId": "u-1",
-            "status": "passed",
-            "riskTier": "low",
-            "checkedAt": "2026-11-04T08:41:47.129Z"
-          }
-        },
-        {
-          "input": {
-            "userId": "u-2"
           }
         }
       ],
@@ -3815,6 +3815,64 @@
         }
       ]
     },
+    "KycModule.getStatus": {
+      "id": "KycModule.getStatus",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "KycResult | undefined",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
+          },
+          {
+            "name": "riskTier",
+            "type": "RiskTier | undefined [\"low\" | \"medium\" | \"high\"]"
+          },
+          {
+            "name": "checkedAt",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "kyc_results",
+            "file": "sample-service/src/modules/kyc/KycModule.ts",
+            "line": 54
+          },
+          "line": 54,
+          "file": "sample-service/src/modules/kyc/KycModule.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "latest"
+        }
+      ]
+    },
     "KycModule.override": {
       "id": "KycModule.override",
       "params": [
@@ -3892,64 +3950,6 @@
           "from": "s2",
           "to": "exit",
           "kind": "control"
-        }
-      ]
-    },
-    "KycModule.getStatus": {
-      "id": "KycModule.getStatus",
-      "params": [
-        {
-          "name": "userId",
-          "type": "string"
-        }
-      ],
-      "returns": {
-        "type": "KycResult | undefined",
-        "fields": [
-          {
-            "name": "userId",
-            "type": "string"
-          },
-          {
-            "name": "status",
-            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
-          },
-          {
-            "name": "riskTier",
-            "type": "RiskTier | undefined [\"low\" | \"medium\" | \"high\"]"
-          },
-          {
-            "name": "checkedAt",
-            "type": "string"
-          }
-        ]
-      },
-      "steps": [
-        {
-          "id": "s1",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.read",
-            "target": "kyc_results",
-            "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 54
-          },
-          "line": 54,
-          "file": "sample-service/src/modules/kyc/KycModule.ts"
-        }
-      ],
-      "edges": [
-        {
-          "from": "entry",
-          "to": "s1",
-          "kind": "data",
-          "label": "userId"
-        },
-        {
-          "from": "s1",
-          "to": "exit",
-          "kind": "data",
-          "label": "latest"
         }
       ]
     },
@@ -4641,7 +4641,7 @@
       "entryPointsReached": 5,
       "operationsKnown": 26,
       "operationsAnalyzed": 12,
-      "ms": 2467
+      "ms": 2377
     }
   }
 }
