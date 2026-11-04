@@ -1,0 +1,27 @@
+{
+  "$comment": "Profile for the birth-info NestJS demo. Entry points and side effects come from the NestJS, TypeORM and event-emitter adapters; this only names owners and table owners. scenario.ts next to it records example calls.",
+  "service": "birth-info-service",
+  "tsconfig": "tsconfig.json",
+  "modules": {
+    "include": [],
+    "exclude": [],
+    "overrides": {
+      "BirthInfoService": { "name": "BirthInfo", "summary": "A user's birth info: what their identity document says and what they told us in KYC." },
+      "DocumentBirthInfoService": { "name": "DocumentBirthInfo", "summary": "Birth data the document pipeline extracted from the identity document. Parts may be missing." },
+      "KycBirthInfoStore": { "summary": "The user-provided (KYC) birth info. A submission overwrites the previous one." },
+      "EligibilityService": { "name": "Eligibility" }
+    }
+  },
+  "owners": {
+    "sample-birth-service/src/birth-info/**": "team-kyc",
+    "sample-birth-service/src/documents/**": "team-documents",
+    "sample-birth-service/src/eligibility/**": "team-onboarding"
+  },
+  "rules": {
+    "fetchOnce": [],
+    "tableOwners": {
+      "document_birth_info": "DocumentBirthInfoService",
+      "kyc_birth_info": "KycBirthInfoStore"
+    }
+  }
+}

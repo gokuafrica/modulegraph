@@ -4,6 +4,7 @@
   "workspaces": [
     "sample-service",
     "sample-nest-service",
+    "sample-birth-service",
     "fixtures/frameworks",
     "analyzer",
     "ui"
