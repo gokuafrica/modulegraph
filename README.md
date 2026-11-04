@@ -9,6 +9,12 @@ side effects.
 **The analyzed code is never modified.** Modules are found from the code's own structure; everything else
 lives in a config file kept outside the repo, which an agent can write.
 
+**Pluggable analyzers.** The review pipeline (diffing, rules, brief, UI) is language-neutral. Language backends
+turn code into the graph; today's TypeScript backend recognises **NestJS, Express, Fastify, KafkaJS, BullMQ,
+node-cron, TypeORM, Prisma, Mongoose, axios and fetch** from `package.json`, so a NestJS service needs no
+platform rules at all. See [docs/analyzers.md](docs/analyzers.md) for adding a framework (often just profile
+data) or a language.
+
 - **Flow view**: an API / gRPC / Kafka consumer / cron entry point → the chain of modules → the response.
   Data edges show what is passed (`identity` fetched once, then shared by Nationality, PersonalDetails and BirthInfo).
 - **Drill in** on any module: its own entry, submodules and exit, recursively. A leaf shows its code diff.
@@ -40,7 +46,13 @@ npm run demo        # regenerate demo graphs from this repo's git history, then 
 
 Open http://localhost:5173. `npm run dev` starts only the UI.
 
-Analyze a change in any TypeScript service. `--config` points at the service's profile, kept outside its repo:
+Analyze a change in any TypeScript service (the NestJS demo needs nothing but the project folder):
+
+```bash
+npm run analyze -- --project sample-nest-service --head feature/order-fraud-hold --base main
+```
+
+`--config` points at a service's profile, kept outside its repo; without it, the profile is found by package name:
 
 ```bash
 C=configs/identity-profile-service
@@ -83,6 +95,7 @@ On a large service, analyzing every flow up front wastes time and buries the cha
 ```bash
 npm run live            # live lazy analysis of the BirthInfo branch; open http://localhost:5173
 npm run live -- kyc     # same for the multi-file KYC branch
+npm run live -- orders  # same for the NestJS service
 npm run analyze -- --project <dir> --config <cfg> --head <branch> --lazy --serve
 npm run lazy-check --workspace analyzer   # proves lazy == full on everything lazy analyzed
 ```
@@ -116,7 +129,12 @@ Things to try:
    *zoom out +* adds one caller level at a time; *all entry points* shows all 21, grouped.
 3. **Checks**: BirthInfo now performs an outbox write that runs on 8 read-only endpoints, and the PR
    description never mentions it.
-4. **A change spread over several files** (`feature/kyc-risk-tiers`, "KYC: risk tiers … (multi-file)"):
+4. **A NestJS service** (`sample-nest-service`, "Orders (NestJS): hold high-risk orders for fraud review"):
+   controllers, Kafka `@EventPattern` handlers, a gRPC method, BullMQ processors, `@OnEvent` listeners and
+   `@Cron` jobs, found without any rules in its profile. The change adds a fraud check: `Orders.create` now holds
+   risky orders (guards changed on stock reservation and `orders.created`), a new release endpoint, and an
+   undisclosed `order_views` write on `GET /api/orders/:id`. Code map: [sample-nest-service/README.md](sample-nest-service/README.md).
+5. **A change spread over several files** (`feature/kyc-risk-tiers`, "KYC: risk tiers … (multi-file)"):
    - KycCheck.runCheck now uses a new helper file (`riskTier.ts`) and a new private `persist`, and gets a
      manual-review branch.
    - SanctionsScreening gains a retry and a score.
@@ -127,11 +145,13 @@ Things to try:
 ## Setting up a new service (no code changes)
 
 1. **Modules are discovered**: a class is a module when it has public methods and takes part in constructor
-   injection (it is injected somewhere, or injects collaborators). Its public methods are its operations.
+   injection (it is injected somewhere, or injects collaborators), or is a framework provider (Nest
+   `@Injectable`). Its public methods are its operations. Framework adapters, chosen from `package.json`, know
+   the entry points and side effects of common libraries.
 2. **A profile describes the rest**, in `configs/<service>/` in this repo (or anywhere outside the service):
    - `modulegraph.config.json`:
-     - `sinks`: which client methods are DB reads/writes, outbox, Kafka or HTTP, and which argument names the table or topic;
-     - `entryPoints`: route, consumer and cron registrations;
+     - `sinks`: in-house client methods that are DB reads/writes, outbox, Kafka, queue or HTTP, and how to name the table or topic;
+     - `entryPoints` / `decoratorEntries`: in-house route, consumer and cron registrations (frameworks without an adapter);
      - `modules`: include/exclude, display names, optional declared contracts;
      - `owners`: path globs to teams (the repo's CODEOWNERS is also read);
      - `rules`: `fetchOnce`, `tableOwners`, review `budget`.
@@ -140,7 +160,7 @@ Things to try:
    - `scenario.ts` (optional): drives the service, from whichever revision is under review, so real example
      calls get recorded.
 3. **An agent writes the profile**: the Claude Code skill [.claude/skills/module-review](.claude/skills/module-review/SKILL.md)
-   reads the code and writes it. For other languages it writes `modulegraph/v1` JSON directly
+   reads the code and writes it. For languages without a backend it writes `modulegraph/v1` JSON directly
    ([schema](schema/modulegraph.schema.json), validated by `npm run validate --workspace analyzer -- <file>`).
 
 ## How it works
@@ -164,16 +184,19 @@ base + head sources        steps, data edges, side effects      modulegraph/v1  
 | Path | What |
 |---|---|
 | `schema/` | `modulegraph.ts` (types) and generated `modulegraph.schema.json` |
-| `analyzer/` | CLI: `cli.ts`, `extract.ts` (ts-morph), `compare.ts` + `compare-steps.ts` (base vs head, per-function and per-step deltas), `rules.ts` (guardrails), `lazy.ts` + `server.ts` (lazy analysis, live expansion), `lazy-check.ts`, `git.ts` |
+| `analyzer/` | CLI: `cli.ts`; `analyzers/` (backend contract `types.ts`, registry; `typescript/extract.ts` with `frameworks/` adapters); `compare.ts` + `compare-steps.ts` (base vs head, per-function and per-step deltas), `rules.ts` (guardrails), `brief.ts`, `lazy.ts` + `server.ts` (lazy analysis, live expansion); checks `framework-check.ts`, `lazy-check.ts`, `mentions-check.ts` |
 | `ui/` | Vite + React + `@xyflow/react` + `elkjs` |
 | `sample-service/` | demo microservice, an ordinary codebase with no modulegraph markers. Branches `feature/birthinfo-consent` and `feature/kyc-risk-tiers` hold the demo changes |
+| `sample-nest-service/` | NestJS demo (order-service): REST, Kafka events, gRPC, BullMQ, cron, TypeORM. Branch `feature/order-fraud-hold` |
+| `fixtures/frameworks/` | small Express + Prisma + KafkaJS + node-cron and Fastify + Mongoose + BullMQ services for `framework-check` |
 | `configs/` | per-service profiles (config + scenario), kept outside the analyzed code |
 | `docs/` | feasibility, research summary, review conventions |
 
 ## Limits of the MVP
 
-TypeScript only for static extraction (other languages through the agent path). Effects are found through
-configured sink methods, so ORMs or raw SQL need sink rules in the profile. Module discovery relies on
+TypeScript is the only static backend so far (other languages through the agent path, or a new backend).
+Effects come from framework adapters and configured sink methods; in-house data access or raw SQL needs sink
+rules in the profile. Module discovery relies on
 constructor injection; codebases built from plain functions need `modules.include` in the profile. Dynamic
 dispatch with several implementations is left unresolved. Example data needs a runnable scenario. No
 persistence or auth: it is a local tool.

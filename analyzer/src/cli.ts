@@ -98,7 +98,7 @@ const profile = args.config ? undefined : findProfile(projectDir, resolve(dirnam
 if (!args.config) {
   console.log(profile?.config
     ? `profile: ${relative(process.cwd(), profile.config)} (found by package name)`
-    : `profile: none found (looked for ${profile?.tried}); using defaults. Write one: .claude/skills/module-review/SKILL.md, step 5`);
+    : `profile: none found (looked for ${profile?.tried}); using defaults. Write one: .claude/skills/module-review/SKILL.md, step 4`);
 }
 const configFile = args.config ? fromUser(args.config) : profile?.config;
 const config = loadConfig(projectDir, configFile);

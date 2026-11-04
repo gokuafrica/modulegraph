@@ -176,6 +176,21 @@ export class LazySession {
     const words = keywords(`${this.source.title ?? ''} ${this.intent ?? ''}`);
     const label = (id: string) => (this.head.snapshot.entryPoints[id] ?? this.base!.snapshot.entryPoints[id]).label;
     const hinted = (id: string) => opts.seedHints?.some((h) => id === h || label(id).toLowerCase().includes(h.toLowerCase()));
+    // How much of the change a flow exercises: changed operations reachable from it through what is analyzed so far.
+    const changedSet = new Set(changed);
+    const changedReached = (id: string): number => {
+      const seen = new Set<string>();
+      const found = new Set<string>();
+      const stack = [...(this.head.snapshot.scopes[id] ?? this.base?.snapshot.scopes[id])?.steps.flatMap((s) => (s.target ? [s.target] : [])) ?? []];
+      while (stack.length) {
+        const op = stack.pop()!;
+        if (seen.has(op)) continue;
+        seen.add(op);
+        if (changedSet.has(op)) found.add(op);
+        stack.push(...(this.head.snapshot.operations[op] ?? this.base?.snapshot.operations[op])?.calls ?? []);
+      }
+      return found.size;
+    };
     const scored = [...level.entries()].map(([id, d]) => {
       const hits = [...keywords(label(id))].filter((w) => [...words].some((k) => k.startsWith(w) || w.startsWith(k)));
       const reasons: string[] = [];
@@ -183,6 +198,8 @@ export class LazySession {
       if (hinted(id)) { score += 100; reasons.push('picked for this review'); }
       if (d === 0) { score += 4; reasons.push(this.head.snapshot.entryPoints[id] && !this.base?.snapshot.entryPoints[id] ? 'added by this change' : 'its handler changed'); }
       if (hits.length) { score += 2 * Math.min(hits.length, 3); reasons.push(`matches the PR: ${hits.join(', ')}`); }
+      const reached = changedReached(id);
+      if (reached > 1) { score += Math.min(reached - 1, 3); reasons.push(`reaches ${reached} changed operations`); }
       if (d > 0) reasons.push(d === 1 ? 'calls the changed code directly' : `${d} calls away from the change`);
       return { id, score, reason: reasons.join('; ') };
     });

@@ -30,7 +30,12 @@ Pick the mode from what the user said:
   only if the user gave you a description that is not in git.
 - Large service (hundreds of entry points)? Add `--lazy`, and `--seed-entries "<entry>,<entry>"` for the 1–2
   flows that matter for this PR.
+- The first lines say which backend and frameworks were used, e.g.
+  `analyzer: typescript` and `frameworks: NestJS (package.json depends on @nestjs/core), TypeORM (…)`.
+  Framework adapters (NestJS, Express, Fastify, KafkaJS, BullMQ, node-cron, TypeORM, Prisma, Mongoose, axios,
+  fetch) find entry points and side effects without any profile rules.
 - If the output says `profile: none found`, stop and do step 4 first. Never copy another service's profile.
+- If it says `analyzer: no static analyzer for <language>`, use "Services no backend understands" below.
 - If `npm run` fails for environment reasons, run the same arguments with `node --import tsx analyzer/src/cli.ts`.
 
 The last lines print two paths: `<id>.json` (for the UI) and **`<id>.brief.md` (the facts: read this one)**.
@@ -46,6 +51,8 @@ For each contract change, open the changed functions it lists (`file:line`) and 
   some users, a write that became an update and loses history, a check that no longer runs)
 - new side effects on read paths, and new writes to tables another module owns
 - policy constants and thresholds in new helpers (who decided them?)
+- every `gains "<value>"` on an output (a new status, type or state): find the code that branches on that
+  field or acts on that entity (cancel, expire, refund, retry paths) and check each handles the new value
 
 ## 3. Write the brief (≤ 25 lines)
 
@@ -66,16 +73,22 @@ say so. Say "no PR description" if the intent is missing.
 
 ## 4. Writing a profile for a new service (read-only on the service)
 
-Start from `configs/identity-profile-service/` as a template. Name the folder after the service's
-`package.json` name and set `"service"` to the same name; that's how the analyzer finds it.
+Name the folder after the service's `package.json` name and set `"service"` to the same name; that's how the
+analyzer finds it. Templates: `configs/order-service/` (NestJS: no platform rules, the adapters cover them) and
+`configs/identity-profile-service/` (in-house platform classes described by rules).
 
-1. **Entry points**: find HTTP/gRPC route registrations, Kafka/queue consumers and schedulers. Add each
-   framework class + method to `entryPoints` (which argument is the handler, how to label it, whether it is read-only).
-2. **Side-effect sinks**: find the DB client or repository base, outbox, Kafka producer, HTTP clients. Add each
-   method to `sinks` with the argument index that names the table, topic or service.
-3. **Check module discovery**: run `npm run analyze -- --project <dir> --snapshot` and look at the
-   module list. Discovery takes classes that take part in constructor injection. Fix it with `modules.exclude`
-   (DTOs, utilities) and `modules.include` (function-style modules it missed).
+1. **Run a snapshot first**: `npm run analyze -- --project <dir> --snapshot`. Read the `frameworks:` line and
+   the brief's module and entry point counts. Compare them with the code: every route, consumer, queue worker and
+   scheduled job should be an entry point; every service with logic should be a module.
+2. **Only add rules for what is missing** (in-house platform classes, frameworks without an adapter). Syntax and
+   examples: [docs/analyzers.md](../../../docs/analyzers.md#teaching-it-a-framework-without-writing-code).
+   - `entryPoints`: registration calls (class or module + method, which argument is the handler, the label).
+   - `decoratorEntries`: decorated handler methods (decorator, the package it comes from, the label).
+   - `sinks`: DB, outbox, broker, queue and HTTP client methods, and how to name their target.
+   - `responses`: calls whose argument is what a handler answers (`ctx.json(x)`).
+3. **Check module discovery** in the same snapshot. Discovery takes classes that take part in constructor
+   injection (and framework providers such as Nest `@Injectable`). Fix it with `modules.exclude` (DTOs,
+   utilities) and `modules.include` (function-style modules it missed).
 4. **Names, owners, summaries**: `modules.overrides.<Class>.name/summary` where the class name is unclear;
    `owners` path globs, relative to the repo root (CODEOWNERS is read automatically if the repo has one).
 5. **Rules**: `rules.tableOwners` (table → owning module), `rules.fetchOnce` (expensive fetches that must be
@@ -87,9 +100,10 @@ Start from `configs/identity-profile-service/` as a template. Name the folder af
 Declared contracts (`modules.overrides.<Class>.effects`) are optional. Without them, the base revision is the
 contract and `new-side-effect` reports what a change adds.
 
-### Non-TypeScript services
+### Services no backend understands
 
-The schema is language-neutral. Write `modulegraph/v1` JSON yourself:
+Today there is a TypeScript backend only (see docs/analyzers.md for adding one). For other languages the schema
+is still the same: write `modulegraph/v1` JSON yourself:
 - Follow `schema/modulegraph.schema.json`; `schema/modulegraph.ts` documents every field.
 - Set `generator` to `agent:<model>` so reviewers know it was not statically extracted.
 - Only record effects and calls you saw in code. Put anything inferred in `findings` with

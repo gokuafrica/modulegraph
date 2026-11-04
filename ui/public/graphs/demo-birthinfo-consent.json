@@ -1,8 +1,8 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T01:43:04.152Z",
-  "generator": "modulegraph-analyzer/0.2 (ts-morph)",
+  "generatedAt": "2026-11-04T08:41:28.492Z",
+  "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
     "repo": ".",
@@ -67,6 +67,11 @@
         "modules": []
       }
     ],
+    "analyzer": {
+      "id": "typescript",
+      "language": "TypeScript",
+      "frameworks": []
+    },
     "intent": "BirthInfo: prefer user-consented birth data (birth_info_consents) over document data; add consent endpoint.",
     "intentSource": "flag",
     "examples": {
@@ -428,7 +433,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T01:43:04.044Z"
+              "extractedAt": "2026-11-04T08:41:28.379Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -453,7 +458,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T01:43:04.045Z"
+              "extractedAt": "2026-11-04T08:41:28.381Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -964,7 +969,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T01:43:04.040Z"
+              "extractedAt": "2026-11-04T08:41:28.376Z"
             }
           },
           "output": {
@@ -985,7 +990,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T01:43:04.044Z"
+              "extractedAt": "2026-11-04T08:41:28.379Z"
             }
           },
           "output": {
@@ -1246,7 +1251,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T01:43:04.040Z"
+              "extractedAt": "2026-11-04T08:41:28.376Z"
             }
           },
           "output": {
@@ -1626,7 +1631,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T01:43:04.040Z"
+            "extractedAt": "2026-11-04T08:41:28.376Z"
           }
         },
         {
@@ -1643,7 +1648,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T01:43:04.044Z"
+            "extractedAt": "2026-11-04T08:41:28.379Z"
           }
         }
       ]
@@ -1780,7 +1785,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-04T01:43:04.042Z"
+            "checkedAt": "2026-11-04T08:41:28.378Z"
           }
         },
         {
@@ -1790,7 +1795,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-04T01:43:04.044Z"
+            "checkedAt": "2026-11-04T08:41:28.380Z"
           }
         }
       ]
@@ -1853,7 +1858,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-04T01:43:04.042Z"
+            "checkedAt": "2026-11-04T08:41:28.378Z"
           }
         },
         {
@@ -1863,7 +1868,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-04T01:43:04.044Z"
+            "checkedAt": "2026-11-04T08:41:28.380Z"
           }
         }
       ]
@@ -2210,7 +2215,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T01:43:04.040Z"
+              "extractedAt": "2026-11-04T08:41:28.376Z"
             }
           },
           "output": {
@@ -2231,7 +2236,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T01:43:04.044Z"
+              "extractedAt": "2026-11-04T08:41:28.379Z"
             }
           },
           "output": {
@@ -2451,7 +2456,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T01:43:04.040Z"
+              "extractedAt": "2026-11-04T08:41:28.376Z"
             }
           },
           "output": {
@@ -2473,7 +2478,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T01:43:04.044Z"
+              "extractedAt": "2026-11-04T08:41:28.379Z"
             }
           },
           "output": {
@@ -9587,7 +9592,7 @@
       {
         "operation": "BirthInfoModule.resolve",
         "risk": "high",
-        "reason": "output shape changed; +outbox birth_info.source_resolved, +db.read birth_info_consents; now calls BirthConsentStore.findActiveConsent",
+        "reason": "output shape changed; +outbox birth_info.source_resolved, +db.read birth_info_consents; now calls BirthConsentStore.findActiveConsent; 1 guard changed inside",
         "reach": 21
       },
       {

@@ -1,0 +1,5476 @@
+{
+  "schema": "modulegraph/v1",
+  "service": "order-service",
+  "generatedAt": "2026-11-04T08:41:53.949Z",
+  "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
+  "source": {
+    "mode": "branch",
+    "repo": ".",
+    "project": "sample-nest-service",
+    "base": "main",
+    "head": "feature/order-fraud-hold",
+    "title": "Orders (NestJS): hold high-risk orders for fraud review",
+    "files": [
+      {
+        "path": "sample-nest-service/src/app.module.ts",
+        "status": "modified",
+        "added": 4,
+        "removed": 3,
+        "modules": []
+      },
+      {
+        "path": "sample-nest-service/src/fraud/fraud.service.ts",
+        "status": "added",
+        "added": 20,
+        "removed": 0,
+        "modules": [
+          "FraudService"
+        ]
+      },
+      {
+        "path": "sample-nest-service/src/fraud/policy.ts",
+        "status": "added",
+        "added": 9,
+        "removed": 0,
+        "modules": [
+          "OrdersService"
+        ]
+      },
+      {
+        "path": "sample-nest-service/src/orders/order.entity.ts",
+        "status": "modified",
+        "added": 14,
+        "removed": 1,
+        "modules": []
+      },
+      {
+        "path": "sample-nest-service/src/orders/orders.controller.ts",
+        "status": "modified",
+        "added": 5,
+        "removed": 0,
+        "modules": []
+      },
+      {
+        "path": "sample-nest-service/src/orders/orders.service.ts",
+        "status": "modified",
+        "added": 25,
+        "removed": 3,
+        "modules": [
+          "OrdersService"
+        ]
+      },
+      {
+        "path": "sample-nest-service/src/payments/payments.service.ts",
+        "status": "modified",
+        "added": 1,
+        "removed": 1,
+        "modules": [
+          "PaymentsService"
+        ]
+      }
+    ],
+    "analyzer": {
+      "id": "typescript",
+      "language": "TypeScript",
+      "frameworks": [
+        {
+          "id": "nestjs",
+          "name": "NestJS",
+          "reason": "package.json depends on @nestjs/core"
+        },
+        {
+          "id": "kafkajs",
+          "name": "KafkaJS",
+          "reason": "package.json depends on kafkajs"
+        },
+        {
+          "id": "bullmq",
+          "name": "BullMQ",
+          "reason": "package.json depends on bullmq"
+        },
+        {
+          "id": "typeorm",
+          "name": "TypeORM",
+          "reason": "package.json depends on typeorm"
+        },
+        {
+          "id": "axios",
+          "name": "axios",
+          "reason": "package.json depends on axios"
+        }
+      ]
+    },
+    "intent": "Orders: hold high-risk orders for fraud review\nEvery new order is scored by the risk API. Orders at or above the risk threshold, or over 5000, are\nheld instead of reserving stock, and published as orders.held instead of orders.created.\nNew POST /orders/:id/release lets a reviewer put a held order back on the normal path.\nReceipts are now only queued for succeeded payments.",
+    "intentSource": "commits"
+  },
+  "modules": {
+    "FraudService": {
+      "id": "FraudService",
+      "name": "Fraud",
+      "className": "FraudService",
+      "file": "sample-nest-service/src/fraud/fraud.service.ts",
+      "line": 12,
+      "summary": "scores orders with the risk team's API (0 = safe, 1 = certainly fraud).",
+      "declaredEffects": [],
+      "operations": [
+        "FraudService.score"
+      ],
+      "change": "added"
+    },
+    "InventoryService": {
+      "id": "InventoryService",
+      "name": "Inventory",
+      "className": "InventoryService",
+      "file": "sample-nest-service/src/inventory/inventory.service.ts",
+      "line": 18,
+      "summary": "",
+      "owner": "team-fulfilment",
+      "declaredEffects": [],
+      "operations": [
+        "InventoryService.reserve",
+        "InventoryService.release"
+      ],
+      "change": "unchanged"
+    },
+    "NotificationsService": {
+      "id": "NotificationsService",
+      "name": "Notifications",
+      "className": "NotificationsService",
+      "file": "sample-nest-service/src/notifications/notifications.service.ts",
+      "line": 10,
+      "summary": "queues customer emails; the email worker sends them through the mail provider.",
+      "owner": "team-crm",
+      "declaredEffects": [],
+      "operations": [
+        "NotificationsService.orderConfirmation",
+        "NotificationsService.receipt"
+      ],
+      "change": "unchanged"
+    },
+    "MailClient": {
+      "id": "MailClient",
+      "name": "Mail",
+      "className": "MailClient",
+      "file": "sample-nest-service/src/notifications/notifications.service.ts",
+      "line": 23,
+      "summary": "",
+      "owner": "team-crm",
+      "declaredEffects": [],
+      "operations": [
+        "MailClient.send"
+      ],
+      "change": "unchanged"
+    },
+    "OrdersService": {
+      "id": "OrdersService",
+      "name": "Orders",
+      "className": "OrdersService",
+      "file": "sample-nest-service/src/orders/orders.service.ts",
+      "line": 14,
+      "summary": "Places, cancels and tracks orders. Owns the orders table and the orders.* topics.",
+      "owner": "team-checkout",
+      "declaredEffects": [],
+      "operations": [
+        "OrdersService.create",
+        "OrdersService.release",
+        "OrdersService.get",
+        "OrdersService.list",
+        "OrdersService.cancel",
+        "OrdersService.markPaid",
+        "OrdersService.markShipped",
+        "OrdersService.expirePending"
+      ],
+      "change": "modified"
+    },
+    "PaymentsService": {
+      "id": "PaymentsService",
+      "name": "Payments",
+      "className": "PaymentsService",
+      "file": "sample-nest-service/src/payments/payments.service.ts",
+      "line": 33,
+      "summary": "talks to the payment provider and keeps the payments table.",
+      "owner": "team-payments",
+      "declaredEffects": [],
+      "operations": [
+        "PaymentsService.forOrder",
+        "PaymentsService.handleWebhook",
+        "PaymentsService.refund",
+        "PaymentsService.reconcile"
+      ],
+      "change": "modified"
+    },
+    "TaxClient": {
+      "id": "TaxClient",
+      "name": "TaxApi",
+      "className": "TaxClient",
+      "file": "sample-nest-service/src/pricing/pricing.service.ts",
+      "line": 24,
+      "summary": "Tax rates come from the finance team's tax API.",
+      "owner": "team-checkout",
+      "declaredEffects": [],
+      "operations": [
+        "TaxClient.rateFor"
+      ],
+      "change": "unchanged"
+    },
+    "PricingService": {
+      "id": "PricingService",
+      "name": "Pricing",
+      "className": "PricingService",
+      "file": "sample-nest-service/src/pricing/pricing.service.ts",
+      "line": 34,
+      "summary": "",
+      "owner": "team-checkout",
+      "declaredEffects": [],
+      "operations": [
+        "PricingService.quote"
+      ],
+      "change": "unchanged"
+    }
+  },
+  "operations": {
+    "FraudService.score": {
+      "id": "FraudService.score",
+      "moduleId": "FraudService",
+      "name": "score",
+      "file": "sample-nest-service/src/fraud/fraud.service.ts",
+      "line": 16,
+      "endLine": 19,
+      "params": [
+        {
+          "name": "input",
+          "type": "RiskInput"
+        }
+      ],
+      "returns": {
+        "type": "number"
+      },
+      "directEffects": [
+        {
+          "kind": "http",
+          "target": "risk.example.com",
+          "file": "sample-nest-service/src/fraud/fraud.service.ts",
+          "line": 17
+        }
+      ],
+      "effects": [
+        {
+          "kind": "http",
+          "target": "risk.example.com",
+          "file": "sample-nest-service/src/fraud/fraud.service.ts",
+          "line": 17
+        }
+      ],
+      "calls": [],
+      "change": "added",
+      "containsChanges": true,
+      "source": "async score(input: RiskInput): Promise<number> {\n  const res = await firstValueFrom(this.http.post<{ score: number }>('https://risk.example.com/v2/score', input));\n  return res.data.score;\n}",
+      "diff": [
+        {
+          "t": "+",
+          "text": "async score(input: RiskInput): Promise<number> {"
+        },
+        {
+          "t": "+",
+          "text": "  const res = await firstValueFrom(this.http.post<{ score: number }>('https://risk.example.com/v2/score', input));"
+        },
+        {
+          "t": "+",
+          "text": "  return res.data.score;"
+        },
+        {
+          "t": "+",
+          "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "score",
+          "role": "operation",
+          "file": "sample-nest-service/src/fraud/fraud.service.ts",
+          "line": 16,
+          "status": "added",
+          "added": 4,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "async score(input: RiskInput): Promise<number> {",
+              "b": 16
+            },
+            {
+              "t": "+",
+              "text": "  const res = await firstValueFrom(this.http.post<{ score: number }>('https://risk.example.com/v2/score', input));",
+              "b": 17
+            },
+            {
+              "t": "+",
+              "text": "  return res.data.score;",
+              "b": 18
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 19
+            }
+          ]
+        }
+      ],
+      "delta": {
+        "risk": "high",
+        "effectsAdded": [
+          {
+            "kind": "http",
+            "target": "risk.example.com",
+            "file": "sample-nest-service/src/fraud/fraud.service.ts",
+            "line": 17
+          }
+        ],
+        "effectsRemoved": [],
+        "callsAdded": [],
+        "callsRemoved": [],
+        "implementationOnly": false
+      }
+    },
+    "InventoryService.reserve": {
+      "id": "InventoryService.reserve",
+      "moduleId": "InventoryService",
+      "name": "reserve",
+      "file": "sample-nest-service/src/inventory/inventory.service.ts",
+      "line": 22,
+      "endLine": 28,
+      "params": [
+        {
+          "name": "lines",
+          "type": "OrderLine[]"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 24
+        },
+        {
+          "kind": "db.write",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 26
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 24
+        },
+        {
+          "kind": "db.write",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 26
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async reserve(lines: OrderLine[]): Promise<void> {\n  for (const line of lines) {\n    const item = await this.stock.findOneBy({ productId: line.productId });\n    if (!item || item.available < line.quantity) throw new ConflictException(`out of stock: ${line.productId}`);\n    await this.stock.update({ productId: line.productId }, { available: item.available - line.quantity, reserved: item.reserved + line.quantity });\n  }\n}"
+    },
+    "InventoryService.release": {
+      "id": "InventoryService.release",
+      "moduleId": "InventoryService",
+      "name": "release",
+      "file": "sample-nest-service/src/inventory/inventory.service.ts",
+      "line": 30,
+      "endLine": 35,
+      "params": [
+        {
+          "name": "lines",
+          "type": "OrderLine[]"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "directEffects": [
+        {
+          "kind": "db.write",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 32
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 32
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async release(lines: OrderLine[]): Promise<void> {\n  for (const line of lines) {\n    await this.stock.increment({ productId: line.productId }, 'available', line.quantity);\n    await this.stock.decrement({ productId: line.productId }, 'reserved', line.quantity);\n  }\n}"
+    },
+    "NotificationsService.orderConfirmation": {
+      "id": "NotificationsService.orderConfirmation",
+      "moduleId": "NotificationsService",
+      "name": "orderConfirmation",
+      "file": "sample-nest-service/src/notifications/notifications.service.ts",
+      "line": 14,
+      "endLine": 16,
+      "params": [
+        {
+          "name": "order",
+          "type": "Order"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "directEffects": [
+        {
+          "kind": "queue",
+          "target": "emails",
+          "file": "sample-nest-service/src/notifications/notifications.service.ts",
+          "line": 15
+        }
+      ],
+      "effects": [
+        {
+          "kind": "queue",
+          "target": "emails",
+          "file": "sample-nest-service/src/notifications/notifications.service.ts",
+          "line": 15
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async orderConfirmation(order: Order): Promise<void> {\n  await this.emails.add('order-confirmation', { to: order.customerId, orderId: order.id });\n}"
+    },
+    "NotificationsService.receipt": {
+      "id": "NotificationsService.receipt",
+      "moduleId": "NotificationsService",
+      "name": "receipt",
+      "file": "sample-nest-service/src/notifications/notifications.service.ts",
+      "line": 18,
+      "endLine": 20,
+      "params": [
+        {
+          "name": "paymentId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "directEffects": [
+        {
+          "kind": "queue",
+          "target": "emails",
+          "file": "sample-nest-service/src/notifications/notifications.service.ts",
+          "line": 19
+        }
+      ],
+      "effects": [
+        {
+          "kind": "queue",
+          "target": "emails",
+          "file": "sample-nest-service/src/notifications/notifications.service.ts",
+          "line": 19
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async receipt(paymentId: string): Promise<void> {\n  await this.emails.add('receipt', { paymentId });\n}"
+    },
+    "MailClient.send": {
+      "id": "MailClient.send",
+      "moduleId": "MailClient",
+      "name": "send",
+      "file": "sample-nest-service/src/notifications/notifications.service.ts",
+      "line": 27,
+      "endLine": 29,
+      "params": [
+        {
+          "name": "template",
+          "type": "string"
+        },
+        {
+          "name": "data",
+          "type": "unknown"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "directEffects": [
+        {
+          "kind": "http",
+          "target": "mail.example.com",
+          "file": "sample-nest-service/src/notifications/notifications.service.ts",
+          "line": 28
+        }
+      ],
+      "effects": [
+        {
+          "kind": "http",
+          "target": "mail.example.com",
+          "file": "sample-nest-service/src/notifications/notifications.service.ts",
+          "line": 28
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async send(template: string, data: unknown): Promise<void> {\n  await firstValueFrom(this.http.post('https://mail.example.com/v3/send', { template, data }));\n}"
+    },
+    "OrdersService.create": {
+      "id": "OrdersService.create",
+      "moduleId": "OrdersService",
+      "name": "create",
+      "file": "sample-nest-service/src/orders/orders.service.ts",
+      "line": 27,
+      "endLine": 40,
+      "params": [
+        {
+          "name": "dto",
+          "type": "CreateOrderDto"
+        }
+      ],
+      "returns": {
+        "type": "Order",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+          },
+          {
+            "name": "lines",
+            "type": "OrderLine[]"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "createdAt",
+            "type": "Date"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 32
+        },
+        {
+          "kind": "kafka",
+          "target": "orders.held",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 34
+        },
+        {
+          "kind": "kafka",
+          "target": "orders.created",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 37
+        },
+        {
+          "kind": "event",
+          "target": "order.created",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 38
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 32
+        },
+        {
+          "kind": "kafka",
+          "target": "orders.held",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 34
+        },
+        {
+          "kind": "kafka",
+          "target": "orders.created",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 37
+        },
+        {
+          "kind": "event",
+          "target": "order.created",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 38
+        },
+        {
+          "kind": "db.read",
+          "target": "products",
+          "file": "sample-nest-service/src/pricing/pricing.service.ts",
+          "line": 42
+        },
+        {
+          "kind": "http",
+          "target": "tax-api.internal",
+          "file": "sample-nest-service/src/pricing/pricing.service.ts",
+          "line": 29
+        },
+        {
+          "kind": "http",
+          "target": "risk.example.com",
+          "file": "sample-nest-service/src/fraud/fraud.service.ts",
+          "line": 17
+        },
+        {
+          "kind": "db.read",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 24
+        },
+        {
+          "kind": "db.write",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 26
+        }
+      ],
+      "calls": [
+        "PricingService.quote",
+        "FraudService.score",
+        "InventoryService.reserve"
+      ],
+      "change": "modified",
+      "containsChanges": true,
+      "source": "async create(dto: CreateOrderDto): Promise<Order> {\n  const quote = await this.pricing.quote(dto.lines, dto.country);\n  const risk = await this.fraud.score({ customerId: dto.customerId, country: dto.country, total: quote.total });\n  const held = needsReview(risk, quote.total);\n  if (!held) await this.inventory.reserve(dto.lines);\n  const order = await this.orders.save({ ...dto, status: held ? 'held' : 'pending', total: quote.total });\n  if (held) {\n    this.kafka.emit('orders.held', { orderId: order.id, risk });\n    return order;\n  }\n  this.kafka.emit('orders.created', { orderId: order.id, total: order.total });\n  this.events.emit('order.created', order);\n  return order;\n}",
+      "diff": [
+        {
+          "t": " ",
+          "text": "async create(dto: CreateOrderDto): Promise<Order> {"
+        },
+        {
+          "t": " ",
+          "text": "  const quote = await this.pricing.quote(dto.lines, dto.country);"
+        },
+        {
+          "t": "-",
+          "text": "  await this.inventory.reserve(dto.lines);"
+        },
+        {
+          "t": "-",
+          "text": "  const order = await this.orders.save({ ...dto, status: 'pending', total: quote.total });"
+        },
+        {
+          "t": "+",
+          "text": "  const risk = await this.fraud.score({ customerId: dto.customerId, country: dto.country, total: quote.total });"
+        },
+        {
+          "t": "+",
+          "text": "  const held = needsReview(risk, quote.total);"
+        },
+        {
+          "t": "+",
+          "text": "  if (!held) await this.inventory.reserve(dto.lines);"
+        },
+        {
+          "t": "+",
+          "text": "  const order = await this.orders.save({ ...dto, status: held ? 'held' : 'pending', total: quote.total });"
+        },
+        {
+          "t": "+",
+          "text": "  if (held) {"
+        },
+        {
+          "t": "+",
+          "text": "    this.kafka.emit('orders.held', { orderId: order.id, risk });"
+        },
+        {
+          "t": "+",
+          "text": "    return order;"
+        },
+        {
+          "t": "+",
+          "text": "  }"
+        },
+        {
+          "t": " ",
+          "text": "  this.kafka.emit('orders.created', { orderId: order.id, total: order.total });"
+        },
+        {
+          "t": " ",
+          "text": "  this.events.emit('order.created', order);"
+        },
+        {
+          "t": " ",
+          "text": "  return order;"
+        },
+        {
+          "t": " ",
+          "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "create",
+          "role": "operation",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 27,
+          "status": "modified",
+          "added": 8,
+          "removed": 2,
+          "diff": [
+            {
+              "t": " ",
+              "text": "async create(dto: CreateOrderDto): Promise<Order> {",
+              "a": 23,
+              "b": 27
+            },
+            {
+              "t": " ",
+              "text": "  const quote = await this.pricing.quote(dto.lines, dto.country);",
+              "a": 24,
+              "b": 28
+            },
+            {
+              "t": "-",
+              "text": "  await this.inventory.reserve(dto.lines);",
+              "a": 25
+            },
+            {
+              "t": "-",
+              "text": "  const order = await this.orders.save({ ...dto, status: 'pending', total: quote.total });",
+              "a": 26
+            },
+            {
+              "t": "+",
+              "text": "  const risk = await this.fraud.score({ customerId: dto.customerId, country: dto.country, total: quote.total });",
+              "b": 29
+            },
+            {
+              "t": "+",
+              "text": "  const held = needsReview(risk, quote.total);",
+              "b": 30
+            },
+            {
+              "t": "+",
+              "text": "  if (!held) await this.inventory.reserve(dto.lines);",
+              "b": 31
+            },
+            {
+              "t": "+",
+              "text": "  const order = await this.orders.save({ ...dto, status: held ? 'held' : 'pending', total: quote.total });",
+              "b": 32
+            },
+            {
+              "t": "+",
+              "text": "  if (held) {",
+              "b": 33
+            },
+            {
+              "t": "+",
+              "text": "    this.kafka.emit('orders.held', { orderId: order.id, risk });",
+              "b": 34
+            },
+            {
+              "t": "+",
+              "text": "    return order;",
+              "b": 35
+            },
+            {
+              "t": "+",
+              "text": "  }",
+              "b": 36
+            },
+            {
+              "t": " ",
+              "text": "  this.kafka.emit('orders.created', { orderId: order.id, total: order.total });",
+              "a": 27,
+              "b": 37
+            },
+            {
+              "t": " ",
+              "text": "  this.events.emit('order.created', order);",
+              "a": 28,
+              "b": 38
+            },
+            {
+              "t": " ",
+              "text": "  return order;",
+              "a": 29,
+              "b": 39
+            },
+            {
+              "t": " ",
+              "text": "}",
+              "a": 30,
+              "b": 40
+            }
+          ]
+        },
+        {
+          "name": "needsReview",
+          "role": "helper",
+          "file": "sample-nest-service/src/fraud/policy.ts",
+          "line": 7,
+          "status": "added",
+          "added": 3,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "export function needsReview(score: number, total: number): boolean {",
+              "b": 7
+            },
+            {
+              "t": "+",
+              "text": "  return score >= HOLD_THRESHOLD || total > ALWAYS_REVIEW_ABOVE;",
+              "b": 8
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 9
+            }
+          ]
+        }
+      ],
+      "delta": {
+        "risk": "high",
+        "returns": {
+          "before": {
+            "type": "Order",
+            "fields": [
+              {
+                "name": "id",
+                "type": "string"
+              },
+              {
+                "name": "customerId",
+                "type": "string"
+              },
+              {
+                "name": "status",
+                "type": "OrderStatus [\"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+              },
+              {
+                "name": "lines",
+                "type": "OrderLine[]"
+              },
+              {
+                "name": "country",
+                "type": "string"
+              },
+              {
+                "name": "total",
+                "type": "number"
+              },
+              {
+                "name": "createdAt",
+                "type": "Date"
+              }
+            ]
+          },
+          "after": {
+            "type": "Order",
+            "fields": [
+              {
+                "name": "id",
+                "type": "string"
+              },
+              {
+                "name": "customerId",
+                "type": "string"
+              },
+              {
+                "name": "status",
+                "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+              },
+              {
+                "name": "lines",
+                "type": "OrderLine[]"
+              },
+              {
+                "name": "country",
+                "type": "string"
+              },
+              {
+                "name": "total",
+                "type": "number"
+              },
+              {
+                "name": "createdAt",
+                "type": "Date"
+              }
+            ]
+          }
+        },
+        "effectsAdded": [
+          {
+            "kind": "kafka",
+            "target": "orders.held",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 34
+          },
+          {
+            "kind": "http",
+            "target": "risk.example.com",
+            "file": "sample-nest-service/src/fraud/fraud.service.ts",
+            "line": 17
+          }
+        ],
+        "effectsRemoved": [],
+        "callsAdded": [
+          "FraudService.score"
+        ],
+        "callsRemoved": [],
+        "implementationOnly": false
+      }
+    },
+    "OrdersService.release": {
+      "id": "OrdersService.release",
+      "moduleId": "OrdersService",
+      "name": "release",
+      "file": "sample-nest-service/src/orders/orders.service.ts",
+      "line": 43,
+      "endLine": 51,
+      "params": [
+        {
+          "name": "id",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Order",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+          },
+          {
+            "name": "lines",
+            "type": "OrderLine[]"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "createdAt",
+            "type": "Date"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 54
+        },
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 56
+        },
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 47
+        },
+        {
+          "kind": "kafka",
+          "target": "orders.created",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 48
+        },
+        {
+          "kind": "event",
+          "target": "order.created",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 49
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 54
+        },
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 56
+        },
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 47
+        },
+        {
+          "kind": "kafka",
+          "target": "orders.created",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 48
+        },
+        {
+          "kind": "event",
+          "target": "order.created",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 49
+        },
+        {
+          "kind": "db.read",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 24
+        },
+        {
+          "kind": "db.write",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 26
+        }
+      ],
+      "calls": [
+        "InventoryService.reserve"
+      ],
+      "change": "added",
+      "containsChanges": true,
+      "source": "async release(id: string): Promise<Order> {\n  const order = await this.get(id);\n  if (order.status !== 'held') throw new NotFoundException(`order ${id} is not held`);\n  await this.inventory.reserve(order.lines);\n  await this.orders.update({ id }, { status: 'pending' });\n  this.kafka.emit('orders.created', { orderId: id, total: order.total });\n  this.events.emit('order.created', order);\n  return { ...order, status: 'pending' };\n}",
+      "diff": [
+        {
+          "t": "+",
+          "text": "async release(id: string): Promise<Order> {"
+        },
+        {
+          "t": "+",
+          "text": "  const order = await this.get(id);"
+        },
+        {
+          "t": "+",
+          "text": "  if (order.status !== 'held') throw new NotFoundException(`order ${id} is not held`);"
+        },
+        {
+          "t": "+",
+          "text": "  await this.inventory.reserve(order.lines);"
+        },
+        {
+          "t": "+",
+          "text": "  await this.orders.update({ id }, { status: 'pending' });"
+        },
+        {
+          "t": "+",
+          "text": "  this.kafka.emit('orders.created', { orderId: id, total: order.total });"
+        },
+        {
+          "t": "+",
+          "text": "  this.events.emit('order.created', order);"
+        },
+        {
+          "t": "+",
+          "text": "  return { ...order, status: 'pending' };"
+        },
+        {
+          "t": "+",
+          "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "release",
+          "role": "operation",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 43,
+          "status": "added",
+          "added": 9,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "async release(id: string): Promise<Order> {",
+              "b": 43
+            },
+            {
+              "t": "+",
+              "text": "  const order = await this.get(id);",
+              "b": 44
+            },
+            {
+              "t": "+",
+              "text": "  if (order.status !== 'held') throw new NotFoundException(`order ${id} is not held`);",
+              "b": 45
+            },
+            {
+              "t": "+",
+              "text": "  await this.inventory.reserve(order.lines);",
+              "b": 46
+            },
+            {
+              "t": "+",
+              "text": "  await this.orders.update({ id }, { status: 'pending' });",
+              "b": 47
+            },
+            {
+              "t": "+",
+              "text": "  this.kafka.emit('orders.created', { orderId: id, total: order.total });",
+              "b": 48
+            },
+            {
+              "t": "+",
+              "text": "  this.events.emit('order.created', order);",
+              "b": 49
+            },
+            {
+              "t": "+",
+              "text": "  return { ...order, status: 'pending' };",
+              "b": 50
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 51
+            }
+          ]
+        },
+        {
+          "name": "OrdersService.get",
+          "role": "helper",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 53,
+          "status": "modified",
+          "added": 1,
+          "removed": 0,
+          "diff": [
+            {
+              "t": " ",
+              "text": "async get(id: string): Promise<Order> {",
+              "a": 32,
+              "b": 53
+            },
+            {
+              "t": " ",
+              "text": "  const order = await this.orders.findOneBy({ id });",
+              "a": 33,
+              "b": 54
+            },
+            {
+              "t": " ",
+              "text": "  if (!order) throw new NotFoundException(`order ${id}`);",
+              "a": 34,
+              "b": 55
+            },
+            {
+              "t": "+",
+              "text": "  await this.views.insert({ orderId: id });",
+              "b": 56
+            },
+            {
+              "t": " ",
+              "text": "  return order;",
+              "a": 35,
+              "b": 57
+            },
+            {
+              "t": " ",
+              "text": "}",
+              "a": 36,
+              "b": 58
+            }
+          ]
+        }
+      ],
+      "delta": {
+        "risk": "high",
+        "effectsAdded": [
+          {
+            "kind": "db.read",
+            "target": "orders",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 54
+          },
+          {
+            "kind": "db.write",
+            "target": "order_views",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 56
+          },
+          {
+            "kind": "db.write",
+            "target": "orders",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 47
+          },
+          {
+            "kind": "kafka",
+            "target": "orders.created",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 48
+          },
+          {
+            "kind": "event",
+            "target": "order.created",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 49
+          },
+          {
+            "kind": "db.read",
+            "target": "stock_items",
+            "file": "sample-nest-service/src/inventory/inventory.service.ts",
+            "line": 24
+          },
+          {
+            "kind": "db.write",
+            "target": "stock_items",
+            "file": "sample-nest-service/src/inventory/inventory.service.ts",
+            "line": 26
+          }
+        ],
+        "effectsRemoved": [],
+        "callsAdded": [
+          "InventoryService.reserve"
+        ],
+        "callsRemoved": [],
+        "implementationOnly": false
+      }
+    },
+    "OrdersService.get": {
+      "id": "OrdersService.get",
+      "moduleId": "OrdersService",
+      "name": "get",
+      "file": "sample-nest-service/src/orders/orders.service.ts",
+      "line": 53,
+      "endLine": 58,
+      "params": [
+        {
+          "name": "id",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Order",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+          },
+          {
+            "name": "lines",
+            "type": "OrderLine[]"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "createdAt",
+            "type": "Date"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 54
+        },
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 56
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 54
+        },
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 56
+        }
+      ],
+      "calls": [],
+      "change": "modified",
+      "containsChanges": true,
+      "source": "async get(id: string): Promise<Order> {\n  const order = await this.orders.findOneBy({ id });\n  if (!order) throw new NotFoundException(`order ${id}`);\n  await this.views.insert({ orderId: id });\n  return order;\n}",
+      "diff": [
+        {
+          "t": " ",
+          "text": "async get(id: string): Promise<Order> {"
+        },
+        {
+          "t": " ",
+          "text": "  const order = await this.orders.findOneBy({ id });"
+        },
+        {
+          "t": " ",
+          "text": "  if (!order) throw new NotFoundException(`order ${id}`);"
+        },
+        {
+          "t": "+",
+          "text": "  await this.views.insert({ orderId: id });"
+        },
+        {
+          "t": " ",
+          "text": "  return order;"
+        },
+        {
+          "t": " ",
+          "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "get",
+          "role": "operation",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 53,
+          "status": "modified",
+          "added": 1,
+          "removed": 0,
+          "diff": [
+            {
+              "t": " ",
+              "text": "async get(id: string): Promise<Order> {",
+              "a": 32,
+              "b": 53
+            },
+            {
+              "t": " ",
+              "text": "  const order = await this.orders.findOneBy({ id });",
+              "a": 33,
+              "b": 54
+            },
+            {
+              "t": " ",
+              "text": "  if (!order) throw new NotFoundException(`order ${id}`);",
+              "a": 34,
+              "b": 55
+            },
+            {
+              "t": "+",
+              "text": "  await this.views.insert({ orderId: id });",
+              "b": 56
+            },
+            {
+              "t": " ",
+              "text": "  return order;",
+              "a": 35,
+              "b": 57
+            },
+            {
+              "t": " ",
+              "text": "}",
+              "a": 36,
+              "b": 58
+            }
+          ]
+        }
+      ],
+      "delta": {
+        "risk": "high",
+        "returns": {
+          "before": {
+            "type": "Order",
+            "fields": [
+              {
+                "name": "id",
+                "type": "string"
+              },
+              {
+                "name": "customerId",
+                "type": "string"
+              },
+              {
+                "name": "status",
+                "type": "OrderStatus [\"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+              },
+              {
+                "name": "lines",
+                "type": "OrderLine[]"
+              },
+              {
+                "name": "country",
+                "type": "string"
+              },
+              {
+                "name": "total",
+                "type": "number"
+              },
+              {
+                "name": "createdAt",
+                "type": "Date"
+              }
+            ]
+          },
+          "after": {
+            "type": "Order",
+            "fields": [
+              {
+                "name": "id",
+                "type": "string"
+              },
+              {
+                "name": "customerId",
+                "type": "string"
+              },
+              {
+                "name": "status",
+                "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+              },
+              {
+                "name": "lines",
+                "type": "OrderLine[]"
+              },
+              {
+                "name": "country",
+                "type": "string"
+              },
+              {
+                "name": "total",
+                "type": "number"
+              },
+              {
+                "name": "createdAt",
+                "type": "Date"
+              }
+            ]
+          }
+        },
+        "effectsAdded": [
+          {
+            "kind": "db.write",
+            "target": "order_views",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 56
+          }
+        ],
+        "effectsRemoved": [],
+        "callsAdded": [],
+        "callsRemoved": [],
+        "implementationOnly": false
+      }
+    },
+    "OrdersService.list": {
+      "id": "OrdersService.list",
+      "moduleId": "OrdersService",
+      "name": "list",
+      "file": "sample-nest-service/src/orders/orders.service.ts",
+      "line": 60,
+      "endLine": 62,
+      "params": [
+        {
+          "name": "customerId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Order[]"
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 61
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 61
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async list(customerId: string): Promise<Order[]> {\n  return this.orders.findBy({ customerId });\n}"
+    },
+    "OrdersService.cancel": {
+      "id": "OrdersService.cancel",
+      "moduleId": "OrdersService",
+      "name": "cancel",
+      "file": "sample-nest-service/src/orders/orders.service.ts",
+      "line": 64,
+      "endLine": 71,
+      "params": [
+        {
+          "name": "id",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Order",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+          },
+          {
+            "name": "lines",
+            "type": "OrderLine[]"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "createdAt",
+            "type": "Date"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 54
+        },
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 56
+        },
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 68
+        },
+        {
+          "kind": "kafka",
+          "target": "orders.cancelled",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 69
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 54
+        },
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 56
+        },
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 68
+        },
+        {
+          "kind": "kafka",
+          "target": "orders.cancelled",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 69
+        },
+        {
+          "kind": "http",
+          "target": "api.payments.example",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 53
+        },
+        {
+          "kind": "db.write",
+          "target": "payments",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 54
+        },
+        {
+          "kind": "db.write",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 32
+        }
+      ],
+      "calls": [
+        "PaymentsService.refund",
+        "InventoryService.release"
+      ],
+      "change": "modified",
+      "containsChanges": true,
+      "source": "async cancel(id: string): Promise<Order> {\n  const order = await this.get(id);\n  if (order.status === 'paid') await this.payments.refund(order);\n  await this.inventory.release(order.lines);\n  await this.orders.update({ id }, { status: 'cancelled' });\n  this.kafka.emit('orders.cancelled', { orderId: id });\n  return { ...order, status: 'cancelled' };\n}",
+      "diff": [
+        {
+          "t": " ",
+          "text": "async cancel(id: string): Promise<Order> {"
+        },
+        {
+          "t": " ",
+          "text": "  const order = await this.get(id);"
+        },
+        {
+          "t": " ",
+          "text": "  if (order.status === 'paid') await this.payments.refund(order);"
+        },
+        {
+          "t": " ",
+          "text": "  await this.inventory.release(order.lines);"
+        },
+        {
+          "t": " ",
+          "text": "  await this.orders.update({ id }, { status: 'cancelled' });"
+        },
+        {
+          "t": " ",
+          "text": "  this.kafka.emit('orders.cancelled', { orderId: id });"
+        },
+        {
+          "t": " ",
+          "text": "  return { ...order, status: 'cancelled' };"
+        },
+        {
+          "t": " ",
+          "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "OrdersService.get",
+          "role": "helper",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 53,
+          "status": "modified",
+          "added": 1,
+          "removed": 0,
+          "diff": [
+            {
+              "t": " ",
+              "text": "async get(id: string): Promise<Order> {",
+              "a": 32,
+              "b": 53
+            },
+            {
+              "t": " ",
+              "text": "  const order = await this.orders.findOneBy({ id });",
+              "a": 33,
+              "b": 54
+            },
+            {
+              "t": " ",
+              "text": "  if (!order) throw new NotFoundException(`order ${id}`);",
+              "a": 34,
+              "b": 55
+            },
+            {
+              "t": "+",
+              "text": "  await this.views.insert({ orderId: id });",
+              "b": 56
+            },
+            {
+              "t": " ",
+              "text": "  return order;",
+              "a": 35,
+              "b": 57
+            },
+            {
+              "t": " ",
+              "text": "}",
+              "a": 36,
+              "b": 58
+            }
+          ]
+        }
+      ],
+      "delta": {
+        "risk": "high",
+        "returns": {
+          "before": {
+            "type": "Order",
+            "fields": [
+              {
+                "name": "id",
+                "type": "string"
+              },
+              {
+                "name": "customerId",
+                "type": "string"
+              },
+              {
+                "name": "status",
+                "type": "OrderStatus [\"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+              },
+              {
+                "name": "lines",
+                "type": "OrderLine[]"
+              },
+              {
+                "name": "country",
+                "type": "string"
+              },
+              {
+                "name": "total",
+                "type": "number"
+              },
+              {
+                "name": "createdAt",
+                "type": "Date"
+              }
+            ]
+          },
+          "after": {
+            "type": "Order",
+            "fields": [
+              {
+                "name": "id",
+                "type": "string"
+              },
+              {
+                "name": "customerId",
+                "type": "string"
+              },
+              {
+                "name": "status",
+                "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+              },
+              {
+                "name": "lines",
+                "type": "OrderLine[]"
+              },
+              {
+                "name": "country",
+                "type": "string"
+              },
+              {
+                "name": "total",
+                "type": "number"
+              },
+              {
+                "name": "createdAt",
+                "type": "Date"
+              }
+            ]
+          }
+        },
+        "effectsAdded": [
+          {
+            "kind": "db.write",
+            "target": "order_views",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 56
+          }
+        ],
+        "effectsRemoved": [],
+        "callsAdded": [],
+        "callsRemoved": [],
+        "implementationOnly": false
+      }
+    },
+    "OrdersService.markPaid": {
+      "id": "OrdersService.markPaid",
+      "moduleId": "OrdersService",
+      "name": "markPaid",
+      "file": "sample-nest-service/src/orders/orders.service.ts",
+      "line": 73,
+      "endLine": 76,
+      "params": [
+        {
+          "name": "orderId",
+          "type": "string"
+        },
+        {
+          "name": "paymentId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "directEffects": [
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 74
+        },
+        {
+          "kind": "event",
+          "target": "order.paid",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 75
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 74
+        },
+        {
+          "kind": "event",
+          "target": "order.paid",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 75
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async markPaid(orderId: string, paymentId: string): Promise<void> {\n  await this.orders.update({ id: orderId }, { status: 'paid' });\n  this.events.emit('order.paid', { orderId, paymentId });\n}"
+    },
+    "OrdersService.markShipped": {
+      "id": "OrdersService.markShipped",
+      "moduleId": "OrdersService",
+      "name": "markShipped",
+      "file": "sample-nest-service/src/orders/orders.service.ts",
+      "line": 78,
+      "endLine": 80,
+      "params": [
+        {
+          "name": "orderId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "directEffects": [
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 79
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 79
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async markShipped(orderId: string): Promise<void> {\n  await this.orders.update({ id: orderId }, { status: 'shipped' });\n}"
+    },
+    "OrdersService.expirePending": {
+      "id": "OrdersService.expirePending",
+      "moduleId": "OrdersService",
+      "name": "expirePending",
+      "file": "sample-nest-service/src/orders/orders.service.ts",
+      "line": 83,
+      "endLine": 90,
+      "params": [
+        {
+          "name": "minutes",
+          "type": "number"
+        }
+      ],
+      "returns": {
+        "type": "number"
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 84
+        },
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 87
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 84
+        },
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 87
+        },
+        {
+          "kind": "db.write",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 32
+        }
+      ],
+      "calls": [
+        "InventoryService.release"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async expirePending(minutes: number): Promise<number> {\n  const stale = await this.orders.findBy({ status: 'pending', createdAt: LessThan(new Date(Date.now() - minutes * 60_000)) });\n  for (const order of stale) {\n    await this.inventory.release(order.lines);\n    await this.orders.update({ id: order.id }, { status: 'expired' });\n  }\n  return stale.length;\n}"
+    },
+    "PaymentsService.forOrder": {
+      "id": "PaymentsService.forOrder",
+      "moduleId": "PaymentsService",
+      "name": "forOrder",
+      "file": "sample-nest-service/src/payments/payments.service.ts",
+      "line": 41,
+      "endLine": 43,
+      "params": [
+        {
+          "name": "orderId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Payment[]"
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "payments",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 42
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "payments",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 42
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async forOrder(orderId: string): Promise<Payment[]> {\n  return this.payments.findBy({ orderId });\n}"
+    },
+    "PaymentsService.handleWebhook": {
+      "id": "PaymentsService.handleWebhook",
+      "moduleId": "PaymentsService",
+      "name": "handleWebhook",
+      "file": "sample-nest-service/src/payments/payments.service.ts",
+      "line": 45,
+      "endLine": 50,
+      "params": [
+        {
+          "name": "event",
+          "type": "ProviderEvent"
+        }
+      ],
+      "returns": {
+        "type": "Payment",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "orderId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "\"authorized\" | \"succeeded\" | \"failed\" | \"refunded\""
+          },
+          {
+            "name": "amount",
+            "type": "number"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.write",
+          "target": "payments",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 47
+        },
+        {
+          "kind": "queue",
+          "target": "receipts",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 48
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "payments",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 47
+        },
+        {
+          "kind": "queue",
+          "target": "receipts",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 48
+        }
+      ],
+      "calls": [],
+      "change": "modified",
+      "containsChanges": true,
+      "source": "async handleWebhook(event: ProviderEvent): Promise<Payment> {\n  const status = event.type === 'charge.succeeded' ? 'succeeded' : 'failed';\n  const payment = await this.payments.save({ id: event.paymentId, orderId: event.orderId, status, amount: event.amount });\n  if (status === 'succeeded') await this.receipts.add('send-receipt', { paymentId: payment.id });\n  return payment;\n}",
+      "diff": [
+        {
+          "t": " ",
+          "text": "async handleWebhook(event: ProviderEvent): Promise<Payment> {"
+        },
+        {
+          "t": " ",
+          "text": "  const status = event.type === 'charge.succeeded' ? 'succeeded' : 'failed';"
+        },
+        {
+          "t": " ",
+          "text": "  const payment = await this.payments.save({ id: event.paymentId, orderId: event.orderId, status, amount: event.amount });"
+        },
+        {
+          "t": "-",
+          "text": "  await this.receipts.add('send-receipt', { paymentId: payment.id });"
+        },
+        {
+          "t": "+",
+          "text": "  if (status === 'succeeded') await this.receipts.add('send-receipt', { paymentId: payment.id });"
+        },
+        {
+          "t": " ",
+          "text": "  return payment;"
+        },
+        {
+          "t": " ",
+          "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "handleWebhook",
+          "role": "operation",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 45,
+          "status": "modified",
+          "added": 1,
+          "removed": 1,
+          "diff": [
+            {
+              "t": " ",
+              "text": "async handleWebhook(event: ProviderEvent): Promise<Payment> {",
+              "a": 45,
+              "b": 45
+            },
+            {
+              "t": " ",
+              "text": "  const status = event.type === 'charge.succeeded' ? 'succeeded' : 'failed';",
+              "a": 46,
+              "b": 46
+            },
+            {
+              "t": " ",
+              "text": "  const payment = await this.payments.save({ id: event.paymentId, orderId: event.orderId, status, amount: event.amount });",
+              "a": 47,
+              "b": 47
+            },
+            {
+              "t": "-",
+              "text": "  await this.receipts.add('send-receipt', { paymentId: payment.id });",
+              "a": 48
+            },
+            {
+              "t": "+",
+              "text": "  if (status === 'succeeded') await this.receipts.add('send-receipt', { paymentId: payment.id });",
+              "b": 48
+            },
+            {
+              "t": " ",
+              "text": "  return payment;",
+              "a": 49,
+              "b": 49
+            },
+            {
+              "t": " ",
+              "text": "}",
+              "a": 50,
+              "b": 50
+            }
+          ]
+        }
+      ],
+      "delta": {
+        "risk": "low",
+        "effectsAdded": [],
+        "effectsRemoved": [],
+        "callsAdded": [],
+        "callsRemoved": [],
+        "implementationOnly": true
+      }
+    },
+    "PaymentsService.refund": {
+      "id": "PaymentsService.refund",
+      "moduleId": "PaymentsService",
+      "name": "refund",
+      "file": "sample-nest-service/src/payments/payments.service.ts",
+      "line": 52,
+      "endLine": 55,
+      "params": [
+        {
+          "name": "order",
+          "type": "Order"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "directEffects": [
+        {
+          "kind": "http",
+          "target": "api.payments.example",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 53
+        },
+        {
+          "kind": "db.write",
+          "target": "payments",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 54
+        }
+      ],
+      "effects": [
+        {
+          "kind": "http",
+          "target": "api.payments.example",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 53
+        },
+        {
+          "kind": "db.write",
+          "target": "payments",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 54
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async refund(order: Order): Promise<void> {\n  await firstValueFrom(this.http.post('https://api.payments.example/v1/refunds', { orderId: order.id, amount: order.total }));\n  await this.payments.update({ orderId: order.id }, { status: 'refunded' });\n}"
+    },
+    "PaymentsService.reconcile": {
+      "id": "PaymentsService.reconcile",
+      "moduleId": "PaymentsService",
+      "name": "reconcile",
+      "file": "sample-nest-service/src/payments/payments.service.ts",
+      "line": 58,
+      "endLine": 62,
+      "params": [
+        {
+          "name": "day",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ missing: string[]; }",
+        "fields": [
+          {
+            "name": "missing",
+            "type": "string[]"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "http",
+          "target": "api.payments.example",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 59
+        },
+        {
+          "kind": "db.read",
+          "target": "payments",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 60
+        }
+      ],
+      "effects": [
+        {
+          "kind": "http",
+          "target": "api.payments.example",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 59
+        },
+        {
+          "kind": "db.read",
+          "target": "payments",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 60
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async reconcile(day: string): Promise<{ missing: string[] }> {\n  const res = await firstValueFrom(this.http.get<{ ids: string[] }>(`https://api.payments.example/v1/settlements?day=${day}`));\n  const ours = await this.payments.findBy({ status: 'succeeded' });\n  return { missing: res.data.ids.filter((id) => !ours.some((p) => p.id === id)) };\n}"
+    },
+    "TaxClient.rateFor": {
+      "id": "TaxClient.rateFor",
+      "moduleId": "TaxClient",
+      "name": "rateFor",
+      "file": "sample-nest-service/src/pricing/pricing.service.ts",
+      "line": 28,
+      "endLine": 31,
+      "params": [
+        {
+          "name": "country",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "number"
+      },
+      "directEffects": [
+        {
+          "kind": "http",
+          "target": "tax-api.internal",
+          "file": "sample-nest-service/src/pricing/pricing.service.ts",
+          "line": 29
+        }
+      ],
+      "effects": [
+        {
+          "kind": "http",
+          "target": "tax-api.internal",
+          "file": "sample-nest-service/src/pricing/pricing.service.ts",
+          "line": 29
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async rateFor(country: string): Promise<number> {\n  const res = await firstValueFrom(this.http.get<{ rate: number }>(`https://tax-api.internal/v1/rates/${country}`));\n  return res.data.rate;\n}"
+    },
+    "PricingService.quote": {
+      "id": "PricingService.quote",
+      "moduleId": "PricingService",
+      "name": "quote",
+      "file": "sample-nest-service/src/pricing/pricing.service.ts",
+      "line": 41,
+      "endLine": 46,
+      "params": [
+        {
+          "name": "lines",
+          "type": "OrderLine[]"
+        },
+        {
+          "name": "country",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Quote",
+        "fields": [
+          {
+            "name": "subtotal",
+            "type": "number"
+          },
+          {
+            "name": "tax",
+            "type": "number"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "products",
+          "file": "sample-nest-service/src/pricing/pricing.service.ts",
+          "line": 42
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "products",
+          "file": "sample-nest-service/src/pricing/pricing.service.ts",
+          "line": 42
+        },
+        {
+          "kind": "http",
+          "target": "tax-api.internal",
+          "file": "sample-nest-service/src/pricing/pricing.service.ts",
+          "line": 29
+        }
+      ],
+      "calls": [
+        "TaxClient.rateFor"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async quote(lines: OrderLine[], country: string): Promise<Quote> {\n  const products = await this.products.findBy({ id: In(lines.map((l) => l.productId)) });\n  const subtotal = lines.reduce((sum, l) => sum + (products.find((p) => p.id === l.productId)?.price ?? 0) * l.quantity, 0);\n  const rate = await this.tax.rateFor(country);\n  return { subtotal, tax: round(subtotal * rate), total: round(subtotal * (1 + rate)) };\n}"
+    }
+  },
+  "entryPoints": {
+    "cron:cron payments-reconciliation (0 03 * * *)": {
+      "id": "cron:cron payments-reconciliation (0 03 * * *)",
+      "kind": "cron",
+      "label": "cron payments-reconciliation (0 03 * * *)",
+      "readOnly": false,
+      "file": "sample-nest-service/src/jobs/jobs.ts",
+      "line": 15,
+      "effects": [
+        {
+          "kind": "http",
+          "target": "api.payments.example",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 59
+        },
+        {
+          "kind": "db.read",
+          "target": "payments",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 60
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": []
+    },
+    "event:event order.created": {
+      "id": "event:event order.created",
+      "kind": "event",
+      "label": "event order.created",
+      "readOnly": false,
+      "file": "sample-nest-service/src/notifications/notifications.service.ts",
+      "line": 48,
+      "effects": [
+        {
+          "kind": "queue",
+          "target": "emails",
+          "file": "sample-nest-service/src/notifications/notifications.service.ts",
+          "line": 15
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": []
+    },
+    "cron:cron expireStaleOrders (every 60000 ms)": {
+      "id": "cron:cron expireStaleOrders (every 60000 ms)",
+      "kind": "cron",
+      "label": "cron expireStaleOrders (every 60000 ms)",
+      "readOnly": false,
+      "file": "sample-nest-service/src/jobs/jobs.ts",
+      "line": 22,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 84
+        },
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 87
+        },
+        {
+          "kind": "db.write",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 32
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": []
+    },
+    "queue:queue emails": {
+      "id": "queue:queue emails",
+      "kind": "queue",
+      "label": "queue emails",
+      "readOnly": false,
+      "file": "sample-nest-service/src/notifications/notifications.service.ts",
+      "line": 38,
+      "effects": [
+        {
+          "kind": "http",
+          "target": "mail.example.com",
+          "file": "sample-nest-service/src/notifications/notifications.service.ts",
+          "line": 28
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": []
+    },
+    "api:POST /api/orders": {
+      "id": "api:POST /api/orders",
+      "kind": "api",
+      "label": "POST /api/orders",
+      "readOnly": false,
+      "file": "sample-nest-service/src/orders/orders.controller.ts",
+      "line": 12,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 32
+        },
+        {
+          "kind": "kafka",
+          "target": "orders.held",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 34
+        },
+        {
+          "kind": "kafka",
+          "target": "orders.created",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 37
+        },
+        {
+          "kind": "event",
+          "target": "order.created",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 38
+        },
+        {
+          "kind": "db.read",
+          "target": "products",
+          "file": "sample-nest-service/src/pricing/pricing.service.ts",
+          "line": 42
+        },
+        {
+          "kind": "http",
+          "target": "tax-api.internal",
+          "file": "sample-nest-service/src/pricing/pricing.service.ts",
+          "line": 29
+        },
+        {
+          "kind": "http",
+          "target": "risk.example.com",
+          "file": "sample-nest-service/src/fraud/fraud.service.ts",
+          "line": 17
+        },
+        {
+          "kind": "db.read",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 24
+        },
+        {
+          "kind": "db.write",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 26
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "kafka",
+          "target": "orders.held",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 34
+        },
+        {
+          "kind": "http",
+          "target": "risk.example.com",
+          "file": "sample-nest-service/src/fraud/fraud.service.ts",
+          "line": 17
+        }
+      ],
+      "effectsRemoved": []
+    },
+    "api:GET /api/orders/:id": {
+      "id": "api:GET /api/orders/:id",
+      "kind": "api",
+      "label": "GET /api/orders/:id",
+      "readOnly": true,
+      "file": "sample-nest-service/src/orders/orders.controller.ts",
+      "line": 17,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 54
+        },
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 56
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 56
+        }
+      ],
+      "effectsRemoved": []
+    },
+    "api:GET /api/orders": {
+      "id": "api:GET /api/orders",
+      "kind": "api",
+      "label": "GET /api/orders",
+      "readOnly": true,
+      "file": "sample-nest-service/src/orders/orders.controller.ts",
+      "line": 22,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 61
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": []
+    },
+    "api:POST /api/orders/:id/cancel": {
+      "id": "api:POST /api/orders/:id/cancel",
+      "kind": "api",
+      "label": "POST /api/orders/:id/cancel",
+      "readOnly": false,
+      "file": "sample-nest-service/src/orders/orders.controller.ts",
+      "line": 27,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 54
+        },
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 56
+        },
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 68
+        },
+        {
+          "kind": "kafka",
+          "target": "orders.cancelled",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 69
+        },
+        {
+          "kind": "http",
+          "target": "api.payments.example",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 53
+        },
+        {
+          "kind": "db.write",
+          "target": "payments",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 54
+        },
+        {
+          "kind": "db.write",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 32
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 56
+        }
+      ],
+      "effectsRemoved": []
+    },
+    "api:POST /api/orders/:id/release": {
+      "id": "api:POST /api/orders/:id/release",
+      "kind": "api",
+      "label": "POST /api/orders/:id/release",
+      "readOnly": false,
+      "file": "sample-nest-service/src/orders/orders.controller.ts",
+      "line": 32,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 54
+        },
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 56
+        },
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 47
+        },
+        {
+          "kind": "kafka",
+          "target": "orders.created",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 48
+        },
+        {
+          "kind": "event",
+          "target": "order.created",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 49
+        },
+        {
+          "kind": "db.read",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 24
+        },
+        {
+          "kind": "db.write",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 26
+        }
+      ],
+      "change": "added",
+      "containsChanges": true,
+      "changes": [
+        {
+          "name": "POST /api/orders/:id/release",
+          "role": "handler",
+          "file": "sample-nest-service/src/orders/orders.controller.ts",
+          "line": 32,
+          "status": "added",
+          "added": 4,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "@Post(':id/release')",
+              "b": 32
+            },
+            {
+              "t": "+",
+              "text": "release(@Param('id') id: string): Promise<Order> {",
+              "b": 33
+            },
+            {
+              "t": "+",
+              "text": "  return this.orders.release(id);",
+              "b": 34
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 35
+            }
+          ]
+        }
+      ],
+      "effectsAdded": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 54
+        },
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 56
+        },
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 47
+        },
+        {
+          "kind": "kafka",
+          "target": "orders.created",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 48
+        },
+        {
+          "kind": "event",
+          "target": "order.created",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 49
+        },
+        {
+          "kind": "db.read",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 24
+        },
+        {
+          "kind": "db.write",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 26
+        }
+      ],
+      "effectsRemoved": []
+    },
+    "consumer:topic payments.settled": {
+      "id": "consumer:topic payments.settled",
+      "kind": "consumer",
+      "label": "topic payments.settled",
+      "readOnly": false,
+      "file": "sample-nest-service/src/orders/orders.controller.ts",
+      "line": 43,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 74
+        },
+        {
+          "kind": "event",
+          "target": "order.paid",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 75
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": []
+    },
+    "consumer:topic shipments.dispatched": {
+      "id": "consumer:topic shipments.dispatched",
+      "kind": "consumer",
+      "label": "topic shipments.dispatched",
+      "readOnly": false,
+      "file": "sample-nest-service/src/orders/orders.controller.ts",
+      "line": 48,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 79
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": []
+    },
+    "grpc:gRPC OrderService/GetOrder": {
+      "id": "grpc:gRPC OrderService/GetOrder",
+      "kind": "grpc",
+      "label": "gRPC OrderService/GetOrder",
+      "readOnly": true,
+      "file": "sample-nest-service/src/orders/orders.controller.ts",
+      "line": 53,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 54
+        },
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 56
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 56
+        }
+      ],
+      "effectsRemoved": []
+    },
+    "api:POST /api/payments/webhook": {
+      "id": "api:POST /api/payments/webhook",
+      "kind": "api",
+      "label": "POST /api/payments/webhook",
+      "readOnly": false,
+      "file": "sample-nest-service/src/payments/payments.controller.ts",
+      "line": 11,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "payments",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 47
+        },
+        {
+          "kind": "queue",
+          "target": "receipts",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 48
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [],
+      "effectsRemoved": []
+    },
+    "api:GET /api/payments/:orderId": {
+      "id": "api:GET /api/payments/:orderId",
+      "kind": "api",
+      "label": "GET /api/payments/:orderId",
+      "readOnly": true,
+      "file": "sample-nest-service/src/payments/payments.controller.ts",
+      "line": 16,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "payments",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 42
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": []
+    },
+    "queue:queue receipts": {
+      "id": "queue:queue receipts",
+      "kind": "queue",
+      "label": "queue receipts",
+      "readOnly": false,
+      "file": "sample-nest-service/src/payments/payments.controller.ts",
+      "line": 29,
+      "effects": [
+        {
+          "kind": "queue",
+          "target": "emails",
+          "file": "sample-nest-service/src/notifications/notifications.service.ts",
+          "line": 19
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": []
+    }
+  },
+  "scopes": {
+    "FraudService.score": {
+      "id": "FraudService.score",
+      "params": [
+        {
+          "name": "input",
+          "type": "RiskInput"
+        }
+      ],
+      "returns": {
+        "type": "number"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "http",
+            "target": "risk.example.com",
+            "file": "sample-nest-service/src/fraud/fraud.service.ts",
+            "line": 17
+          },
+          "line": 17,
+          "file": "sample-nest-service/src/fraud/fraud.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "input"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "res"
+        }
+      ]
+    },
+    "InventoryService.reserve": {
+      "id": "InventoryService.reserve",
+      "params": [
+        {
+          "name": "lines",
+          "type": "OrderLine[]"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "stock_items",
+            "file": "sample-nest-service/src/inventory/inventory.service.ts",
+            "line": 24
+          },
+          "line": 24,
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "loop": true
+        },
+        {
+          "id": "s2",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "stock_items",
+            "file": "sample-nest-service/src/inventory/inventory.service.ts",
+            "line": 26
+          },
+          "line": 26,
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "condition": "unless (!item || item.available < line.quantity)",
+          "loop": true
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "line.productId"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "line.productId, line.quantity"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "item"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "InventoryService.release": {
+      "id": "InventoryService.release",
+      "params": [
+        {
+          "name": "lines",
+          "type": "OrderLine[]"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "stock_items",
+            "file": "sample-nest-service/src/inventory/inventory.service.ts",
+            "line": 32
+          },
+          "line": 32,
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "loop": true
+        },
+        {
+          "id": "s2",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "stock_items",
+            "file": "sample-nest-service/src/inventory/inventory.service.ts",
+            "line": 33
+          },
+          "line": 33,
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "loop": true
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "line.productId, line.quantity"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "line.productId, line.quantity"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "NotificationsService.orderConfirmation": {
+      "id": "NotificationsService.orderConfirmation",
+      "params": [
+        {
+          "name": "order",
+          "type": "Order"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "queue",
+            "target": "emails",
+            "file": "sample-nest-service/src/notifications/notifications.service.ts",
+            "line": 15
+          },
+          "line": 15,
+          "file": "sample-nest-service/src/notifications/notifications.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "order.customerId, order.id"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "NotificationsService.receipt": {
+      "id": "NotificationsService.receipt",
+      "params": [
+        {
+          "name": "paymentId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "queue",
+            "target": "emails",
+            "file": "sample-nest-service/src/notifications/notifications.service.ts",
+            "line": 19
+          },
+          "line": 19,
+          "file": "sample-nest-service/src/notifications/notifications.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "paymentId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "MailClient.send": {
+      "id": "MailClient.send",
+      "params": [
+        {
+          "name": "template",
+          "type": "string"
+        },
+        {
+          "name": "data",
+          "type": "unknown"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "http",
+            "target": "mail.example.com",
+            "file": "sample-nest-service/src/notifications/notifications.service.ts",
+            "line": 28
+          },
+          "line": 28,
+          "file": "sample-nest-service/src/notifications/notifications.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "template, data"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "OrdersService.create": {
+      "id": "OrdersService.create",
+      "params": [
+        {
+          "name": "dto",
+          "type": "CreateOrderDto"
+        }
+      ],
+      "returns": {
+        "type": "Order",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+          },
+          {
+            "name": "lines",
+            "type": "OrderLine[]"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "createdAt",
+            "type": "Date"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "PricingService.quote",
+          "line": 28,
+          "file": "sample-nest-service/src/orders/orders.service.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "FraudService.score",
+          "line": 29,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "delta": "added"
+        },
+        {
+          "id": "s3",
+          "kind": "call",
+          "target": "InventoryService.reserve",
+          "line": 31,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "condition": "if (!held)",
+          "conditionBefore": ""
+        },
+        {
+          "id": "s4",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "orders",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 32
+          },
+          "line": 32,
+          "file": "sample-nest-service/src/orders/orders.service.ts"
+        },
+        {
+          "id": "s5",
+          "kind": "effect",
+          "effect": {
+            "kind": "kafka",
+            "target": "orders.held",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 34
+          },
+          "line": 34,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "condition": "if (held)",
+          "delta": "added"
+        },
+        {
+          "id": "s6",
+          "kind": "effect",
+          "effect": {
+            "kind": "kafka",
+            "target": "orders.created",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 37
+          },
+          "line": 37,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "condition": "unless (held)",
+          "conditionBefore": ""
+        },
+        {
+          "id": "s7",
+          "kind": "effect",
+          "effect": {
+            "kind": "event",
+            "target": "order.created",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 38
+          },
+          "line": 38,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "condition": "unless (held)",
+          "conditionBefore": ""
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "dto.lines, dto.country"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "dto.customerId, dto.country"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "quote"
+        },
+        {
+          "from": "entry",
+          "to": "s3",
+          "kind": "data",
+          "label": "dto.lines"
+        },
+        {
+          "from": "s2",
+          "to": "s3",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "s1",
+          "to": "s3",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "entry",
+          "to": "s4",
+          "kind": "data",
+          "label": "dto"
+        },
+        {
+          "from": "s2",
+          "to": "s4",
+          "kind": "data",
+          "label": "held"
+        },
+        {
+          "from": "s1",
+          "to": "s4",
+          "kind": "data",
+          "label": "held, quote"
+        },
+        {
+          "from": "s4",
+          "to": "s5",
+          "kind": "data",
+          "label": "order"
+        },
+        {
+          "from": "s2",
+          "to": "s5",
+          "kind": "data",
+          "label": "risk"
+        },
+        {
+          "from": "s1",
+          "to": "s5",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "s4",
+          "to": "s6",
+          "kind": "data",
+          "label": "order"
+        },
+        {
+          "from": "s2",
+          "to": "s6",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "s1",
+          "to": "s6",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "s4",
+          "to": "s7",
+          "kind": "data",
+          "label": "order"
+        },
+        {
+          "from": "s2",
+          "to": "s7",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "s1",
+          "to": "s7",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "s4",
+          "to": "exit",
+          "kind": "data",
+          "label": "order"
+        },
+        {
+          "from": "s3",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s5",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s6",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s7",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "OrdersService.release": {
+      "id": "OrdersService.release",
+      "params": [
+        {
+          "name": "id",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Order",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+          },
+          {
+            "name": "lines",
+            "type": "OrderLine[]"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "createdAt",
+            "type": "Date"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "orders",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 54
+          },
+          "line": 54,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "via": "OrdersService.get"
+        },
+        {
+          "id": "s2",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "order_views",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 56
+          },
+          "line": 56,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "condition": "if (order)",
+          "via": "OrdersService.get"
+        },
+        {
+          "id": "s3",
+          "kind": "call",
+          "target": "InventoryService.reserve",
+          "line": 46,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "condition": "unless (order.status !== 'held')"
+        },
+        {
+          "id": "s4",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "orders",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 47
+          },
+          "line": 47,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "condition": "unless (order.status !== 'held')"
+        },
+        {
+          "id": "s5",
+          "kind": "effect",
+          "effect": {
+            "kind": "kafka",
+            "target": "orders.created",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 48
+          },
+          "line": 48,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "condition": "unless (order.status !== 'held')"
+        },
+        {
+          "id": "s6",
+          "kind": "effect",
+          "effect": {
+            "kind": "event",
+            "target": "order.created",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 49
+          },
+          "line": 49,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "condition": "unless (order.status !== 'held')"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "id"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "id"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "s1",
+          "to": "s3",
+          "kind": "data",
+          "label": "order"
+        },
+        {
+          "from": "entry",
+          "to": "s4",
+          "kind": "data",
+          "label": "id"
+        },
+        {
+          "from": "s1",
+          "to": "s4",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "entry",
+          "to": "s5",
+          "kind": "data",
+          "label": "id"
+        },
+        {
+          "from": "s1",
+          "to": "s5",
+          "kind": "data",
+          "label": "order"
+        },
+        {
+          "from": "s1",
+          "to": "s6",
+          "kind": "data",
+          "label": "order"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "order"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s3",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s4",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s5",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s6",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "OrdersService.get": {
+      "id": "OrdersService.get",
+      "params": [
+        {
+          "name": "id",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Order",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+          },
+          {
+            "name": "lines",
+            "type": "OrderLine[]"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "createdAt",
+            "type": "Date"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "orders",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 54
+          },
+          "line": 54,
+          "file": "sample-nest-service/src/orders/orders.service.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "order_views",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 56
+          },
+          "line": 56,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "condition": "if (order)",
+          "delta": "added"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "id"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "id"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "order"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "OrdersService.list": {
+      "id": "OrdersService.list",
+      "params": [
+        {
+          "name": "customerId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Order[]"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "orders",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 61
+          },
+          "line": 61,
+          "file": "sample-nest-service/src/orders/orders.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "customerId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "OrdersService.cancel": {
+      "id": "OrdersService.cancel",
+      "params": [
+        {
+          "name": "id",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Order",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+          },
+          {
+            "name": "lines",
+            "type": "OrderLine[]"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "createdAt",
+            "type": "Date"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "orders",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 54
+          },
+          "line": 54,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "via": "OrdersService.get"
+        },
+        {
+          "id": "s2",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "order_views",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 56
+          },
+          "line": 56,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "condition": "if (order)",
+          "via": "OrdersService.get",
+          "delta": "added"
+        },
+        {
+          "id": "s3",
+          "kind": "call",
+          "target": "PaymentsService.refund",
+          "line": 66,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "condition": "if (order.status === 'paid')"
+        },
+        {
+          "id": "s4",
+          "kind": "call",
+          "target": "InventoryService.release",
+          "line": 67,
+          "file": "sample-nest-service/src/orders/orders.service.ts"
+        },
+        {
+          "id": "s5",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "orders",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 68
+          },
+          "line": 68,
+          "file": "sample-nest-service/src/orders/orders.service.ts"
+        },
+        {
+          "id": "s6",
+          "kind": "effect",
+          "effect": {
+            "kind": "kafka",
+            "target": "orders.cancelled",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 69
+          },
+          "line": 69,
+          "file": "sample-nest-service/src/orders/orders.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "id"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "id"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "s1",
+          "to": "s3",
+          "kind": "data",
+          "label": "order"
+        },
+        {
+          "from": "s1",
+          "to": "s4",
+          "kind": "data",
+          "label": "order"
+        },
+        {
+          "from": "entry",
+          "to": "s5",
+          "kind": "data",
+          "label": "id"
+        },
+        {
+          "from": "entry",
+          "to": "s6",
+          "kind": "data",
+          "label": "id"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "order"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s3",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s4",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s5",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s6",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "OrdersService.markPaid": {
+      "id": "OrdersService.markPaid",
+      "params": [
+        {
+          "name": "orderId",
+          "type": "string"
+        },
+        {
+          "name": "paymentId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "orders",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 74
+          },
+          "line": 74,
+          "file": "sample-nest-service/src/orders/orders.service.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "effect",
+          "effect": {
+            "kind": "event",
+            "target": "order.paid",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 75
+          },
+          "line": 75,
+          "file": "sample-nest-service/src/orders/orders.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "orderId"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "orderId, paymentId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "OrdersService.markShipped": {
+      "id": "OrdersService.markShipped",
+      "params": [
+        {
+          "name": "orderId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "orders",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 79
+          },
+          "line": 79,
+          "file": "sample-nest-service/src/orders/orders.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "orderId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "OrdersService.expirePending": {
+      "id": "OrdersService.expirePending",
+      "params": [
+        {
+          "name": "minutes",
+          "type": "number"
+        }
+      ],
+      "returns": {
+        "type": "number"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "orders",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 84
+          },
+          "line": 84,
+          "file": "sample-nest-service/src/orders/orders.service.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "InventoryService.release",
+          "line": 86,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "loop": true
+        },
+        {
+          "id": "s3",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "orders",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 87
+          },
+          "line": 87,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "loop": true
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "minutes"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "order"
+        },
+        {
+          "from": "s1",
+          "to": "s3",
+          "kind": "data",
+          "label": "order"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "stale"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s3",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "PaymentsService.forOrder": {
+      "id": "PaymentsService.forOrder",
+      "params": [
+        {
+          "name": "orderId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Payment[]"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "payments",
+            "file": "sample-nest-service/src/payments/payments.service.ts",
+            "line": 42
+          },
+          "line": 42,
+          "file": "sample-nest-service/src/payments/payments.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "orderId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "PaymentsService.handleWebhook": {
+      "id": "PaymentsService.handleWebhook",
+      "params": [
+        {
+          "name": "event",
+          "type": "ProviderEvent"
+        }
+      ],
+      "returns": {
+        "type": "Payment",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "orderId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "\"authorized\" | \"succeeded\" | \"failed\" | \"refunded\""
+          },
+          {
+            "name": "amount",
+            "type": "number"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "payments",
+            "file": "sample-nest-service/src/payments/payments.service.ts",
+            "line": 47
+          },
+          "line": 47,
+          "file": "sample-nest-service/src/payments/payments.service.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "effect",
+          "effect": {
+            "kind": "queue",
+            "target": "receipts",
+            "file": "sample-nest-service/src/payments/payments.service.ts",
+            "line": 48
+          },
+          "line": 48,
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "condition": "if (status === 'succeeded')",
+          "conditionBefore": ""
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "event.paymentId, event.orderId, status, event.amount"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "payment"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "payment"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "PaymentsService.refund": {
+      "id": "PaymentsService.refund",
+      "params": [
+        {
+          "name": "order",
+          "type": "Order"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "http",
+            "target": "api.payments.example",
+            "file": "sample-nest-service/src/payments/payments.service.ts",
+            "line": 53
+          },
+          "line": 53,
+          "file": "sample-nest-service/src/payments/payments.service.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "payments",
+            "file": "sample-nest-service/src/payments/payments.service.ts",
+            "line": 54
+          },
+          "line": 54,
+          "file": "sample-nest-service/src/payments/payments.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "order.id, order.total"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "order.id"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "PaymentsService.reconcile": {
+      "id": "PaymentsService.reconcile",
+      "params": [
+        {
+          "name": "day",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "{ missing: string[]; }",
+        "fields": [
+          {
+            "name": "missing",
+            "type": "string[]"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "http",
+            "target": "api.payments.example",
+            "file": "sample-nest-service/src/payments/payments.service.ts",
+            "line": 59
+          },
+          "line": 59,
+          "file": "sample-nest-service/src/payments/payments.service.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "payments",
+            "file": "sample-nest-service/src/payments/payments.service.ts",
+            "line": 60
+          },
+          "line": 60,
+          "file": "sample-nest-service/src/payments/payments.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "day"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "res"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "data",
+          "label": "ours"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "control"
+        }
+      ]
+    },
+    "TaxClient.rateFor": {
+      "id": "TaxClient.rateFor",
+      "params": [
+        {
+          "name": "country",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "number"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "http",
+            "target": "tax-api.internal",
+            "file": "sample-nest-service/src/pricing/pricing.service.ts",
+            "line": 29
+          },
+          "line": 29,
+          "file": "sample-nest-service/src/pricing/pricing.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "country"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "res"
+        }
+      ]
+    },
+    "PricingService.quote": {
+      "id": "PricingService.quote",
+      "params": [
+        {
+          "name": "lines",
+          "type": "OrderLine[]"
+        },
+        {
+          "name": "country",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Quote",
+        "fields": [
+          {
+            "name": "subtotal",
+            "type": "number"
+          },
+          {
+            "name": "tax",
+            "type": "number"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "products",
+            "file": "sample-nest-service/src/pricing/pricing.service.ts",
+            "line": 42
+          },
+          "line": 42,
+          "file": "sample-nest-service/src/pricing/pricing.service.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "TaxClient.rateFor",
+          "line": 44,
+          "file": "sample-nest-service/src/pricing/pricing.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "lines.map"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "country"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "subtotal"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "data",
+          "label": "rate"
+        }
+      ]
+    },
+    "cron:cron payments-reconciliation (0 03 * * *)": {
+      "id": "cron:cron payments-reconciliation (0 03 * * *)",
+      "params": [],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "PaymentsService.reconcile",
+          "line": 18,
+          "file": "sample-nest-service/src/jobs/jobs.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "control"
+        }
+      ]
+    },
+    "event:event order.created": {
+      "id": "event:event order.created",
+      "params": [
+        {
+          "name": "order",
+          "type": "Order"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "NotificationsService.orderConfirmation",
+          "line": 50,
+          "file": "sample-nest-service/src/notifications/notifications.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "order"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "cron:cron expireStaleOrders (every 60000 ms)": {
+      "id": "cron:cron expireStaleOrders (every 60000 ms)",
+      "params": [],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "OrdersService.expirePending",
+          "line": 24,
+          "file": "sample-nest-service/src/jobs/jobs.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "control"
+        }
+      ]
+    },
+    "queue:queue emails": {
+      "id": "queue:queue emails",
+      "params": [
+        {
+          "name": "job",
+          "type": "Job<any, any, string, JobProgress>"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "MailClient.send",
+          "line": 39,
+          "file": "sample-nest-service/src/notifications/notifications.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "job.name, job.data"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "api:POST /api/orders": {
+      "id": "api:POST /api/orders",
+      "params": [
+        {
+          "name": "dto",
+          "type": "CreateOrderDto"
+        }
+      ],
+      "returns": {
+        "type": "Order",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+          },
+          {
+            "name": "lines",
+            "type": "OrderLine[]"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "createdAt",
+            "type": "Date"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "OrdersService.create",
+          "line": 14,
+          "file": "sample-nest-service/src/orders/orders.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "dto"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:GET /api/orders/:id": {
+      "id": "api:GET /api/orders/:id",
+      "params": [
+        {
+          "name": "id",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Order",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+          },
+          {
+            "name": "lines",
+            "type": "OrderLine[]"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "createdAt",
+            "type": "Date"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "OrdersService.get",
+          "line": 19,
+          "file": "sample-nest-service/src/orders/orders.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "id"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:GET /api/orders": {
+      "id": "api:GET /api/orders",
+      "params": [
+        {
+          "name": "customerId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Order[]"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "OrdersService.list",
+          "line": 24,
+          "file": "sample-nest-service/src/orders/orders.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "customerId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:POST /api/orders/:id/cancel": {
+      "id": "api:POST /api/orders/:id/cancel",
+      "params": [
+        {
+          "name": "id",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Order",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+          },
+          {
+            "name": "lines",
+            "type": "OrderLine[]"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "createdAt",
+            "type": "Date"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "OrdersService.cancel",
+          "line": 29,
+          "file": "sample-nest-service/src/orders/orders.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "id"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:POST /api/orders/:id/release": {
+      "id": "api:POST /api/orders/:id/release",
+      "params": [
+        {
+          "name": "id",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Order",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+          },
+          {
+            "name": "lines",
+            "type": "OrderLine[]"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "createdAt",
+            "type": "Date"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "OrdersService.release",
+          "line": 34,
+          "file": "sample-nest-service/src/orders/orders.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "id"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "consumer:topic payments.settled": {
+      "id": "consumer:topic payments.settled",
+      "params": [
+        {
+          "name": "event",
+          "type": "{ orderId: string; paymentId: string; }"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "OrdersService.markPaid",
+          "line": 45,
+          "file": "sample-nest-service/src/orders/orders.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "event.orderId, event.paymentId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "consumer:topic shipments.dispatched": {
+      "id": "consumer:topic shipments.dispatched",
+      "params": [
+        {
+          "name": "event",
+          "type": "{ orderId: string; }"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "OrdersService.markShipped",
+          "line": 50,
+          "file": "sample-nest-service/src/orders/orders.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "event.orderId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "grpc:gRPC OrderService/GetOrder": {
+      "id": "grpc:gRPC OrderService/GetOrder",
+      "params": [
+        {
+          "name": "data",
+          "type": "{ id: string; }"
+        }
+      ],
+      "returns": {
+        "type": "Order",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+          },
+          {
+            "name": "lines",
+            "type": "OrderLine[]"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "createdAt",
+            "type": "Date"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "OrdersService.get",
+          "line": 55,
+          "file": "sample-nest-service/src/orders/orders.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "data.id"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:POST /api/payments/webhook": {
+      "id": "api:POST /api/payments/webhook",
+      "params": [
+        {
+          "name": "event",
+          "type": "ProviderEvent"
+        }
+      ],
+      "returns": {
+        "type": "Payment",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "orderId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "\"authorized\" | \"succeeded\" | \"failed\" | \"refunded\""
+          },
+          {
+            "name": "amount",
+            "type": "number"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "PaymentsService.handleWebhook",
+          "line": 13,
+          "file": "sample-nest-service/src/payments/payments.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "event"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:GET /api/payments/:orderId": {
+      "id": "api:GET /api/payments/:orderId",
+      "params": [
+        {
+          "name": "orderId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Payment[]"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "PaymentsService.forOrder",
+          "line": 18,
+          "file": "sample-nest-service/src/payments/payments.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "orderId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "queue:queue receipts": {
+      "id": "queue:queue receipts",
+      "params": [
+        {
+          "name": "job",
+          "type": "Job<{ paymentId: string; }, any, string, JobProgress>"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "NotificationsService.receipt",
+          "line": 30,
+          "file": "sample-nest-service/src/payments/payments.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "job.data.paymentId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    }
+  },
+  "findings": [
+    {
+      "rule": "read-path-writes",
+      "severity": "warning",
+      "message": "db.write `order_views` runs on 2 read-only entry points: GET /api/orders/:id, gRPC OrderService/GetOrder",
+      "subject": {
+        "type": "entry",
+        "id": "api:GET /api/orders/:id"
+      },
+      "related": [
+        {
+          "type": "entry",
+          "id": "api:GET /api/orders/:id"
+        },
+        {
+          "type": "entry",
+          "id": "grpc:gRPC OrderService/GetOrder"
+        }
+      ],
+      "isNew": true,
+      "hint": "Reads that write break caching, retries and replica routing. Move the write to a command path or make it explicit in the API contract."
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "info",
+      "message": "Fraud.score now performs http `risk.example.com` (new operation)",
+      "subject": {
+        "type": "operation",
+        "id": "FraudService.score"
+      },
+      "isNew": true
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "warning",
+      "message": "Orders.create now performs kafka `orders.held`",
+      "subject": {
+        "type": "operation",
+        "id": "OrdersService.create"
+      },
+      "isNew": true,
+      "hint": "A new write runs on every flow that reaches this module. Check the zoom-out view."
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "info",
+      "message": "Orders.release now performs db.read `orders` (new operation)",
+      "subject": {
+        "type": "operation",
+        "id": "OrdersService.release"
+      },
+      "isNew": true
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "warning",
+      "message": "Orders.release now performs db.write `order_views` (new operation)",
+      "subject": {
+        "type": "operation",
+        "id": "OrdersService.release"
+      },
+      "isNew": true,
+      "hint": "A new write runs on every flow that reaches this module. Check the zoom-out view."
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "warning",
+      "message": "Orders.release now performs db.write `orders` (new operation)",
+      "subject": {
+        "type": "operation",
+        "id": "OrdersService.release"
+      },
+      "isNew": true,
+      "hint": "A new write runs on every flow that reaches this module. Check the zoom-out view."
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "warning",
+      "message": "Orders.release now performs kafka `orders.created` (new operation)",
+      "subject": {
+        "type": "operation",
+        "id": "OrdersService.release"
+      },
+      "isNew": true,
+      "hint": "A new write runs on every flow that reaches this module. Check the zoom-out view."
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "warning",
+      "message": "Orders.release now performs event `order.created` (new operation)",
+      "subject": {
+        "type": "operation",
+        "id": "OrdersService.release"
+      },
+      "isNew": true,
+      "hint": "A new write runs on every flow that reaches this module. Check the zoom-out view."
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "warning",
+      "message": "Orders.get now performs db.write `order_views`",
+      "subject": {
+        "type": "operation",
+        "id": "OrdersService.get"
+      },
+      "isNew": true,
+      "hint": "A new write runs on every flow that reaches this module. Check the zoom-out view."
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "warning",
+      "message": "Orders.cancel now performs db.write `order_views`",
+      "subject": {
+        "type": "operation",
+        "id": "OrdersService.cancel"
+      },
+      "isNew": true,
+      "hint": "A new write runs on every flow that reaches this module. Check the zoom-out view."
+    },
+    {
+      "rule": "unattributed-change",
+      "severity": "info",
+      "message": "2 changed files outside any module: src/app.module.ts, orders/order.entity.ts",
+      "related": [
+        {
+          "type": "file",
+          "id": "sample-nest-service/src/app.module.ts"
+        },
+        {
+          "type": "file",
+          "id": "sample-nest-service/src/orders/order.entity.ts"
+        }
+      ],
+      "isNew": true,
+      "hint": "Wiring, shared types and dev tooling. Contract effects of shared types already show up as output-shape changes on the modules."
+    },
+    {
+      "rule": "undisclosed-effect",
+      "severity": "warning",
+      "message": "Change adds db.write `order_views`, which the PR description never mentions",
+      "isNew": true,
+      "hint": "Either the description is incomplete or the agent added a side effect nobody asked for."
+    }
+  ],
+  "review": {
+    "changedModules": [
+      "FraudService",
+      "OrdersService",
+      "PaymentsService"
+    ],
+    "changedOperations": [
+      "FraudService.score",
+      "OrdersService.create",
+      "OrdersService.release",
+      "OrdersService.get",
+      "OrdersService.cancel",
+      "PaymentsService.handleWebhook"
+    ],
+    "queue": [
+      {
+        "operation": "OrdersService.get",
+        "risk": "high",
+        "reason": "output shape changed; +db.write order_views; 1 step added or removed inside",
+        "reach": 2
+      },
+      {
+        "operation": "FraudService.score",
+        "risk": "high",
+        "reason": "new operation; +http risk.example.com",
+        "reach": 1
+      },
+      {
+        "operation": "OrdersService.create",
+        "risk": "high",
+        "reason": "output shape changed; +kafka orders.held, +http risk.example.com; now calls Fraud.score; 3 guards changed inside",
+        "reach": 1
+      },
+      {
+        "operation": "OrdersService.release",
+        "risk": "high",
+        "reason": "new operation; +db.read orders, +db.write order_views, +db.write orders, +kafka orders.created, +event order.created, +db.read stock_items, +db.write stock_items; now calls Inventory.reserve",
+        "reach": 1
+      },
+      {
+        "operation": "OrdersService.cancel",
+        "risk": "high",
+        "reason": "output shape changed; +db.write order_views; 1 step added or removed inside",
+        "reach": 1
+      },
+      {
+        "operation": "PaymentsService.handleWebhook",
+        "risk": "medium",
+        "reason": "1 guard changed inside",
+        "reach": 1
+      }
+    ],
+    "reviewers": [
+      "team-checkout",
+      "team-payments"
+    ],
+    "stats": {
+      "files": 7,
+      "linesAdded": 78,
+      "linesRemoved": 8,
+      "contractChanges": 5,
+      "entryPointsAffected": 6
+    }
+  }
+}

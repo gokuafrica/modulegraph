@@ -1,18 +1,19 @@
-/** Regenerates the demo analyses shown in the UI from the sample service's real git history. */
+/** Regenerates the demo analyses shown in the UI from the sample services' real git history. */
 import { execFileSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const cli = resolve(here, 'cli.ts');
-const project = resolve(here, '../../sample-service');
-// Everything modulegraph needs to know about the service lives outside it.
+const identity = resolve(here, '../../sample-service');
+const orders = resolve(here, '../../sample-nest-service');
+// Everything modulegraph needs to know about a service lives outside it.
 const profile = resolve(here, '../../configs/identity-profile-service');
 const config = resolve(profile, 'modulegraph.config.json');
 const scenario = resolve(profile, 'scenario.ts');
 
-const run = (args: string[]) =>
-  execFileSync(process.execPath, ['--import', 'tsx', cli, '--project', project, '--config', config, ...args], { stdio: 'inherit' });
+const analyze = (args: string[]) => execFileSync(process.execPath, ['--import', 'tsx', cli, ...args], { stdio: 'inherit' });
+const run = (args: string[]) => analyze(['--project', identity, '--config', config, ...args]);
 
 run(['--snapshot', '--examples', scenario, '--name', 'snapshot-main', '--title', 'Snapshot: identity-profile-service (main)']);
 run([
@@ -40,3 +41,8 @@ for (const [head, title, intent] of [
 ]) {
   run(['--head', head, '--base', 'main', '--lazy', '--examples', scenario, '--name', `live-${head.split('/').pop()}`, '--title', title, '--intent', intent]);
 }
+
+// The NestJS service: no platform rules in its profile; the framework adapters find routes, handlers and effects.
+// Its intent comes from the branch's commit message, the way an agent would run it.
+analyze(['--project', orders, '--head', 'feature/order-fraud-hold', '--base', 'main', '--name', 'demo-order-fraud-hold', '--title', 'Orders (NestJS): hold high-risk orders for fraud review']);
+analyze(['--project', orders, '--head', 'feature/order-fraud-hold', '--base', 'main', '--lazy', '--name', 'live-order-fraud-hold', '--title', 'Live (lazy, NestJS): hold high-risk orders for fraud review']);

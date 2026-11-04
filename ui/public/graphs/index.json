@@ -1,10 +1,38 @@
 [
   {
+    "id": "live-order-fraud-hold",
+    "title": "Live (lazy, NestJS): hold high-risk orders for fraud review",
+    "mode": "branch",
+    "lazy": true,
+    "generatedAt": "2026-11-04T08:42:29.997Z",
+    "stats": {
+      "files": 7,
+      "linesAdded": 78,
+      "linesRemoved": 8,
+      "contractChanges": 5,
+      "entryPointsAffected": 6
+    }
+  },
+  {
+    "id": "demo-order-fraud-hold",
+    "title": "Orders (NestJS): hold high-risk orders for fraud review",
+    "mode": "branch",
+    "lazy": false,
+    "generatedAt": "2026-11-04T08:41:53.949Z",
+    "stats": {
+      "files": 7,
+      "linesAdded": 78,
+      "linesRemoved": 8,
+      "contractChanges": 5,
+      "entryPointsAffected": 6
+    }
+  },
+  {
     "id": "live-kyc-risk-tiers",
     "title": "Live (lazy): KYC risk tiers, manual review, async rescreen",
     "mode": "branch",
     "lazy": true,
-    "generatedAt": "2026-11-04T01:43:21.312Z",
+    "generatedAt": "2026-11-04T08:41:47.251Z",
     "stats": {
       "files": 5,
       "linesAdded": 74,
@@ -18,7 +46,7 @@
     "title": "Live (lazy): BirthInfo consented data wins over documents",
     "mode": "branch",
     "lazy": true,
-    "generatedAt": "2026-11-04T01:43:15.453Z",
+    "generatedAt": "2026-11-04T08:41:40.975Z",
     "stats": {
       "files": 7,
       "linesAdded": 57,
@@ -32,7 +60,7 @@
     "title": "KYC: risk tiers, manual review, async rescreen (multi-file)",
     "mode": "branch",
     "lazy": false,
-    "generatedAt": "2026-11-04T01:43:09.606Z",
+    "generatedAt": "2026-11-04T08:41:34.536Z",
     "stats": {
       "files": 5,
       "linesAdded": 74,
@@ -46,7 +74,7 @@
     "title": "BirthInfo: consented data wins over documents",
     "mode": "branch",
     "lazy": false,
-    "generatedAt": "2026-11-04T01:43:04.152Z",
+    "generatedAt": "2026-11-04T08:41:28.492Z",
     "stats": {
       "files": 7,
       "linesAdded": 57,
@@ -60,7 +88,7 @@
     "title": "Snapshot: identity-profile-service (main)",
     "mode": "snapshot",
     "lazy": false,
-    "generatedAt": "2026-11-04T01:42:58.851Z",
+    "generatedAt": "2026-11-04T08:41:22.667Z",
     "stats": {
       "files": 0,
       "linesAdded": 0,

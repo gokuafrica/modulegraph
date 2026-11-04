@@ -1119,18 +1119,18 @@ function guardOf(call: Node, fn: Node): { condition?: string; loop?: boolean; gu
     if (Node.isIfStatement(node)) {
       const cond = short(node.getExpression().getText(), 40);
       if (child === node.getThenStatement()) conditions.push(`if (${cond})`);
-      else if (child === node.getElseStatement()) conditions.push(`unless (${cond})`);
+      else if (child === node.getElseStatement()) conditions.push(unless(cond));
       if (child !== node.getExpression()) guardNodes.push(node.getExpression());
     } else if (Node.isConditionalExpression(node)) {
       if (child !== node.getCondition()) guardNodes.push(node.getCondition());
       const cond = short(node.getCondition().getText(), 40);
       if (child === node.getWhenTrue()) conditions.push(`if (${cond})`);
-      else if (child === node.getWhenFalse()) conditions.push(`unless (${cond})`);
+      else if (child === node.getWhenFalse()) conditions.push(unless(cond));
     } else if (Node.isBinaryExpression(node) && child === node.getRight()) {
       const op = node.getOperatorToken().getKind();
       const left = short(node.getLeft().getText(), 40);
       if (op === SyntaxKind.QuestionQuestionToken) conditions.push(`if ${left} is missing`);
-      else if (op === SyntaxKind.BarBarToken) conditions.push(`unless (${left})`);
+      else if (op === SyntaxKind.BarBarToken) conditions.push(unless(left));
       else if (op === SyntaxKind.AmpersandAmpersandToken) conditions.push(`if (${left})`);
     } else if (
       Node.isForOfStatement(node) || Node.isForInStatement(node) || Node.isForStatement(node) ||
@@ -1146,7 +1146,7 @@ function guardOf(call: Node, fn: Node): { condition?: string; loop?: boolean; gu
       for (const stmt of node.getStatements()) {
         if (stmt === child) break;
         if (Node.isIfStatement(stmt) && !stmt.getElseStatement() && exits(stmt.getThenStatement())) {
-          conditions.push(`unless (${short(stmt.getExpression().getText(), 40)})`);
+          conditions.push(unless(short(stmt.getExpression().getText(), 40)));
           guardNodes.push(stmt.getExpression());
         }
       }
@@ -1155,6 +1155,12 @@ function guardOf(call: Node, fn: Node): { condition?: string; loop?: boolean; gu
     node = node.getParent();
   }
   return { condition: conditions.reverse().join(' and ') || undefined, loop: loop || undefined, guardNodes };
+}
+
+/** `unless (x)`, but `if (x)` for `unless (!x)`: an early `if (!order) throw` means "only when order". */
+function unless(cond: string): string {
+  const m = /^!([\w$.]+|\([^()]*\))$/.exec(cond);
+  return m ? `if (${m[1].replace(/^\((.*)\)$/, '$1')})` : `unless (${cond})`;
 }
 
 /** The call expression a reference names: `x.method(…)` or `fn(…)`. */

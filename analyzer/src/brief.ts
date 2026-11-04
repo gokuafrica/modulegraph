@@ -74,7 +74,11 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://localhos
       const files = new Set(op.changes.map((c) => c.file)).size;
       out.push(`- **Code**: ${op.changes.length} function${op.changes.length > 1 ? 's' : ''} in ${files} file${files > 1 ? 's' : ''}: ${op.changes.map((c) => `\`${c.name}\` (${c.status}, +${c.added}/−${c.removed}, ${c.file}:${c.line})`).join('; ')}`);
     }
-    if (d?.implementationOnly) out.push('- Implementation only: same inputs, outputs and side effects.');
+    if (d?.implementationOnly) {
+      out.push(behaviour.length
+        ? '- Same inputs, outputs and side effects, but **behaviour changed inside** (above): check who relied on the old behaviour.'
+        : '- Implementation only: same inputs, outputs and side effects.');
+    }
     out.push(`- **Reached from** ${entries.length}${partial && !op.lazy?.callersLoaded ? '+' : ''} entry point${entries.length === 1 ? '' : 's'}: ${list(entries.map((id) => `\`${label(g, id)}\``), 8)}`);
     out.push('');
   });

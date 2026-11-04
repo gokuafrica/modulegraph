@@ -1,8 +1,8 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T01:43:21.312Z",
-  "generator": "modulegraph-analyzer/0.2 (ts-morph, lazy)",
+  "generatedAt": "2026-11-04T08:41:47.251Z",
+  "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
     "repo": ".",
@@ -53,6 +53,11 @@
         ]
       }
     ],
+    "analyzer": {
+      "id": "typescript",
+      "language": "TypeScript",
+      "frameworks": []
+    },
     "intent": "KYC: add risk tiers from sanctions score, birth country and nationality; send high-risk users to manual review (outbox kyc.manual_review_requested); make the nightly rescreen asynchronous via kyc.recheck_requested.",
     "intentSource": "flag",
     "examples": {
@@ -807,7 +812,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T01:43:21.190Z"
+            "checkedAt": "2026-11-04T08:41:47.129Z"
           }
         },
         {
@@ -818,7 +823,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-04T01:43:21.192Z"
+            "checkedAt": "2026-11-04T08:41:47.130Z"
           }
         }
       ],
@@ -914,7 +919,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T01:43:21.187Z"
+            "extractedAt": "2026-11-04T08:41:47.127Z"
           }
         },
         {
@@ -931,7 +936,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T01:43:21.191Z"
+            "extractedAt": "2026-11-04T08:41:47.130Z"
           }
         }
       ],
@@ -1163,7 +1168,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T01:43:21.187Z"
+              "extractedAt": "2026-11-04T08:41:47.127Z"
             }
           },
           "output": {
@@ -1183,7 +1188,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T01:43:21.191Z"
+              "extractedAt": "2026-11-04T08:41:47.130Z"
             }
           },
           "output": {
@@ -1242,7 +1247,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T01:43:21.187Z"
+              "extractedAt": "2026-11-04T08:41:47.127Z"
             }
           },
           "output": {
@@ -1262,7 +1267,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T01:43:21.191Z"
+              "extractedAt": "2026-11-04T08:41:47.130Z"
             }
           },
           "output": {
@@ -1339,7 +1344,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T01:43:21.187Z"
+              "extractedAt": "2026-11-04T08:41:47.127Z"
             }
           },
           "output": {
@@ -1360,7 +1365,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T01:43:21.191Z"
+              "extractedAt": "2026-11-04T08:41:47.130Z"
             }
           },
           "output": {
@@ -1917,7 +1922,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T01:43:21.190Z"
+            "checkedAt": "2026-11-04T08:41:47.129Z"
           }
         },
         {
@@ -2262,416 +2267,6 @@
     }
   },
   "entryPoints": {
-    "api:GET /admin/v1/users/:userId/identity-review": {
-      "id": "api:GET /admin/v1/users/:userId/identity-review",
-      "kind": "api",
-      "label": "GET /admin/v1/users/:userId/identity-review",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/http/adminRoutes.ts",
-      "line": 5,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "api:GET /v1/kyc/:userId/status": {
-      "id": "api:GET /v1/kyc/:userId/status",
-      "kind": "api",
-      "label": "GET /v1/kyc/:userId/status",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
-      "line": 6,
-      "effects": [
-        {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        }
-      ],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "reached"
-    },
-    "api:GET /v1/tax/:userId/residency": {
-      "id": "api:GET /v1/tax/:userId/residency",
-      "kind": "api",
-      "label": "GET /v1/tax/:userId/residency",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
-      "line": 8,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "api:GET /v1/travel/:userId/visa-eligibility": {
-      "id": "api:GET /v1/travel/:userId/visa-eligibility",
-      "kind": "api",
-      "label": "GET /v1/travel/:userId/visa-eligibility",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
-      "line": 10,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "api:GET /v1/users/:userId/profile": {
-      "id": "api:GET /v1/users/:userId/profile",
-      "kind": "api",
-      "label": "GET /v1/users/:userId/profile",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
-      "line": 5,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "api:GET /v1/users/:userId/profile/summary": {
-      "id": "api:GET /v1/users/:userId/profile/summary",
-      "kind": "api",
-      "label": "GET /v1/users/:userId/profile/summary",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
-      "line": 6,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "api:GET /v1/users/:userId/nationality": {
-      "id": "api:GET /v1/users/:userId/nationality",
-      "kind": "api",
-      "label": "GET /v1/users/:userId/nationality",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
-      "line": 7,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "api:GET /v1/users/:userId/birth-info": {
-      "id": "api:GET /v1/users/:userId/birth-info",
-      "kind": "api",
-      "label": "GET /v1/users/:userId/birth-info",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
-      "line": 8,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "api:POST /admin/v1/users/:userId/kyc-override": {
-      "id": "api:POST /admin/v1/users/:userId/kyc-override",
-      "kind": "api",
-      "label": "POST /admin/v1/users/:userId/kyc-override",
-      "readOnly": false,
-      "file": "sample-service/src/entrypoints/http/adminRoutes.ts",
-      "line": 6,
-      "effects": [
-        {
-          "kind": "db.write",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 59
-        },
-        {
-          "kind": "outbox",
-          "target": "kyc.overridden",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 60
-        }
-      ],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "reached"
-    },
-    "api:POST /v1/kyc/:userId/check": {
-      "id": "api:POST /v1/kyc/:userId/check",
-      "kind": "api",
-      "label": "POST /v1/kyc/:userId/check",
-      "readOnly": false,
-      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
-      "line": 5,
-      "effects": [
-        {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
-          "kind": "db.write",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 73
-        },
-        {
-          "kind": "outbox",
-          "target": "kyc.manual_review_requested",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 46
-        },
-        {
-          "kind": "outbox",
-          "target": "kyc.completed",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 48
-        },
-        {
-          "kind": "db.read",
-          "target": "user_documents",
-          "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 11
-        },
-        {
-          "kind": "http",
-          "target": "document-ai",
-          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 12
-        },
-        {
-          "kind": "db.read",
-          "target": "country_codes",
-          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 17
-        },
-        {
-          "kind": "http",
-          "target": "sanctions-api",
-          "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
-          "line": 20
-        }
-      ],
-      "change": "unchanged",
-      "containsChanges": true,
-      "effectsAdded": [
-        {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
-          "kind": "outbox",
-          "target": "kyc.manual_review_requested",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 46
-        }
-      ],
-      "effectsRemoved": [],
-      "analysis": "reached"
-    },
-    "api:POST /v1/onboarding/:userId/complete": {
-      "id": "api:POST /v1/onboarding/:userId/complete",
-      "kind": "api",
-      "label": "POST /v1/onboarding/:userId/complete",
-      "readOnly": false,
-      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
-      "line": 7,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "api:POST /v1/tax/:userId/declarations": {
-      "id": "api:POST /v1/tax/:userId/declarations",
-      "kind": "api",
-      "label": "POST /v1/tax/:userId/declarations",
-      "readOnly": false,
-      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
-      "line": 9,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "api:POST /v1/travel/:userId/passport-prefill": {
-      "id": "api:POST /v1/travel/:userId/passport-prefill",
-      "kind": "api",
-      "label": "POST /v1/travel/:userId/passport-prefill",
-      "readOnly": false,
-      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
-      "line": 11,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "api:POST /v1/users/:userId/export": {
-      "id": "api:POST /v1/users/:userId/export",
-      "kind": "api",
-      "label": "POST /v1/users/:userId/export",
-      "readOnly": false,
-      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
-      "line": 9,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "api:DELETE /v1/users/:userId": {
-      "id": "api:DELETE /v1/users/:userId",
-      "kind": "api",
-      "label": "DELETE /v1/users/:userId",
-      "readOnly": false,
-      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
-      "line": 10,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "grpc:gRPC identity.v1.ProfileService/GetProfile": {
-      "id": "grpc:gRPC identity.v1.ProfileService/GetProfile",
-      "kind": "grpc",
-      "label": "gRPC identity.v1.ProfileService/GetProfile",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/grpc.ts",
-      "line": 5,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "grpc:gRPC identity.v1.ProfileService/GetBirthInfo": {
-      "id": "grpc:gRPC identity.v1.ProfileService/GetBirthInfo",
-      "kind": "grpc",
-      "label": "gRPC identity.v1.ProfileService/GetBirthInfo",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/grpc.ts",
-      "line": 6,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "grpc:gRPC kyc.v1.KycService/RunCheck": {
-      "id": "grpc:gRPC kyc.v1.KycService/RunCheck",
-      "kind": "grpc",
-      "label": "gRPC kyc.v1.KycService/RunCheck",
-      "readOnly": false,
-      "file": "sample-service/src/entrypoints/grpc.ts",
-      "line": 7,
-      "effects": [
-        {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
-          "kind": "db.write",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 73
-        },
-        {
-          "kind": "outbox",
-          "target": "kyc.manual_review_requested",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 46
-        },
-        {
-          "kind": "outbox",
-          "target": "kyc.completed",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 48
-        },
-        {
-          "kind": "db.read",
-          "target": "user_documents",
-          "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 11
-        },
-        {
-          "kind": "http",
-          "target": "document-ai",
-          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 12
-        },
-        {
-          "kind": "db.read",
-          "target": "country_codes",
-          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
-          "line": 17
-        },
-        {
-          "kind": "http",
-          "target": "sanctions-api",
-          "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
-          "line": 20
-        }
-      ],
-      "change": "unchanged",
-      "containsChanges": true,
-      "effectsAdded": [
-        {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
-          "kind": "outbox",
-          "target": "kyc.manual_review_requested",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 46
-        }
-      ],
-      "effectsRemoved": [],
-      "analysis": "reached"
-    },
-    "grpc:gRPC travel.v1.TravelService/CheckVisa": {
-      "id": "grpc:gRPC travel.v1.TravelService/CheckVisa",
-      "kind": "grpc",
-      "label": "gRPC travel.v1.TravelService/CheckVisa",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/grpc.ts",
-      "line": 8,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
     "consumer:topic user.documents.uploaded": {
       "id": "consumer:topic user.documents.uploaded",
       "kind": "consumer",
@@ -3036,6 +2631,416 @@
       "readOnly": false,
       "file": "sample-service/src/entrypoints/cron.ts",
       "line": 13,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "grpc:gRPC identity.v1.ProfileService/GetProfile": {
+      "id": "grpc:gRPC identity.v1.ProfileService/GetProfile",
+      "kind": "grpc",
+      "label": "gRPC identity.v1.ProfileService/GetProfile",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/grpc.ts",
+      "line": 5,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "grpc:gRPC identity.v1.ProfileService/GetBirthInfo": {
+      "id": "grpc:gRPC identity.v1.ProfileService/GetBirthInfo",
+      "kind": "grpc",
+      "label": "gRPC identity.v1.ProfileService/GetBirthInfo",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/grpc.ts",
+      "line": 6,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "grpc:gRPC kyc.v1.KycService/RunCheck": {
+      "id": "grpc:gRPC kyc.v1.KycService/RunCheck",
+      "kind": "grpc",
+      "label": "gRPC kyc.v1.KycService/RunCheck",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/grpc.ts",
+      "line": 7,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
+        },
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 73
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.manual_review_requested",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 46
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.completed",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 48
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 11
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 12
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 17
+        },
+        {
+          "kind": "http",
+          "target": "sanctions-api",
+          "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
+          "line": 20
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.manual_review_requested",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 46
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "reached"
+    },
+    "grpc:gRPC travel.v1.TravelService/CheckVisa": {
+      "id": "grpc:gRPC travel.v1.TravelService/CheckVisa",
+      "kind": "grpc",
+      "label": "gRPC travel.v1.TravelService/CheckVisa",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/grpc.ts",
+      "line": 8,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:GET /admin/v1/users/:userId/identity-review": {
+      "id": "api:GET /admin/v1/users/:userId/identity-review",
+      "kind": "api",
+      "label": "GET /admin/v1/users/:userId/identity-review",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/adminRoutes.ts",
+      "line": 5,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:POST /admin/v1/users/:userId/kyc-override": {
+      "id": "api:POST /admin/v1/users/:userId/kyc-override",
+      "kind": "api",
+      "label": "POST /admin/v1/users/:userId/kyc-override",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/adminRoutes.ts",
+      "line": 6,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 59
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.overridden",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 60
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "reached"
+    },
+    "api:POST /v1/kyc/:userId/check": {
+      "id": "api:POST /v1/kyc/:userId/check",
+      "kind": "api",
+      "label": "POST /v1/kyc/:userId/check",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 5,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
+        },
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 73
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.manual_review_requested",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 46
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.completed",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 48
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 11
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 12
+        },
+        {
+          "kind": "db.read",
+          "target": "country_codes",
+          "file": "sample-service/src/modules/nationality/NationalityModule.ts",
+          "line": 17
+        },
+        {
+          "kind": "http",
+          "target": "sanctions-api",
+          "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
+          "line": 20
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.manual_review_requested",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 46
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "reached"
+    },
+    "api:GET /v1/kyc/:userId/status": {
+      "id": "api:GET /v1/kyc/:userId/status",
+      "kind": "api",
+      "label": "GET /v1/kyc/:userId/status",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 6,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "reached"
+    },
+    "api:POST /v1/onboarding/:userId/complete": {
+      "id": "api:POST /v1/onboarding/:userId/complete",
+      "kind": "api",
+      "label": "POST /v1/onboarding/:userId/complete",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 7,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:GET /v1/tax/:userId/residency": {
+      "id": "api:GET /v1/tax/:userId/residency",
+      "kind": "api",
+      "label": "GET /v1/tax/:userId/residency",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 8,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:POST /v1/tax/:userId/declarations": {
+      "id": "api:POST /v1/tax/:userId/declarations",
+      "kind": "api",
+      "label": "POST /v1/tax/:userId/declarations",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 9,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:GET /v1/travel/:userId/visa-eligibility": {
+      "id": "api:GET /v1/travel/:userId/visa-eligibility",
+      "kind": "api",
+      "label": "GET /v1/travel/:userId/visa-eligibility",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 10,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:POST /v1/travel/:userId/passport-prefill": {
+      "id": "api:POST /v1/travel/:userId/passport-prefill",
+      "kind": "api",
+      "label": "POST /v1/travel/:userId/passport-prefill",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 11,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:GET /v1/users/:userId/profile": {
+      "id": "api:GET /v1/users/:userId/profile",
+      "kind": "api",
+      "label": "GET /v1/users/:userId/profile",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 5,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:GET /v1/users/:userId/profile/summary": {
+      "id": "api:GET /v1/users/:userId/profile/summary",
+      "kind": "api",
+      "label": "GET /v1/users/:userId/profile/summary",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 6,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:GET /v1/users/:userId/nationality": {
+      "id": "api:GET /v1/users/:userId/nationality",
+      "kind": "api",
+      "label": "GET /v1/users/:userId/nationality",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 7,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:GET /v1/users/:userId/birth-info": {
+      "id": "api:GET /v1/users/:userId/birth-info",
+      "kind": "api",
+      "label": "GET /v1/users/:userId/birth-info",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 8,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:POST /v1/users/:userId/export": {
+      "id": "api:POST /v1/users/:userId/export",
+      "kind": "api",
+      "label": "POST /v1/users/:userId/export",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 9,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:DELETE /v1/users/:userId": {
+      "id": "api:DELETE /v1/users/:userId",
+      "kind": "api",
+      "label": "DELETE /v1/users/:userId",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 10,
       "effects": [],
       "change": "unchanged",
       "containsChanges": false,
@@ -4592,19 +4597,19 @@
       {
         "operation": "KycModule.runCheck",
         "risk": "high",
-        "reason": "output shape changed; +db.read kyc_results, +outbox kyc.manual_review_requested",
+        "reason": "output shape changed; +db.read kyc_results, +outbox kyc.manual_review_requested; 2 guards changed inside",
         "reach": 4
       },
       {
         "operation": "KycModule.recheckExpired",
         "risk": "high",
-        "reason": "+outbox kyc.recheck_requested; −db.write kyc_results, −outbox kyc.completed, −db.read user_documents, −http document-ai, −db.read country_codes, −http sanctions-api",
+        "reason": "+outbox kyc.recheck_requested; −db.write kyc_results, −outbox kyc.completed, −db.read user_documents, −http document-ai, −db.read country_codes, −http sanctions-api; 7 steps added or removed inside",
         "reach": 1
       },
       {
         "operation": "SanctionsScreening.screen",
         "risk": "medium",
-        "reason": "output shape changed",
+        "reason": "output shape changed; 1 step added or removed inside",
         "reach": 4
       }
     ],
@@ -4623,7 +4628,7 @@
     "seeds": [
       {
         "id": "consumer:topic kyc.recheck_requested",
-        "reason": "added by this change; matches the PR: recheck, requested"
+        "reason": "added by this change; matches the PR: recheck, requested; reaches 2 changed operations"
       },
       {
         "id": "cron:cron kyc-nightly-rescreen (0 2 * * *)",
@@ -4636,7 +4641,7 @@
       "entryPointsReached": 5,
       "operationsKnown": 26,
       "operationsAnalyzed": 12,
-      "ms": 2023
+      "ms": 2467
     }
   }
 }

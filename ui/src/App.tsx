@@ -161,6 +161,21 @@ export default function App() {
       setBusy(undefined);
     }
   }, []);
+  // A flow opened from a link, a reload or Back may not be analyzed yet: ask the live server for it once.
+  const autoExpanded = useRef(new Set<string>());
+  useEffect(() => {
+    if (!g?.lazy || !live || view?.mode !== 'flow') return;
+    for (const id of view.trail) {
+      const entry = g.entryPoints[id];
+      const op = g.operations[id];
+      const missing = entry ? entry.analysis !== 'full' : op ? !op.lazy?.calleesLoaded : false;
+      const key = `${graphId}|${id}`;
+      if (!missing || autoExpanded.current.has(key)) continue;
+      autoExpanded.current.add(key);
+      void runExpand(entry ? 'entry' : 'op', id, entry ? `the flow of ${entry.label}` : `${id} and everything it calls`);
+      return;
+    }
+  }, [g, live, view, graphId, runExpand]);
   const viewRef = useRef<View>(undefined);
   viewRef.current = view;
   const chainRef = useRef<string[]>(undefined);
@@ -454,6 +469,8 @@ function Legend() {
       <span className="chip fx-outbox direct">outbox</span>
       <span className="chip fx-kafka direct">kafka</span>
       <span className="chip fx-http direct">http</span>
+      <span className="chip fx-queue direct">queue</span>
+      <span className="chip fx-event direct">event</span>
       <span><span className="legend-decision">◇</span> exclusive branch (yes / no)</span>
       <span className="muted">solid chip = this module · outlined = via submodules · ━ data · ┅ control</span>
     </div>

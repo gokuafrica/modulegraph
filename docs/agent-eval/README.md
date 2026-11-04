@@ -16,6 +16,13 @@ Test of 2026-11-04. Claude Haiku got only a one-line request ("review X at modul
 | 1: original skill | 3 of 5 / 4 of 4. Missed `kyc.completed` no longer sent for reviewed users; history loss only in passing | 4 of 4 / 3 of 4 (missed new output field, didn't call it blocking) | `npm run analyze` failed for both; A missed the existing profile and created a duplicate |
 | 2: facts brief, auto profile and intent | 4.5 of 5 / 4 of 4. Caught the guard change; added the Onboarding impact itself | **4 of 4 / 4 of 4** | relative `--project` broke under `npm run` (the real cause of round 1's "git ENOENT") |
 | 3: + path fix, literal-union deltas, better intent matching | **5 of 5 / 4 of 4**. History loss stated explicitly; found the reviewer-override issue | (not rerun) | none |
+| 4: NestJS service (`feature/order-fraud-hold`), framework adapters, no platform rules in the profile | **5 of 6** critical: missed that `cancel()` mishandles the new `held` status | (not run) | none |
+
+
+Round 4 ([brief and grading](round4-haiku-order-fraud-hold.md)) tested a new framework end to end: the profile has
+no entry point or side-effect rules, the adapters found them. Fixes from it: same-contract operations with changed
+guards are now medium risk and no longer called "implementation only"; the skill now says to check every code path
+that acts on a field that `gains` a value.
 
 No round produced a wrong claim. From round 2 on, every brief also had correct code-level judgment beyond the facts:
 non-atomic write + outbox, a race in `persist()`, overrides being overwritten, the IND policy question.

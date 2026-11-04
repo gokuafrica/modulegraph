@@ -6,6 +6,9 @@ const cases: [string, string, boolean][] = [
   ['BirthInfo: prefer user-consented birth data (birth_info_consents) over document data', 'birth_info.source_resolved', false],
   ['BirthInfo: prefer user-consented birth data (birth_info_consents) over document data', 'birth_info_consents', true],
   ['make the nightly rescreen asynchronous via kyc.recheck_requested', 'kyc.recheck_requested', true],
+  ['Orders: hold high-risk orders. Every new order is scored by the risk API.', 'risk.example.com', true],
+  ['Orders: hold high-risk orders. Every new order is scored by the risk API.', 'mail.example.com', false],
+  ['Orders: hold high-risk orders. Every new order is scored by the risk API.', 'order_views', false],
 ];
 let bad = 0;
 for (const [i, t, want] of cases) if (mentions(i, t) !== want) { bad++; console.log('FAIL', t, 'expected', want); }

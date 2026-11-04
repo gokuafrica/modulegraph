@@ -15,9 +15,6 @@ import { LazySession } from './lazy.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, '../..').replace(/\\/g, '/');
-const projectDir = join(repo, 'sample-service').replace(/\\/g, '/');
-const config = loadConfig(projectDir, join(repo, 'configs/identity-profile-service/modulegraph.config.json'));
-const project = (files: Map<string, string>) => typescript.open({ repo, projectDir, config, files });
 
 let failures = 0;
 const fail = (msg: string) => {
@@ -26,22 +23,27 @@ const fail = (msg: string) => {
 };
 const keys = (es: { kind: string; target: string }[]) => es.map((e) => effectKey(e as never)).sort().join(', ');
 
-for (const [branch, intent] of [
-  ['feature/birthinfo-consent', 'BirthInfo: prefer user-consented birth data over document data; add consent endpoint.'],
-  ['feature/kyc-risk-tiers', 'KYC: risk tiers, manual review, async nightly rescreen.'],
+for (const [projectRel, profile, branch, intent] of [
+  ['sample-service', 'identity-profile-service', 'feature/birthinfo-consent', 'BirthInfo: prefer user-consented birth data over document data; add consent endpoint.'],
+  ['sample-service', 'identity-profile-service', 'feature/kyc-risk-tiers', 'KYC: risk tiers, manual review, async nightly rescreen.'],
+  // NestJS: decorator entry points, framework sinks, constructor injection through @Inject* decorators
+  ['sample-nest-service', 'order-service', 'feature/order-fraud-hold', 'Orders: hold high-risk orders for fraud review; release endpoint.'],
 ] as const) {
-  console.log(`\n${branch}`);
+  console.log(`\n${projectRel} ${branch}`);
+  const projectDir = join(repo, projectRel).replace(/\\/g, '/');
+  const config = loadConfig(projectDir, join(repo, `configs/${profile}/modulegraph.config.json`));
+  const project = (files: Map<string, string>) => typescript.open({ repo, projectDir, config, files });
   const mb = mergeBase(repo, 'main', branch);
-  const headFiles = filesAtRef(repo, revParse(repo, branch), 'sample-service');
-  const baseFiles = filesAtRef(repo, mb, 'sample-service');
-  const diff = diffBetween(repo, mb, branch, 'sample-service');
+  const headFiles = filesAtRef(repo, revParse(repo, branch), projectRel);
+  const baseFiles = filesAtRef(repo, mb, projectRel);
+  const diff = diffBetween(repo, mb, branch, projectRel);
 
   let t = performance.now();
   const full = compare(project(headFiles).run(), project(baseFiles).run());
   const fullMs = performance.now() - t;
 
   t = performance.now();
-  const source = { mode: 'branch' as const, repo, project: 'sample-service', base: 'main', head: branch, files: diff.files };
+  const source = { mode: 'branch' as const, repo, project: projectRel, base: 'main', head: branch, files: diff.files };
   const session = new LazySession(project(headFiles), project(baseFiles), repo, config, diff, source, intent);
   session.init({ seedCount: 2 });
   let lazy = session.graph();

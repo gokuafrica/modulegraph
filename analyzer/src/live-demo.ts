@@ -1,6 +1,6 @@
 /**
  * Starts a live lazy analysis of a demo branch for the UI (http://localhost:5173 proxies /api to it).
- * usage: npm run live [-- kyc]      (default: the BirthInfo branch)
+ * usage: npm run live [-- kyc | orders]      (default: the BirthInfo branch; orders = the NestJS service)
  */
 import { execFileSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
@@ -20,6 +20,17 @@ const demos = {
     intent: 'KYC: add risk tiers from sanctions score, birth country and nationality; send high-risk users to manual review (outbox kyc.manual_review_requested); make the nightly rescreen asynchronous via kyc.recheck_requested.',
   },
 };
+if (process.argv[2] === 'orders') {
+  // The NestJS demo: profile found by package name, intent from the branch's commits.
+  execFileSync(process.execPath, [
+    '--import', 'tsx', resolve(here, 'cli.ts'),
+    '--project', resolve(here, '../../sample-nest-service'),
+    '--head', 'feature/order-fraud-hold', '--base', 'main',
+    '--lazy', '--serve', '--name', 'live-order-fraud-hold',
+    '--title', 'Live (lazy, NestJS): hold high-risk orders for fraud review',
+  ], { stdio: 'inherit' });
+  process.exit(0);
+}
 const demo = demos[(process.argv[2] ?? 'birthinfo') as keyof typeof demos] ?? demos.birthinfo;
 execFileSync(process.execPath, [
   '--import', 'tsx', resolve(here, 'cli.ts'),

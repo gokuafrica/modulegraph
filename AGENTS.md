@@ -9,5 +9,9 @@ People review it as an interactive graph.
   `npm run analyze -- --project <service dir> --head <branch> --base main` (or `--uncommitted`), then read the
   printed `<id>.brief.md` and add the judgment.
 - **Never modify the code being analyzed.** Per-service knowledge lives in `configs/<service>/`.
-- Changing modulegraph itself: `npm run check` (types), `npm run lazy-check --workspace analyzer` (lazy == full),
+- Backends and framework support: [docs/analyzers.md](docs/analyzers.md). The analyzer picks the language backend
+  and the framework adapters (NestJS, Express, Fastify, KafkaJS, BullMQ, TypeORM, Prisma, …) from the project
+  itself and prints which ones it used.
+- Changing modulegraph itself: `npm run check` (types), `npm test --workspace analyzer` (intent matching, framework
+  adapters vs hand-checked services, lazy == full),
   `npm run validate --workspace analyzer -- <graph.json>` (schema). The UI is `npm run dev` (http://localhost:5173).

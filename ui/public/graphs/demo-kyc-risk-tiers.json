@@ -1,8 +1,8 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T01:43:09.606Z",
-  "generator": "modulegraph-analyzer/0.2 (ts-morph)",
+  "generatedAt": "2026-11-04T08:41:34.536Z",
+  "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
     "repo": ".",
@@ -53,6 +53,11 @@
         ]
       }
     ],
+    "analyzer": {
+      "id": "typescript",
+      "language": "TypeScript",
+      "frameworks": []
+    },
     "intent": "KYC: add risk tiers from sanctions score, birth country and nationality; send high-risk users to manual review (outbox kyc.manual_review_requested); make the nightly rescreen asynchronous via kyc.recheck_requested.",
     "intentSource": "flag",
     "examples": {
@@ -365,7 +370,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T01:43:09.492Z"
+              "extractedAt": "2026-11-04T08:41:34.420Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -389,7 +394,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T01:43:09.493Z"
+              "extractedAt": "2026-11-04T08:41:34.421Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -447,7 +452,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T01:43:09.488Z"
+              "extractedAt": "2026-11-04T08:41:34.415Z"
             }
           },
           "output": {
@@ -467,7 +472,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T01:43:09.492Z"
+              "extractedAt": "2026-11-04T08:41:34.420Z"
             }
           },
           "output": {
@@ -522,7 +527,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T01:43:09.488Z"
+              "extractedAt": "2026-11-04T08:41:34.415Z"
             }
           },
           "output": {
@@ -542,7 +547,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T01:43:09.492Z"
+              "extractedAt": "2026-11-04T08:41:34.420Z"
             }
           },
           "output": {
@@ -888,7 +893,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T01:43:09.488Z"
+            "extractedAt": "2026-11-04T08:41:34.415Z"
           }
         },
         {
@@ -905,7 +910,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T01:43:09.492Z"
+            "extractedAt": "2026-11-04T08:41:34.420Z"
           }
         }
       ]
@@ -1453,7 +1458,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T01:43:09.491Z"
+            "checkedAt": "2026-11-04T08:41:34.418Z"
           }
         },
         {
@@ -1464,7 +1469,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-04T01:43:09.492Z"
+            "checkedAt": "2026-11-04T08:41:34.420Z"
           }
         }
       ]
@@ -1585,7 +1590,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T01:43:09.491Z"
+            "checkedAt": "2026-11-04T08:41:34.418Z"
           }
         },
         {
@@ -2256,7 +2261,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T01:43:09.488Z"
+              "extractedAt": "2026-11-04T08:41:34.415Z"
             }
           },
           "output": {
@@ -2277,7 +2282,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T01:43:09.492Z"
+              "extractedAt": "2026-11-04T08:41:34.420Z"
             }
           },
           "output": {
@@ -2497,7 +2502,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T01:43:09.488Z"
+              "extractedAt": "2026-11-04T08:41:34.415Z"
             }
           },
           "output": {
@@ -2519,7 +2524,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T01:43:09.492Z"
+              "extractedAt": "2026-11-04T08:41:34.420Z"
             }
           },
           "output": {
@@ -8875,19 +8880,19 @@
       {
         "operation": "KycModule.runCheck",
         "risk": "high",
-        "reason": "output shape changed; +db.read kyc_results, +outbox kyc.manual_review_requested",
+        "reason": "output shape changed; +db.read kyc_results, +outbox kyc.manual_review_requested; 2 guards changed inside",
         "reach": 5
       },
       {
         "operation": "KycModule.recheckExpired",
         "risk": "high",
-        "reason": "+outbox kyc.recheck_requested; −db.write kyc_results, −outbox kyc.completed, −db.read user_documents, −http document-ai, −db.read country_codes, −http sanctions-api",
+        "reason": "+outbox kyc.recheck_requested; −db.write kyc_results, −outbox kyc.completed, −db.read user_documents, −http document-ai, −db.read country_codes, −http sanctions-api; 7 steps added or removed inside",
         "reach": 1
       },
       {
         "operation": "SanctionsScreening.screen",
         "risk": "medium",
-        "reason": "output shape changed",
+        "reason": "output shape changed; 1 step added or removed inside",
         "reach": 5
       }
     ],

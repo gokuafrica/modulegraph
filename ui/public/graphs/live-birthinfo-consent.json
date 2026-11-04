@@ -1,8 +1,8 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T01:43:15.453Z",
-  "generator": "modulegraph-analyzer/0.2 (ts-morph, lazy)",
+  "generatedAt": "2026-11-04T08:41:40.975Z",
+  "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
     "repo": ".",
@@ -67,6 +67,11 @@
         "modules": []
       }
     ],
+    "analyzer": {
+      "id": "typescript",
+      "language": "TypeScript",
+      "frameworks": []
+    },
     "intent": "BirthInfo: prefer user-consented birth data (birth_info_consents) over document data; add consent endpoint.",
     "intentSource": "flag",
     "examples": {
@@ -922,7 +927,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T01:43:15.333Z"
+              "extractedAt": "2026-11-04T08:41:40.857Z"
             }
           },
           "output": {
@@ -943,7 +948,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T01:43:15.336Z"
+              "extractedAt": "2026-11-04T08:41:40.861Z"
             }
           },
           "output": {
@@ -1100,7 +1105,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T01:43:15.333Z"
+              "extractedAt": "2026-11-04T08:41:40.857Z"
             }
           },
           "output": {
@@ -1646,7 +1651,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T01:43:15.336Z"
+              "extractedAt": "2026-11-04T08:41:40.860Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -1671,7 +1676,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T01:43:15.337Z"
+              "extractedAt": "2026-11-04T08:41:40.862Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -1807,7 +1812,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-04T01:43:15.335Z"
+            "checkedAt": "2026-11-04T08:41:40.859Z"
           }
         },
         {
@@ -1817,7 +1822,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-04T01:43:15.337Z"
+            "checkedAt": "2026-11-04T08:41:40.861Z"
           }
         }
       ],
@@ -3046,7 +3051,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T01:43:15.333Z"
+            "extractedAt": "2026-11-04T08:41:40.857Z"
           }
         },
         {
@@ -3063,7 +3068,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T01:43:15.336Z"
+            "extractedAt": "2026-11-04T08:41:40.861Z"
           }
         }
       ],
@@ -3250,912 +3255,6 @@
     }
   },
   "entryPoints": {
-    "api:GET /admin/v1/users/:userId/identity-review": {
-      "id": "api:GET /admin/v1/users/:userId/identity-review",
-      "kind": "api",
-      "label": "GET /admin/v1/users/:userId/identity-review",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/http/adminRoutes.ts",
-      "line": 5,
-      "effects": [
-        {
-          "kind": "db.read",
-          "target": "review_notes",
-          "file": "sample-service/src/modules/admin/IdentityReviewModule.ts",
-          "line": 18
-        },
-        {
-          "kind": "db.read",
-          "target": "user_documents",
-          "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 11
-        },
-        {
-          "kind": "http",
-          "target": "document-ai",
-          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 12
-        },
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "change": "unchanged",
-      "containsChanges": true,
-      "effectsAdded": [
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "effectsRemoved": [],
-      "analysis": "reached"
-    },
-    "api:GET /v1/kyc/:userId/status": {
-      "id": "api:GET /v1/kyc/:userId/status",
-      "kind": "api",
-      "label": "GET /v1/kyc/:userId/status",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
-      "line": 6,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "api:GET /v1/tax/:userId/residency": {
-      "id": "api:GET /v1/tax/:userId/residency",
-      "kind": "api",
-      "label": "GET /v1/tax/:userId/residency",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
-      "line": 8,
-      "effects": [
-        {
-          "kind": "db.read",
-          "target": "tax_declarations",
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 27
-        },
-        {
-          "kind": "db.write",
-          "target": "tax_residency_assessments",
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 30
-        },
-        {
-          "kind": "db.read",
-          "target": "user_documents",
-          "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 11
-        },
-        {
-          "kind": "http",
-          "target": "document-ai",
-          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 12
-        },
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "change": "unchanged",
-      "containsChanges": true,
-      "effectsAdded": [
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "effectsRemoved": [],
-      "analysis": "reached"
-    },
-    "api:GET /v1/travel/:userId/visa-eligibility": {
-      "id": "api:GET /v1/travel/:userId/visa-eligibility",
-      "kind": "api",
-      "label": "GET /v1/travel/:userId/visa-eligibility",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
-      "line": 10,
-      "effects": [
-        {
-          "kind": "http",
-          "target": "visa-rules-service",
-          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
-          "line": 25
-        },
-        {
-          "kind": "db.read",
-          "target": "user_documents",
-          "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 11
-        },
-        {
-          "kind": "http",
-          "target": "document-ai",
-          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 12
-        },
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "change": "unchanged",
-      "containsChanges": true,
-      "effectsAdded": [
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "effectsRemoved": [],
-      "analysis": "reached"
-    },
-    "api:GET /v1/users/:userId/profile": {
-      "id": "api:GET /v1/users/:userId/profile",
-      "kind": "api",
-      "label": "GET /v1/users/:userId/profile",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
-      "line": 5,
-      "effects": [
-        {
-          "kind": "db.read",
-          "target": "user_documents",
-          "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 11
-        },
-        {
-          "kind": "http",
-          "target": "document-ai",
-          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 12
-        },
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "change": "unchanged",
-      "containsChanges": true,
-      "effectsAdded": [
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "effectsRemoved": [],
-      "analysis": "reached"
-    },
-    "api:GET /v1/users/:userId/profile/summary": {
-      "id": "api:GET /v1/users/:userId/profile/summary",
-      "kind": "api",
-      "label": "GET /v1/users/:userId/profile/summary",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
-      "line": 6,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "api:GET /v1/users/:userId/nationality": {
-      "id": "api:GET /v1/users/:userId/nationality",
-      "kind": "api",
-      "label": "GET /v1/users/:userId/nationality",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
-      "line": 7,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "api:GET /v1/users/:userId/birth-info": {
-      "id": "api:GET /v1/users/:userId/birth-info",
-      "kind": "api",
-      "label": "GET /v1/users/:userId/birth-info",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
-      "line": 8,
-      "effects": [
-        {
-          "kind": "db.read",
-          "target": "user_documents",
-          "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 11
-        },
-        {
-          "kind": "http",
-          "target": "document-ai",
-          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 12
-        },
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "change": "unchanged",
-      "containsChanges": true,
-      "effectsAdded": [
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "effectsRemoved": [],
-      "analysis": "full"
-    },
-    "api:POST /admin/v1/users/:userId/kyc-override": {
-      "id": "api:POST /admin/v1/users/:userId/kyc-override",
-      "kind": "api",
-      "label": "POST /admin/v1/users/:userId/kyc-override",
-      "readOnly": false,
-      "file": "sample-service/src/entrypoints/http/adminRoutes.ts",
-      "line": 6,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "api:POST /v1/kyc/:userId/check": {
-      "id": "api:POST /v1/kyc/:userId/check",
-      "kind": "api",
-      "label": "POST /v1/kyc/:userId/check",
-      "readOnly": false,
-      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
-      "line": 5,
-      "effects": [
-        {
-          "kind": "db.write",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 38
-        },
-        {
-          "kind": "outbox",
-          "target": "kyc.completed",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 39
-        },
-        {
-          "kind": "db.read",
-          "target": "user_documents",
-          "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 11
-        },
-        {
-          "kind": "http",
-          "target": "document-ai",
-          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 12
-        },
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "change": "unchanged",
-      "containsChanges": true,
-      "effectsAdded": [
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "effectsRemoved": [],
-      "analysis": "reached"
-    },
-    "api:POST /v1/onboarding/:userId/complete": {
-      "id": "api:POST /v1/onboarding/:userId/complete",
-      "kind": "api",
-      "label": "POST /v1/onboarding/:userId/complete",
-      "readOnly": false,
-      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
-      "line": 7,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "api:POST /v1/tax/:userId/declarations": {
-      "id": "api:POST /v1/tax/:userId/declarations",
-      "kind": "api",
-      "label": "POST /v1/tax/:userId/declarations",
-      "readOnly": false,
-      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
-      "line": 9,
-      "effects": [
-        {
-          "kind": "db.write",
-          "target": "tax_declarations",
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 35
-        },
-        {
-          "kind": "db.read",
-          "target": "tax_declarations",
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 27
-        },
-        {
-          "kind": "db.write",
-          "target": "tax_residency_assessments",
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 30
-        },
-        {
-          "kind": "db.read",
-          "target": "user_documents",
-          "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 11
-        },
-        {
-          "kind": "http",
-          "target": "document-ai",
-          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 12
-        },
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "change": "unchanged",
-      "containsChanges": true,
-      "effectsAdded": [
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "effectsRemoved": [],
-      "analysis": "reached"
-    },
-    "api:POST /v1/travel/:userId/passport-prefill": {
-      "id": "api:POST /v1/travel/:userId/passport-prefill",
-      "kind": "api",
-      "label": "POST /v1/travel/:userId/passport-prefill",
-      "readOnly": false,
-      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
-      "line": 11,
-      "effects": [
-        {
-          "kind": "db.write",
-          "target": "passport_prefills",
-          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
-          "line": 37
-        },
-        {
-          "kind": "db.read",
-          "target": "user_documents",
-          "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 11
-        },
-        {
-          "kind": "http",
-          "target": "document-ai",
-          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 12
-        },
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "change": "unchanged",
-      "containsChanges": true,
-      "effectsAdded": [
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "effectsRemoved": [],
-      "analysis": "reached"
-    },
-    "api:POST /v1/users/:userId/export": {
-      "id": "api:POST /v1/users/:userId/export",
-      "kind": "api",
-      "label": "POST /v1/users/:userId/export",
-      "readOnly": false,
-      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
-      "line": 12,
-      "effects": [
-        {
-          "kind": "db.write",
-          "target": "gdpr_exports",
-          "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "line": 49
-        },
-        {
-          "kind": "kafka",
-          "target": "privacy.export.ready",
-          "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "line": 50
-        },
-        {
-          "kind": "db.read",
-          "target": "user_documents",
-          "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 11
-        },
-        {
-          "kind": "http",
-          "target": "document-ai",
-          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 12
-        },
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "change": "unchanged",
-      "containsChanges": true,
-      "effectsAdded": [
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "effectsRemoved": [],
-      "analysis": "reached"
-    },
-    "api:PUT /v1/users/:userId/birth-info/consent": {
-      "id": "api:PUT /v1/users/:userId/birth-info/consent",
-      "kind": "api",
-      "label": "PUT /v1/users/:userId/birth-info/consent",
-      "readOnly": false,
-      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
-      "line": 9,
-      "effects": [
-        {
-          "kind": "db.write",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 16
-        }
-      ],
-      "change": "added",
-      "containsChanges": true,
-      "changes": [
-        {
-          "name": "PUT /v1/users/:userId/birth-info/consent",
-          "role": "handler",
-          "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
-          "line": 9,
-          "status": "added",
-          "added": 3,
-          "removed": 0,
-          "diff": [
-            {
-              "t": "+",
-              "text": "router.put('/v1/users/:userId/birth-info/consent', (req) =>",
-              "b": 9
-            },
-            {
-              "t": "+",
-              "text": "  m.birthInfo.recordConsent(req.params.userId, req.body.countryOfBirth, req.body.cityOfBirth),",
-              "b": 10
-            },
-            {
-              "t": "+",
-              "text": ")",
-              "b": 11
-            }
-          ]
-        }
-      ],
-      "effectsAdded": [
-        {
-          "kind": "db.write",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 16
-        }
-      ],
-      "effectsRemoved": [],
-      "analysis": "full"
-    },
-    "api:DELETE /v1/users/:userId": {
-      "id": "api:DELETE /v1/users/:userId",
-      "kind": "api",
-      "label": "DELETE /v1/users/:userId",
-      "readOnly": false,
-      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
-      "line": 13,
-      "effects": [],
-      "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
-    },
-    "grpc:gRPC identity.v1.ProfileService/GetProfile": {
-      "id": "grpc:gRPC identity.v1.ProfileService/GetProfile",
-      "kind": "grpc",
-      "label": "gRPC identity.v1.ProfileService/GetProfile",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/grpc.ts",
-      "line": 5,
-      "effects": [
-        {
-          "kind": "db.read",
-          "target": "user_documents",
-          "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 11
-        },
-        {
-          "kind": "http",
-          "target": "document-ai",
-          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 12
-        },
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "change": "unchanged",
-      "containsChanges": true,
-      "effectsAdded": [
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "effectsRemoved": [],
-      "analysis": "reached"
-    },
-    "grpc:gRPC identity.v1.ProfileService/GetBirthInfo": {
-      "id": "grpc:gRPC identity.v1.ProfileService/GetBirthInfo",
-      "kind": "grpc",
-      "label": "gRPC identity.v1.ProfileService/GetBirthInfo",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/grpc.ts",
-      "line": 6,
-      "effects": [
-        {
-          "kind": "db.read",
-          "target": "user_documents",
-          "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 11
-        },
-        {
-          "kind": "http",
-          "target": "document-ai",
-          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 12
-        },
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "change": "unchanged",
-      "containsChanges": true,
-      "effectsAdded": [
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "effectsRemoved": [],
-      "analysis": "reached"
-    },
-    "grpc:gRPC kyc.v1.KycService/RunCheck": {
-      "id": "grpc:gRPC kyc.v1.KycService/RunCheck",
-      "kind": "grpc",
-      "label": "gRPC kyc.v1.KycService/RunCheck",
-      "readOnly": false,
-      "file": "sample-service/src/entrypoints/grpc.ts",
-      "line": 7,
-      "effects": [
-        {
-          "kind": "db.write",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 38
-        },
-        {
-          "kind": "outbox",
-          "target": "kyc.completed",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 39
-        },
-        {
-          "kind": "db.read",
-          "target": "user_documents",
-          "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 11
-        },
-        {
-          "kind": "http",
-          "target": "document-ai",
-          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 12
-        },
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "change": "unchanged",
-      "containsChanges": true,
-      "effectsAdded": [
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "effectsRemoved": [],
-      "analysis": "reached"
-    },
-    "grpc:gRPC travel.v1.TravelService/CheckVisa": {
-      "id": "grpc:gRPC travel.v1.TravelService/CheckVisa",
-      "kind": "grpc",
-      "label": "gRPC travel.v1.TravelService/CheckVisa",
-      "readOnly": true,
-      "file": "sample-service/src/entrypoints/grpc.ts",
-      "line": 8,
-      "effects": [
-        {
-          "kind": "http",
-          "target": "visa-rules-service",
-          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
-          "line": 25
-        },
-        {
-          "kind": "db.read",
-          "target": "user_documents",
-          "file": "sample-service/src/modules/identity/DocumentStore.ts",
-          "line": 11
-        },
-        {
-          "kind": "http",
-          "target": "document-ai",
-          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
-          "line": 12
-        },
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "change": "unchanged",
-      "containsChanges": true,
-      "effectsAdded": [
-        {
-          "kind": "outbox",
-          "target": "birth_info.source_resolved",
-          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
-          "line": 22
-        },
-        {
-          "kind": "db.read",
-          "target": "birth_info_consents",
-          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
-          "line": 11
-        }
-      ],
-      "effectsRemoved": [],
-      "analysis": "reached"
-    },
     "consumer:topic user.documents.uploaded": {
       "id": "consumer:topic user.documents.uploaded",
       "kind": "consumer",
@@ -4560,6 +3659,912 @@
       "label": "cron compliance-monthly-report (0 6 1 * *)",
       "readOnly": false,
       "file": "sample-service/src/entrypoints/cron.ts",
+      "line": 13,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "grpc:gRPC identity.v1.ProfileService/GetProfile": {
+      "id": "grpc:gRPC identity.v1.ProfileService/GetProfile",
+      "kind": "grpc",
+      "label": "gRPC identity.v1.ProfileService/GetProfile",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/grpc.ts",
+      "line": 5,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 11
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 12
+        },
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "reached"
+    },
+    "grpc:gRPC identity.v1.ProfileService/GetBirthInfo": {
+      "id": "grpc:gRPC identity.v1.ProfileService/GetBirthInfo",
+      "kind": "grpc",
+      "label": "gRPC identity.v1.ProfileService/GetBirthInfo",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/grpc.ts",
+      "line": 6,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 11
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 12
+        },
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "reached"
+    },
+    "grpc:gRPC kyc.v1.KycService/RunCheck": {
+      "id": "grpc:gRPC kyc.v1.KycService/RunCheck",
+      "kind": "grpc",
+      "label": "gRPC kyc.v1.KycService/RunCheck",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/grpc.ts",
+      "line": 7,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 38
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.completed",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 39
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 11
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 12
+        },
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "reached"
+    },
+    "grpc:gRPC travel.v1.TravelService/CheckVisa": {
+      "id": "grpc:gRPC travel.v1.TravelService/CheckVisa",
+      "kind": "grpc",
+      "label": "gRPC travel.v1.TravelService/CheckVisa",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/grpc.ts",
+      "line": 8,
+      "effects": [
+        {
+          "kind": "http",
+          "target": "visa-rules-service",
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
+          "line": 25
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 11
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 12
+        },
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "reached"
+    },
+    "api:GET /admin/v1/users/:userId/identity-review": {
+      "id": "api:GET /admin/v1/users/:userId/identity-review",
+      "kind": "api",
+      "label": "GET /admin/v1/users/:userId/identity-review",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/adminRoutes.ts",
+      "line": 5,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "review_notes",
+          "file": "sample-service/src/modules/admin/IdentityReviewModule.ts",
+          "line": 18
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 11
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 12
+        },
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "reached"
+    },
+    "api:POST /admin/v1/users/:userId/kyc-override": {
+      "id": "api:POST /admin/v1/users/:userId/kyc-override",
+      "kind": "api",
+      "label": "POST /admin/v1/users/:userId/kyc-override",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/adminRoutes.ts",
+      "line": 6,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:POST /v1/kyc/:userId/check": {
+      "id": "api:POST /v1/kyc/:userId/check",
+      "kind": "api",
+      "label": "POST /v1/kyc/:userId/check",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 5,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 38
+        },
+        {
+          "kind": "outbox",
+          "target": "kyc.completed",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 39
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 11
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 12
+        },
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "reached"
+    },
+    "api:GET /v1/kyc/:userId/status": {
+      "id": "api:GET /v1/kyc/:userId/status",
+      "kind": "api",
+      "label": "GET /v1/kyc/:userId/status",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 6,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:POST /v1/onboarding/:userId/complete": {
+      "id": "api:POST /v1/onboarding/:userId/complete",
+      "kind": "api",
+      "label": "POST /v1/onboarding/:userId/complete",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 7,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:GET /v1/tax/:userId/residency": {
+      "id": "api:GET /v1/tax/:userId/residency",
+      "kind": "api",
+      "label": "GET /v1/tax/:userId/residency",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 8,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 27
+        },
+        {
+          "kind": "db.write",
+          "target": "tax_residency_assessments",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 30
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 11
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 12
+        },
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "reached"
+    },
+    "api:POST /v1/tax/:userId/declarations": {
+      "id": "api:POST /v1/tax/:userId/declarations",
+      "kind": "api",
+      "label": "POST /v1/tax/:userId/declarations",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 9,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 35
+        },
+        {
+          "kind": "db.read",
+          "target": "tax_declarations",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 27
+        },
+        {
+          "kind": "db.write",
+          "target": "tax_residency_assessments",
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
+          "line": 30
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 11
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 12
+        },
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "reached"
+    },
+    "api:GET /v1/travel/:userId/visa-eligibility": {
+      "id": "api:GET /v1/travel/:userId/visa-eligibility",
+      "kind": "api",
+      "label": "GET /v1/travel/:userId/visa-eligibility",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 10,
+      "effects": [
+        {
+          "kind": "http",
+          "target": "visa-rules-service",
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
+          "line": 25
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 11
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 12
+        },
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "reached"
+    },
+    "api:POST /v1/travel/:userId/passport-prefill": {
+      "id": "api:POST /v1/travel/:userId/passport-prefill",
+      "kind": "api",
+      "label": "POST /v1/travel/:userId/passport-prefill",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/complianceRoutes.ts",
+      "line": 11,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "passport_prefills",
+          "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
+          "line": 37
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 11
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 12
+        },
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "reached"
+    },
+    "api:GET /v1/users/:userId/profile": {
+      "id": "api:GET /v1/users/:userId/profile",
+      "kind": "api",
+      "label": "GET /v1/users/:userId/profile",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 5,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 11
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 12
+        },
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "reached"
+    },
+    "api:GET /v1/users/:userId/profile/summary": {
+      "id": "api:GET /v1/users/:userId/profile/summary",
+      "kind": "api",
+      "label": "GET /v1/users/:userId/profile/summary",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 6,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:GET /v1/users/:userId/nationality": {
+      "id": "api:GET /v1/users/:userId/nationality",
+      "kind": "api",
+      "label": "GET /v1/users/:userId/nationality",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 7,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:GET /v1/users/:userId/birth-info": {
+      "id": "api:GET /v1/users/:userId/birth-info",
+      "kind": "api",
+      "label": "GET /v1/users/:userId/birth-info",
+      "readOnly": true,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 8,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 11
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 12
+        },
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "full"
+    },
+    "api:PUT /v1/users/:userId/birth-info/consent": {
+      "id": "api:PUT /v1/users/:userId/birth-info/consent",
+      "kind": "api",
+      "label": "PUT /v1/users/:userId/birth-info/consent",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 9,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 16
+        }
+      ],
+      "change": "added",
+      "containsChanges": true,
+      "changes": [
+        {
+          "name": "PUT /v1/users/:userId/birth-info/consent",
+          "role": "handler",
+          "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+          "line": 9,
+          "status": "added",
+          "added": 3,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "router.put('/v1/users/:userId/birth-info/consent', (req) =>",
+              "b": 9
+            },
+            {
+              "t": "+",
+              "text": "  m.birthInfo.recordConsent(req.params.userId, req.body.countryOfBirth, req.body.cityOfBirth),",
+              "b": 10
+            },
+            {
+              "t": "+",
+              "text": ")",
+              "b": 11
+            }
+          ]
+        }
+      ],
+      "effectsAdded": [
+        {
+          "kind": "db.write",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 16
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "full"
+    },
+    "api:POST /v1/users/:userId/export": {
+      "id": "api:POST /v1/users/:userId/export",
+      "kind": "api",
+      "label": "POST /v1/users/:userId/export",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
+      "line": 12,
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "gdpr_exports",
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "line": 49
+        },
+        {
+          "kind": "kafka",
+          "target": "privacy.export.ready",
+          "file": "sample-service/src/modules/profile/ProfileService.ts",
+          "line": 50
+        },
+        {
+          "kind": "db.read",
+          "target": "user_documents",
+          "file": "sample-service/src/modules/identity/DocumentStore.ts",
+          "line": 11
+        },
+        {
+          "kind": "http",
+          "target": "document-ai",
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "line": 12
+        },
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "outbox",
+          "target": "birth_info.source_resolved",
+          "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
+          "line": 22
+        },
+        {
+          "kind": "db.read",
+          "target": "birth_info_consents",
+          "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
+          "line": 11
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "reached"
+    },
+    "api:DELETE /v1/users/:userId": {
+      "id": "api:DELETE /v1/users/:userId",
+      "kind": "api",
+      "label": "DELETE /v1/users/:userId",
+      "readOnly": false,
+      "file": "sample-service/src/entrypoints/http/profileRoutes.ts",
       "line": 13,
       "effects": [],
       "change": "unchanged",
@@ -7592,12 +7597,24 @@
     {
       "rule": "read-path-writes",
       "severity": "warning",
-      "message": "outbox `birth_info.source_resolved` runs on 8 read-only entry points: GET /admin/v1/users/:userId/identity-review, GET /v1/tax/:userId/residency, GET /v1/travel/:userId/visa-eligibility, …",
+      "message": "outbox `birth_info.source_resolved` runs on 8 read-only entry points: gRPC identity.v1.ProfileService/GetProfile, gRPC identity.v1.ProfileService/GetBirthInfo, gRPC travel.v1.TravelService/CheckVisa, …",
       "subject": {
         "type": "entry",
-        "id": "api:GET /admin/v1/users/:userId/identity-review"
+        "id": "grpc:gRPC identity.v1.ProfileService/GetProfile"
       },
       "related": [
+        {
+          "type": "entry",
+          "id": "grpc:gRPC identity.v1.ProfileService/GetProfile"
+        },
+        {
+          "type": "entry",
+          "id": "grpc:gRPC identity.v1.ProfileService/GetBirthInfo"
+        },
+        {
+          "type": "entry",
+          "id": "grpc:gRPC travel.v1.TravelService/CheckVisa"
+        },
         {
           "type": "entry",
           "id": "api:GET /admin/v1/users/:userId/identity-review"
@@ -7617,18 +7634,6 @@
         {
           "type": "entry",
           "id": "api:GET /v1/users/:userId/birth-info"
-        },
-        {
-          "type": "entry",
-          "id": "grpc:gRPC identity.v1.ProfileService/GetProfile"
-        },
-        {
-          "type": "entry",
-          "id": "grpc:gRPC identity.v1.ProfileService/GetBirthInfo"
-        },
-        {
-          "type": "entry",
-          "id": "grpc:gRPC travel.v1.TravelService/CheckVisa"
         }
       ],
       "isNew": true,
@@ -7735,7 +7740,7 @@
       {
         "operation": "BirthInfoModule.resolve",
         "risk": "high",
-        "reason": "output shape changed; +outbox birth_info.source_resolved, +db.read birth_info_consents; now calls BirthConsentStore.findActiveConsent",
+        "reason": "output shape changed; +outbox birth_info.source_resolved, +db.read birth_info_consents; now calls BirthConsentStore.findActiveConsent; 1 guard changed inside",
         "reach": 19
       },
       {
@@ -7772,11 +7777,11 @@
     "seeds": [
       {
         "id": "api:PUT /v1/users/:userId/birth-info/consent",
-        "reason": "added by this change; matches the PR: birth, info, consent"
+        "reason": "added by this change; matches the PR: birth, info, consent; reaches 2 changed operations"
       },
       {
         "id": "api:GET /v1/users/:userId/birth-info",
-        "reason": "matches the PR: birth, info; 2 calls away from the change"
+        "reason": "matches the PR: birth, info; reaches 3 changed operations; 2 calls away from the change"
       }
     ],
     "stats": {
@@ -7785,7 +7790,7 @@
       "entryPointsReached": 18,
       "operationsKnown": 29,
       "operationsAnalyzed": 21,
-      "ms": 1997
+      "ms": 2650
     }
   }
 }

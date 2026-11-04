@@ -268,7 +268,11 @@ export function changeFindings(g: Graphish, diff: RawDiff, config: Config, inten
   return findings;
 }
 
-const GENERIC = new Set(['requested', 'request', 'created', 'updated', 'changed', 'completed', 'event', 'events', 'resolved', 'ready', 'table', 'api', 'service']);
+const GENERIC = new Set([
+  'requested', 'request', 'created', 'updated', 'changed', 'completed', 'event', 'events', 'resolved', 'ready', 'table', 'api', 'service',
+  // host names: "the risk API" discloses risk.example.com
+  'com', 'net', 'org', 'dev', 'www', 'svc', 'http', 'https', 'internal', 'local', 'cluster', 'example',
+]);
 const words = (t: string) =>
   t.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 3).map((w) => w.replace(/(ies|s)$/, (m) => (m === 'ies' ? 'y' : '')));
 
@@ -307,20 +311,28 @@ export function reviewSummary(g: Graphish, diff: RawDiff | undefined): ReviewSum
         d?.effectsRemoved.length && `−${d.effectsRemoved.map((e) => `${e.kind} ${e.target}`).join(', −')}`,
         d?.callsAdded.length && `now calls ${d.callsAdded.map((c) => opLabel(g, c)).join(', ')}`,
       ].filter(Boolean) as string[];
+      // Same contract, different behaviour: a step added, removed or now guarded differently (an event no longer
+      // sent for some inputs) matters more than a refactor.
+      const scope = g.scopes[op.id];
+      const guardChanges = (scope?.steps ?? []).filter((s) => s.conditionBefore !== undefined).length;
+      const stepChanges = (scope?.steps ?? []).filter((s) => s.delta === 'added').length + (scope?.removedSteps?.length ?? 0);
+      const behaviour = guardChanges + stepChanges;
+      if (behaviour && op.change === 'modified') {
+        reasons.push(guardChanges ? `${guardChanges} guard${guardChanges > 1 ? 's' : ''} changed inside` : `${stepChanges} step${stepChanges > 1 ? 's' : ''} added or removed inside`);
+      }
+      const risk = (d?.risk ?? 'low') === 'low' && behaviour ? 'medium' : d?.risk ?? 'low';
       return {
         operation: op.id,
-        risk: d?.risk ?? 'low',
+        risk,
         reason: reasons.join('; ') || 'implementation only',
         reach: reach.get(op.id)?.size ?? 0,
       };
     })
     .sort((a, b) => riskOrder[a.risk] - riskOrder[b.risk] || b.reach - a.reach);
   const changedModules = Object.values(g.modules).filter((m) => m.change !== 'unchanged').map((m) => m.id);
-  const reviewers = [
-    ...new Set(
-      changed.filter((op) => op.delta && !op.delta.implementationOnly).map((op) => g.modules[op.moduleId]?.owner).filter(Boolean) as string[],
-    ),
-  ];
+  // Owners of contract changes first, then owners of modules whose behaviour changed inside (guards, steps).
+  const contractFirst = [...changed].sort((a, b) => Number(!a.delta || a.delta.implementationOnly) - Number(!b.delta || b.delta.implementationOnly));
+  const reviewers = [...new Set(contractFirst.map((op) => g.modules[op.moduleId]?.owner).filter(Boolean) as string[])];
   const affected = new Set(changed.flatMap((op) => [...(reach.get(op.id) ?? [])]));
   Object.values(g.entryPoints).filter((e) => e.change !== 'unchanged').forEach((e) => affected.add(e.id));
   return {
