@@ -208,11 +208,11 @@ export function changeFindings(g: Graphish, diff: RawDiff, config: Config, inten
     });
   }
 
-  // R3 without declarations: the base revision is the contract. Any direct side effect a change adds is surfaced.
+  // R3 without declarations: the base revision is the contract. Any side effect a change adds is surfaced where it
+  // originates: its own code, or a new call to an operation that already did it (`runCheck` now calls `getStatus`).
   for (const op of Object.values(g.operations)) {
     if (op.change === 'removed' || !op.delta) continue;
-    const direct = new Set(op.directEffects.map(effectKey));
-    for (const effect of op.delta.effectsAdded.filter((e) => direct.has(effectKey(e)))) {
+    for (const effect of originatedAt(g, op)) {
       const writes = effect.kind !== 'db.read' && effect.kind !== 'http';
       findings.push({
         rule: 'new-side-effect',
@@ -256,9 +256,9 @@ export function changeFindings(g: Graphish, diff: RawDiff, config: Config, inten
   // R9: side effects added by the change but not mentioned in the stated intent.
   if (intent) {
     const text = intent.toLowerCase();
-    const added = dedupeEffects(contractChanges.flatMap((op) => op.delta!.effectsAdded.filter((e) =>
+    const added = dedupeEffects(contractChanges.flatMap((op) => originatedAt(g, op).filter((e) =>
       // a new operation reading its data is implied by the operation; an existing one that starts reading is not
-      (e.kind !== 'db.read' || op.change === 'modified') && op.directEffects.some((d) => effectKey(d) === effectKey(e)))));
+      e.kind !== 'db.read' || op.change === 'modified')));
     for (const effect of added.filter((e) => !mentions(intent, e.target))) {
       findings.push({
         rule: 'undisclosed-effect',
@@ -270,6 +270,31 @@ export function changeFindings(g: Graphish, diff: RawDiff, config: Config, inten
     }
   }
   return findings;
+}
+
+/**
+ * Effects this operation's change adds that no operation below it added: the change happened here. A new operation
+ * answers for its own code only (what it calls shows as its calls); a changed one also for effects it gains by
+ * newly calling an operation that already had them.
+ */
+function originatedAt(g: Graphish, op: Graphish['operations'][string]): Effect[] {
+  if (op.change === 'added') {
+    const direct = new Set(op.directEffects.map(effectKey));
+    return (op.delta?.effectsAdded ?? []).filter((e) => direct.has(effectKey(e)));
+  }
+  const addedBelow = new Set<string>();
+  const seen = new Set<string>();
+  const stack = [...op.calls];
+  while (stack.length) {
+    const id = stack.pop()!;
+    if (seen.has(id) || id === op.id) continue;
+    seen.add(id);
+    const callee = g.operations[id];
+    if (!callee) continue;
+    callee.delta?.effectsAdded.forEach((e) => addedBelow.add(effectKey(e)));
+    stack.push(...callee.calls);
+  }
+  return (op.delta?.effectsAdded ?? []).filter((e) => !addedBelow.has(effectKey(e)));
 }
 
 /** Guards of a step as `{ test, holds }`: `if (a) and unless (b)` → a holds, b does not. */

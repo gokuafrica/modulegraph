@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T09:24:58.932Z",
+  "generatedAt": "2026-11-04T09:41:33.237Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -305,12 +305,6 @@
       },
       "directEffects": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
@@ -330,12 +324,6 @@
         }
       ],
       "effects": [
-        {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
         {
           "kind": "db.write",
           "target": "kyc_results",
@@ -377,13 +365,20 @@
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
           "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "calls": [
         "IdentityModule.fetchIdentity",
         "BirthInfoModule.resolve",
         "NationalityModule.resolve",
-        "SanctionsScreening.screen"
+        "SanctionsScreening.screen",
+        "KycModule.getStatus"
       ],
       "change": "modified",
       "containsChanges": true,
@@ -786,20 +781,22 @@
         },
         "effectsAdded": [
           {
-            "kind": "db.read",
-            "target": "kyc_results",
-            "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 54
-          },
-          {
             "kind": "outbox",
             "target": "kyc.manual_review_requested",
             "file": "sample-service/src/modules/kyc/KycModule.ts",
             "line": 46
+          },
+          {
+            "kind": "db.read",
+            "target": "kyc_results",
+            "file": "sample-service/src/modules/kyc/KycModule.ts",
+            "line": 54
           }
         ],
         "effectsRemoved": [],
-        "callsAdded": [],
+        "callsAdded": [
+          "KycModule.getStatus"
+        ],
         "callsRemoved": [],
         "implementationOnly": false
       },
@@ -812,7 +809,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T09:24:58.815Z"
+            "checkedAt": "2026-11-04T09:41:33.117Z"
           }
         },
         {
@@ -823,7 +820,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-04T09:24:58.817Z"
+            "checkedAt": "2026-11-04T09:41:33.119Z"
           }
         }
       ],
@@ -919,7 +916,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T09:24:58.813Z"
+            "extractedAt": "2026-11-04T09:41:33.113Z"
           }
         },
         {
@@ -936,7 +933,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T09:24:58.817Z"
+            "extractedAt": "2026-11-04T09:41:33.119Z"
           }
         }
       ],
@@ -1168,7 +1165,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:24:58.813Z"
+              "extractedAt": "2026-11-04T09:41:33.113Z"
             }
           },
           "output": {
@@ -1188,7 +1185,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:24:58.817Z"
+              "extractedAt": "2026-11-04T09:41:33.119Z"
             }
           },
           "output": {
@@ -1247,7 +1244,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:24:58.813Z"
+              "extractedAt": "2026-11-04T09:41:33.113Z"
             }
           },
           "output": {
@@ -1267,7 +1264,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:24:58.817Z"
+              "extractedAt": "2026-11-04T09:41:33.119Z"
             }
           },
           "output": {
@@ -1344,7 +1341,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:24:58.813Z"
+              "extractedAt": "2026-11-04T09:41:33.113Z"
             }
           },
           "output": {
@@ -1365,7 +1362,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:24:58.817Z"
+              "extractedAt": "2026-11-04T09:41:33.119Z"
             }
           },
           "output": {
@@ -1772,7 +1769,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T09:24:58.815Z"
+            "checkedAt": "2026-11-04T09:41:33.117Z"
           }
         },
         {
@@ -2102,10 +2099,7 @@
         ],
         "callsAdded": [],
         "callsRemoved": [
-          "IdentityModule.fetchIdentity",
-          "BirthInfoModule.resolve",
-          "NationalityModule.resolve",
-          "SanctionsScreening.screen"
+          "KycModule.runCheck"
         ],
         "implementationOnly": false
       },
@@ -2174,12 +2168,6 @@
           "line": 19
         },
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
@@ -2220,6 +2208,12 @@
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
           "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "calls": [
@@ -2232,16 +2226,16 @@
         "risk": "high",
         "effectsAdded": [
           {
-            "kind": "db.read",
-            "target": "kyc_results",
-            "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 54
-          },
-          {
             "kind": "outbox",
             "target": "kyc.manual_review_requested",
             "file": "sample-service/src/modules/kyc/KycModule.ts",
             "line": 46
+          },
+          {
+            "kind": "db.read",
+            "target": "kyc_results",
+            "file": "sample-service/src/modules/kyc/KycModule.ts",
+            "line": 54
           }
         ],
         "effectsRemoved": [],
@@ -2276,12 +2270,6 @@
       "line": 5,
       "effects": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
@@ -2322,22 +2310,28 @@
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
           "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "change": "unchanged",
       "containsChanges": true,
       "effectsAdded": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "outbox",
           "target": "kyc.manual_review_requested",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
           "line": 46
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "effectsRemoved": [],
@@ -2352,12 +2346,6 @@
       "line": 9,
       "effects": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
@@ -2398,6 +2386,12 @@
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
           "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "change": "added",
@@ -2432,12 +2426,6 @@
       ],
       "effectsAdded": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
@@ -2478,6 +2466,12 @@
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
           "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "effectsRemoved": [],
@@ -2675,12 +2669,6 @@
       "line": 7,
       "effects": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
@@ -2721,22 +2709,28 @@
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
           "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "change": "unchanged",
       "containsChanges": true,
       "effectsAdded": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "outbox",
           "target": "kyc.manual_review_requested",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
           "line": 46
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "effectsRemoved": [],
@@ -2806,12 +2800,6 @@
       "line": 5,
       "effects": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
@@ -2852,22 +2840,28 @@
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
           "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "change": "unchanged",
       "containsChanges": true,
       "effectsAdded": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "outbox",
           "target": "kyc.manual_review_requested",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
           "line": 46
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "effectsRemoved": [],
@@ -3144,16 +3138,10 @@
         },
         {
           "id": "s5",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.read",
-            "target": "kyc_results",
-            "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 54
-          },
-          "line": 54,
+          "kind": "call",
+          "target": "KycModule.getStatus",
+          "line": 40,
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "via": "KycModule.getStatus",
           "delta": "added"
         },
         {
@@ -4015,71 +4003,10 @@
         {
           "id": "rm:s2",
           "kind": "call",
-          "target": "IdentityModule.fetchIdentity",
-          "line": 30,
+          "target": "KycModule.runCheck",
+          "line": 56,
           "file": "sample-service/src/modules/kyc/KycModule.ts",
           "loop": true,
-          "via": "KycModule.runCheck",
-          "delta": "removed"
-        },
-        {
-          "id": "rm:s3",
-          "kind": "call",
-          "target": "BirthInfoModule.resolve",
-          "line": 31,
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "loop": true,
-          "via": "KycModule.runCheck",
-          "delta": "removed"
-        },
-        {
-          "id": "rm:s4",
-          "kind": "call",
-          "target": "NationalityModule.resolve",
-          "line": 31,
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "loop": true,
-          "via": "KycModule.runCheck",
-          "delta": "removed"
-        },
-        {
-          "id": "rm:s5",
-          "kind": "call",
-          "target": "SanctionsScreening.screen",
-          "line": 32,
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "loop": true,
-          "via": "KycModule.runCheck",
-          "delta": "removed"
-        },
-        {
-          "id": "rm:s6",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.write",
-            "target": "kyc_results",
-            "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 38
-          },
-          "line": 38,
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "loop": true,
-          "via": "KycModule.runCheck",
-          "delta": "removed"
-        },
-        {
-          "id": "rm:s7",
-          "kind": "effect",
-          "effect": {
-            "kind": "outbox",
-            "target": "kyc.completed",
-            "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 39
-          },
-          "line": 39,
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "loop": true,
-          "via": "KycModule.runCheck",
           "delta": "removed"
         }
       ],
@@ -4092,65 +4019,6 @@
         },
         {
           "from": "rm:s2",
-          "to": "rm:s3",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "rm:s2",
-          "to": "rm:s4",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "rm:s2",
-          "to": "rm:s5",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "rm:s3",
-          "to": "rm:s5",
-          "kind": "data",
-          "label": "birth"
-        },
-        {
-          "from": "rm:s4",
-          "to": "rm:s5",
-          "kind": "data",
-          "label": "nationality"
-        },
-        {
-          "from": "s1",
-          "to": "rm:s6",
-          "kind": "data",
-          "label": "row"
-        },
-        {
-          "from": "rm:s5",
-          "to": "rm:s6",
-          "kind": "data",
-          "label": "result"
-        },
-        {
-          "from": "s1",
-          "to": "rm:s7",
-          "kind": "data",
-          "label": "row"
-        },
-        {
-          "from": "rm:s5",
-          "to": "rm:s7",
-          "kind": "data",
-          "label": "result"
-        },
-        {
-          "from": "rm:s6",
-          "to": "exit",
-          "kind": "control"
-        },
-        {
-          "from": "rm:s7",
           "to": "exit",
           "kind": "control"
         }
@@ -4437,6 +4305,34 @@
         }
       ]
     },
+    "cron:cron kyc-nightly-rescreen (0 2 * * *)": {
+      "id": "cron:cron kyc-nightly-rescreen (0 2 * * *)",
+      "params": [],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "KycModule.recheckExpired",
+          "line": 6,
+          "file": "sample-service/src/entrypoints/cron.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "control"
+        }
+      ]
+    },
     "api:GET /v1/kyc/:userId/status": {
       "id": "api:GET /v1/kyc/:userId/status",
       "params": [
@@ -4488,34 +4384,6 @@
           "kind": "data"
         }
       ]
-    },
-    "cron:cron kyc-nightly-rescreen (0 2 * * *)": {
-      "id": "cron:cron kyc-nightly-rescreen (0 2 * * *)",
-      "params": [],
-      "returns": {
-        "type": "void"
-      },
-      "steps": [
-        {
-          "id": "s1",
-          "kind": "call",
-          "target": "KycModule.recheckExpired",
-          "line": 6,
-          "file": "sample-service/src/entrypoints/cron.ts"
-        }
-      ],
-      "edges": [
-        {
-          "from": "s1",
-          "to": "exit",
-          "kind": "control"
-        },
-        {
-          "from": "entry",
-          "to": "s1",
-          "kind": "control"
-        }
-      ]
     }
   },
   "findings": [
@@ -4532,16 +4400,6 @@
     },
     {
       "rule": "new-side-effect",
-      "severity": "info",
-      "message": "KycCheck.runCheck now performs db.read `kyc_results`",
-      "subject": {
-        "type": "operation",
-        "id": "KycModule.runCheck"
-      },
-      "isNew": true
-    },
-    {
-      "rule": "new-side-effect",
       "severity": "warning",
       "message": "KycCheck.runCheck now performs outbox `kyc.manual_review_requested`",
       "subject": {
@@ -4550,6 +4408,16 @@
       },
       "isNew": true,
       "hint": "A new write runs on every flow that reaches this module. Check the zoom-out view."
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "info",
+      "message": "KycCheck.runCheck now performs db.read `kyc_results`",
+      "subject": {
+        "type": "operation",
+        "id": "KycModule.runCheck"
+      },
+      "isNew": true
     },
     {
       "rule": "new-side-effect",
@@ -4597,13 +4465,13 @@
       {
         "operation": "KycModule.runCheck",
         "risk": "high",
-        "reason": "output shape changed; +db.read kyc_results, +outbox kyc.manual_review_requested; 2 guards changed inside",
+        "reason": "output shape changed; +outbox kyc.manual_review_requested, +db.read kyc_results; now calls KycCheck.getStatus; 2 guards changed inside",
         "reach": 4
       },
       {
         "operation": "KycModule.recheckExpired",
         "risk": "high",
-        "reason": "+outbox kyc.recheck_requested; −db.write kyc_results, −outbox kyc.completed, −db.read user_documents, −http document-ai, −db.read country_codes, −http sanctions-api; 7 steps added or removed inside",
+        "reason": "+outbox kyc.recheck_requested; −db.write kyc_results, −outbox kyc.completed, −db.read user_documents, −http document-ai, −db.read country_codes, −http sanctions-api; 2 steps added or removed inside",
         "reach": 1
       },
       {
@@ -4628,7 +4496,7 @@
     "seeds": [
       {
         "id": "consumer:topic kyc.recheck_requested",
-        "reason": "added by this change; matches the PR: recheck, requested; reaches 2 changed operations"
+        "reason": "added by this change; matches the PR: recheck, requested; reaches 3 changed operations"
       },
       {
         "id": "cron:cron kyc-nightly-rescreen (0 2 * * *)",
@@ -4641,7 +4509,7 @@
       "entryPointsReached": 5,
       "operationsKnown": 26,
       "operationsAnalyzed": 12,
-      "ms": 2377
+      "ms": 2866
     }
   }
 }

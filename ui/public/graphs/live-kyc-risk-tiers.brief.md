@@ -15,9 +15,10 @@ Lazy analysis: 2 of 28 flows analyzed (`topic kyc.recheck_requested`, `cron kyc-
 ### 1. KycCheck.runCheck: high risk, modified, owner team-compliance
 
 - **Output** `KycResult`: +riskTier: RiskTier | undefined ["low" | "medium" | "high"], status gains "pending_review" (callers that branch on it must handle this)
-- **Side effects**: +db.read `kyc_results`, +outbox `kyc.manual_review_requested`
+- **Side effects**: +outbox `kyc.manual_review_requested`, +db.read `kyc_results` (via KycCheck.getStatus)
+- **Calls**: +KycCheck.getStatus
 - **Behaviour inside** (steps of this operation, base → head):
-  - NEW db.read `kyc_results` (in KycModule.getStatus)
+  - NEW call KycCheck.getStatus
   - GUARD CHANGED db.write `kyc_results`: now only when `previous`; before: always
   - NEW db.write `kyc_results` (only when not `previous`, in KycModule.persist)
   - NEW outbox `kyc.manual_review_requested` (only when `review`)
@@ -28,15 +29,10 @@ Lazy analysis: 2 of 28 flows analyzed (`topic kyc.recheck_requested`, `cron kyc-
 ### 2. KycCheck.recheckExpired: high risk, modified, owner team-compliance
 
 - **Side effects**: +outbox `kyc.recheck_requested`, −db.write `kyc_results`, −outbox `kyc.completed`, −db.read `user_documents`, −http `document-ai`, −db.read `country_codes`, −http `sanctions-api`
-- **Calls**: −Identity.fetchIdentity, −BirthInfo.resolve, −Nationality.resolve, −SanctionsScreening.screen
+- **Calls**: −KycCheck.runCheck
 - **Behaviour inside** (steps of this operation, base → head):
   - NEW outbox `kyc.recheck_requested` (once per item)
-  - REMOVED call Identity.fetchIdentity (was once per item, in KycModule.runCheck)
-  - REMOVED call BirthInfo.resolve (was once per item, in KycModule.runCheck)
-  - REMOVED call Nationality.resolve (was once per item, in KycModule.runCheck)
-  - REMOVED call SanctionsScreening.screen (was once per item, in KycModule.runCheck)
-  - REMOVED db.write `kyc_results` (was once per item, in KycModule.runCheck)
-  - REMOVED outbox `kyc.completed` (was once per item, in KycModule.runCheck)
+  - REMOVED call KycCheck.runCheck (was once per item)
 - **Code**: 1 function in 1 file: `recheckExpired` (modified, +1/−1, sample-service/src/modules/kyc/KycModule.ts:65)
 - **Reached from** 1 entry point: `cron kyc-nightly-rescreen (0 2 * * *)`
 
@@ -50,14 +46,14 @@ Lazy analysis: 2 of 28 flows analyzed (`topic kyc.recheck_requested`, `cron kyc-
 
 ## Entry points
 
-- **New**: `topic kyc.recheck_requested` (sample-service/src/entrypoints/consumers.ts:9) → KycCheck.runCheck. Side effects: db.read `kyc_results`, db.write `kyc_results`, outbox `kyc.manual_review_requested`, outbox `kyc.completed`, db.read `user_documents`, http `document-ai`, db.read `country_codes`, http `sanctions-api`
+- **New**: `topic kyc.recheck_requested` (sample-service/src/entrypoints/consumers.ts:9) → KycCheck.runCheck. Side effects: db.write `kyc_results`, outbox `kyc.manual_review_requested`, outbox `kyc.completed`, db.read `user_documents`, http `document-ai`, db.read `country_codes`, http `sanctions-api`, db.read `kyc_results`
 
 ## What each affected flow now touches differently
 
-- `topic user.documents.uploaded`: +db.read `kyc_results`, +outbox `kyc.manual_review_requested`
+- `topic user.documents.uploaded`: +outbox `kyc.manual_review_requested`, +db.read `kyc_results`
 - `cron kyc-nightly-rescreen (0 2 * * *)`: +outbox `kyc.recheck_requested`, −db.write `kyc_results`, −outbox `kyc.completed`, −db.read `user_documents`, −http `document-ai`, −db.read `country_codes`, −http `sanctions-api`
-- `gRPC kyc.v1.KycService/RunCheck`: +db.read `kyc_results`, +outbox `kyc.manual_review_requested`
-- `POST /v1/kyc/:userId/check`: +db.read `kyc_results`, +outbox `kyc.manual_review_requested`
+- `gRPC kyc.v1.KycService/RunCheck`: +outbox `kyc.manual_review_requested`, +db.read `kyc_results`
+- `POST /v1/kyc/:userId/check`: +outbox `kyc.manual_review_requested`, +db.read `kyc_results`
 
 ## New findings (machine-checked)
 

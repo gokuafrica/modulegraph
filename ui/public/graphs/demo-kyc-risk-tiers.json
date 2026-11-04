@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T09:24:46.455Z",
+  "generatedAt": "2026-11-04T09:41:20.142Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
@@ -370,7 +370,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:24:46.343Z"
+              "extractedAt": "2026-11-04T09:41:20.030Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -394,7 +394,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:24:46.344Z"
+              "extractedAt": "2026-11-04T09:41:20.031Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -452,7 +452,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:24:46.339Z"
+              "extractedAt": "2026-11-04T09:41:20.026Z"
             }
           },
           "output": {
@@ -472,7 +472,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:24:46.343Z"
+              "extractedAt": "2026-11-04T09:41:20.030Z"
             }
           },
           "output": {
@@ -527,7 +527,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:24:46.339Z"
+              "extractedAt": "2026-11-04T09:41:20.026Z"
             }
           },
           "output": {
@@ -547,7 +547,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:24:46.343Z"
+              "extractedAt": "2026-11-04T09:41:20.030Z"
             }
           },
           "output": {
@@ -893,7 +893,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T09:24:46.339Z"
+            "extractedAt": "2026-11-04T09:41:20.026Z"
           }
         },
         {
@@ -910,7 +910,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T09:24:46.343Z"
+            "extractedAt": "2026-11-04T09:41:20.030Z"
           }
         }
       ]
@@ -951,12 +951,6 @@
       },
       "directEffects": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
@@ -976,12 +970,6 @@
         }
       ],
       "effects": [
-        {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
         {
           "kind": "db.write",
           "target": "kyc_results",
@@ -1023,13 +1011,20 @@
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
           "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "calls": [
         "IdentityModule.fetchIdentity",
         "BirthInfoModule.resolve",
         "NationalityModule.resolve",
-        "SanctionsScreening.screen"
+        "SanctionsScreening.screen",
+        "KycModule.getStatus"
       ],
       "change": "modified",
       "containsChanges": true,
@@ -1432,20 +1427,22 @@
         },
         "effectsAdded": [
           {
-            "kind": "db.read",
-            "target": "kyc_results",
-            "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 54
-          },
-          {
             "kind": "outbox",
             "target": "kyc.manual_review_requested",
             "file": "sample-service/src/modules/kyc/KycModule.ts",
             "line": 46
+          },
+          {
+            "kind": "db.read",
+            "target": "kyc_results",
+            "file": "sample-service/src/modules/kyc/KycModule.ts",
+            "line": 54
           }
         ],
         "effectsRemoved": [],
-        "callsAdded": [],
+        "callsAdded": [
+          "KycModule.getStatus"
+        ],
         "callsRemoved": [],
         "implementationOnly": false
       },
@@ -1458,7 +1455,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T09:24:46.342Z"
+            "checkedAt": "2026-11-04T09:41:20.029Z"
           }
         },
         {
@@ -1469,7 +1466,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-04T09:24:46.343Z"
+            "checkedAt": "2026-11-04T09:41:20.031Z"
           }
         }
       ]
@@ -1590,7 +1587,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T09:24:46.342Z"
+            "checkedAt": "2026-11-04T09:41:20.029Z"
           }
         },
         {
@@ -1912,10 +1909,7 @@
         ],
         "callsAdded": [],
         "callsRemoved": [
-          "IdentityModule.fetchIdentity",
-          "BirthInfoModule.resolve",
-          "NationalityModule.resolve",
-          "SanctionsScreening.screen"
+          "KycModule.runCheck"
         ],
         "implementationOnly": false
       },
@@ -2261,7 +2255,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:24:46.339Z"
+              "extractedAt": "2026-11-04T09:41:20.026Z"
             }
           },
           "output": {
@@ -2282,7 +2276,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:24:46.343Z"
+              "extractedAt": "2026-11-04T09:41:20.030Z"
             }
           },
           "output": {
@@ -2347,12 +2341,6 @@
           "line": 19
         },
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
@@ -2393,6 +2381,12 @@
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
           "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "calls": [
@@ -2405,16 +2399,16 @@
         "risk": "high",
         "effectsAdded": [
           {
-            "kind": "db.read",
-            "target": "kyc_results",
-            "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 54
-          },
-          {
             "kind": "outbox",
             "target": "kyc.manual_review_requested",
             "file": "sample-service/src/modules/kyc/KycModule.ts",
             "line": 46
+          },
+          {
+            "kind": "db.read",
+            "target": "kyc_results",
+            "file": "sample-service/src/modules/kyc/KycModule.ts",
+            "line": 54
           }
         ],
         "effectsRemoved": [],
@@ -2502,7 +2496,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:24:46.339Z"
+              "extractedAt": "2026-11-04T09:41:20.026Z"
             }
           },
           "output": {
@@ -2524,7 +2518,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:24:46.343Z"
+              "extractedAt": "2026-11-04T09:41:20.030Z"
             }
           },
           "output": {
@@ -2952,10 +2946,7 @@
         }
       ],
       "calls": [
-        "IdentityModule.fetchIdentity",
-        "NationalityModule.resolve",
-        "PersonalDetailsModule.resolve",
-        "BirthInfoModule.resolve"
+        "ProfileService.getProfile"
       ],
       "change": "unchanged",
       "containsChanges": false,
@@ -3190,18 +3181,6 @@
           "target": "tax_declarations",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
           "line": 35
-        },
-        {
-          "kind": "db.read",
-          "target": "tax_declarations",
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 27
-        },
-        {
-          "kind": "db.write",
-          "target": "tax_residency_assessments",
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 30
         }
       ],
       "effects": [
@@ -3243,9 +3222,7 @@
         }
       ],
       "calls": [
-        "IdentityModule.fetchIdentity",
-        "BirthInfoModule.resolve",
-        "NationalityModule.resolve"
+        "TaxResidencyModule.assess"
       ],
       "change": "unchanged",
       "containsChanges": false,
@@ -3284,18 +3261,6 @@
           "target": "tax_residency_assessments",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
           "line": 40
-        },
-        {
-          "kind": "db.read",
-          "target": "tax_declarations",
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 27
-        },
-        {
-          "kind": "db.write",
-          "target": "tax_residency_assessments",
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 30
         }
       ],
       "effects": [
@@ -3337,9 +3302,7 @@
         }
       ],
       "calls": [
-        "IdentityModule.fetchIdentity",
-        "BirthInfoModule.resolve",
-        "NationalityModule.resolve"
+        "TaxResidencyModule.assess"
       ],
       "change": "unchanged",
       "containsChanges": false,
@@ -3592,12 +3555,6 @@
       "line": 5,
       "effects": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
@@ -3638,22 +3595,28 @@
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
           "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "change": "unchanged",
       "containsChanges": true,
       "effectsAdded": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "outbox",
           "target": "kyc.manual_review_requested",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
           "line": 46
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "effectsRemoved": []
@@ -3667,12 +3630,6 @@
       "line": 9,
       "effects": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
@@ -3713,6 +3670,12 @@
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
           "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "change": "added",
@@ -3747,12 +3710,6 @@
       ],
       "effectsAdded": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
@@ -3793,6 +3750,12 @@
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
           "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "effectsRemoved": []
@@ -4198,12 +4161,6 @@
       "line": 7,
       "effects": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
@@ -4244,22 +4201,28 @@
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
           "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "change": "unchanged",
       "containsChanges": true,
       "effectsAdded": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "outbox",
           "target": "kyc.manual_review_requested",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
           "line": 46
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "effectsRemoved": []
@@ -4369,12 +4332,6 @@
       "line": 5,
       "effects": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
@@ -4415,22 +4372,28 @@
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
           "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "change": "unchanged",
       "containsChanges": true,
       "effectsAdded": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "outbox",
           "target": "kyc.manual_review_requested",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
           "line": 46
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "effectsRemoved": []
@@ -4476,12 +4439,6 @@
           "line": 19
         },
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "db.write",
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
@@ -4522,22 +4479,28 @@
           "target": "sanctions-api",
           "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
           "line": 20
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "change": "unchanged",
       "containsChanges": true,
       "effectsAdded": [
         {
-          "kind": "db.read",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 54
-        },
-        {
           "kind": "outbox",
           "target": "kyc.manual_review_requested",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
           "line": 46
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_results",
+          "file": "sample-service/src/modules/kyc/KycModule.ts",
+          "line": 54
         }
       ],
       "effectsRemoved": []
@@ -5404,16 +5367,10 @@
         },
         {
           "id": "s5",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.read",
-            "target": "kyc_results",
-            "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 54
-          },
-          "line": 54,
+          "kind": "call",
+          "target": "KycModule.getStatus",
+          "line": 40,
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "via": "KycModule.getStatus",
           "delta": "added"
         },
         {
@@ -5884,71 +5841,10 @@
         {
           "id": "rm:s2",
           "kind": "call",
-          "target": "IdentityModule.fetchIdentity",
-          "line": 30,
+          "target": "KycModule.runCheck",
+          "line": 56,
           "file": "sample-service/src/modules/kyc/KycModule.ts",
           "loop": true,
-          "via": "KycModule.runCheck",
-          "delta": "removed"
-        },
-        {
-          "id": "rm:s3",
-          "kind": "call",
-          "target": "BirthInfoModule.resolve",
-          "line": 31,
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "loop": true,
-          "via": "KycModule.runCheck",
-          "delta": "removed"
-        },
-        {
-          "id": "rm:s4",
-          "kind": "call",
-          "target": "NationalityModule.resolve",
-          "line": 31,
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "loop": true,
-          "via": "KycModule.runCheck",
-          "delta": "removed"
-        },
-        {
-          "id": "rm:s5",
-          "kind": "call",
-          "target": "SanctionsScreening.screen",
-          "line": 32,
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "loop": true,
-          "via": "KycModule.runCheck",
-          "delta": "removed"
-        },
-        {
-          "id": "rm:s6",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.write",
-            "target": "kyc_results",
-            "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 38
-          },
-          "line": 38,
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "loop": true,
-          "via": "KycModule.runCheck",
-          "delta": "removed"
-        },
-        {
-          "id": "rm:s7",
-          "kind": "effect",
-          "effect": {
-            "kind": "outbox",
-            "target": "kyc.completed",
-            "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 39
-          },
-          "line": 39,
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "loop": true,
-          "via": "KycModule.runCheck",
           "delta": "removed"
         }
       ],
@@ -5961,65 +5857,6 @@
         },
         {
           "from": "rm:s2",
-          "to": "rm:s3",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "rm:s2",
-          "to": "rm:s4",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "rm:s2",
-          "to": "rm:s5",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "rm:s3",
-          "to": "rm:s5",
-          "kind": "data",
-          "label": "birth"
-        },
-        {
-          "from": "rm:s4",
-          "to": "rm:s5",
-          "kind": "data",
-          "label": "nationality"
-        },
-        {
-          "from": "s1",
-          "to": "rm:s6",
-          "kind": "data",
-          "label": "row"
-        },
-        {
-          "from": "rm:s5",
-          "to": "rm:s6",
-          "kind": "data",
-          "label": "result"
-        },
-        {
-          "from": "s1",
-          "to": "rm:s7",
-          "kind": "data",
-          "label": "row"
-        },
-        {
-          "from": "rm:s5",
-          "to": "rm:s7",
-          "kind": "data",
-          "label": "result"
-        },
-        {
-          "from": "rm:s6",
-          "to": "exit",
-          "kind": "control"
-        },
-        {
-          "from": "rm:s7",
           "to": "exit",
           "kind": "control"
         }
@@ -6628,37 +6465,12 @@
         {
           "id": "s1",
           "kind": "call",
-          "target": "IdentityModule.fetchIdentity",
-          "line": 22,
-          "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "via": "ProfileService.getProfile"
+          "target": "ProfileService.getProfile",
+          "line": 48,
+          "file": "sample-service/src/modules/profile/ProfileService.ts"
         },
         {
           "id": "s2",
-          "kind": "call",
-          "target": "NationalityModule.resolve",
-          "line": 24,
-          "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "via": "ProfileService.getProfile"
-        },
-        {
-          "id": "s3",
-          "kind": "call",
-          "target": "PersonalDetailsModule.resolve",
-          "line": 25,
-          "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "via": "ProfileService.getProfile"
-        },
-        {
-          "id": "s4",
-          "kind": "call",
-          "target": "BirthInfoModule.resolve",
-          "line": 26,
-          "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "via": "ProfileService.getProfile"
-        },
-        {
-          "id": "s5",
           "kind": "effect",
           "effect": {
             "kind": "db.write",
@@ -6670,7 +6482,7 @@
           "file": "sample-service/src/modules/profile/ProfileService.ts"
         },
         {
-          "id": "s6",
+          "id": "s3",
           "kind": "effect",
           "effect": {
             "kind": "kafka",
@@ -6690,66 +6502,30 @@
           "label": "userId"
         },
         {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
           "from": "s1",
           "to": "s2",
           "kind": "data",
-          "label": "identity"
+          "label": "profile"
         },
         {
           "from": "entry",
           "to": "s3",
           "kind": "data",
           "label": "userId"
-        },
-        {
-          "from": "s1",
-          "to": "s3",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "s1",
-          "to": "s4",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "entry",
-          "to": "s5",
-          "kind": "data",
-          "label": "userId, profile"
         },
         {
           "from": "s2",
-          "to": "s5",
-          "kind": "data",
-          "label": "profile"
-        },
-        {
-          "from": "s3",
-          "to": "s5",
-          "kind": "data",
-          "label": "profile"
-        },
-        {
-          "from": "s4",
-          "to": "s5",
-          "kind": "data",
-          "label": "profile"
-        },
-        {
-          "from": "entry",
-          "to": "s6",
-          "kind": "data",
-          "label": "userId"
-        },
-        {
-          "from": "s5",
           "to": "exit",
           "kind": "control"
         },
         {
-          "from": "s6",
+          "from": "s3",
           "to": "exit",
           "kind": "control"
         }
@@ -7014,52 +6790,9 @@
         {
           "id": "s2",
           "kind": "call",
-          "target": "IdentityModule.fetchIdentity",
-          "line": 24,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "via": "TaxResidencyModule.assess"
-        },
-        {
-          "id": "s3",
-          "kind": "call",
-          "target": "BirthInfoModule.resolve",
-          "line": 25,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "via": "TaxResidencyModule.assess"
-        },
-        {
-          "id": "s4",
-          "kind": "call",
-          "target": "NationalityModule.resolve",
-          "line": 26,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "via": "TaxResidencyModule.assess"
-        },
-        {
-          "id": "s5",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.read",
-            "target": "tax_declarations",
-            "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-            "line": 27
-          },
-          "line": 27,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "via": "TaxResidencyModule.assess"
-        },
-        {
-          "id": "s6",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.write",
-            "target": "tax_residency_assessments",
-            "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-            "line": 30
-          },
-          "line": 30,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "via": "TaxResidencyModule.assess"
+          "target": "TaxResidencyModule.assess",
+          "line": 36,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts"
         }
       ],
       "edges": [
@@ -7077,71 +6810,11 @@
         },
         {
           "from": "s2",
-          "to": "s3",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "s2",
-          "to": "s4",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "entry",
-          "to": "s5",
-          "kind": "data",
-          "label": "userId"
-        },
-        {
-          "from": "entry",
-          "to": "s6",
-          "kind": "data",
-          "label": "userId"
-        },
-        {
-          "from": "s4",
-          "to": "s6",
-          "kind": "data",
-          "label": "assessment"
-        },
-        {
-          "from": "s5",
-          "to": "s6",
-          "kind": "data",
-          "label": "assessment"
-        },
-        {
-          "from": "s3",
-          "to": "s6",
-          "kind": "data",
-          "label": "assessment"
-        },
-        {
-          "from": "s4",
           "to": "exit",
-          "kind": "data",
-          "label": "assessment"
-        },
-        {
-          "from": "s5",
-          "to": "exit",
-          "kind": "data",
-          "label": "assessment"
-        },
-        {
-          "from": "s3",
-          "to": "exit",
-          "kind": "data",
-          "label": "assessment"
+          "kind": "data"
         },
         {
           "from": "s1",
-          "to": "exit",
-          "kind": "control"
-        },
-        {
-          "from": "s6",
           "to": "exit",
           "kind": "control"
         }
@@ -7169,57 +6842,10 @@
         {
           "id": "s2",
           "kind": "call",
-          "target": "IdentityModule.fetchIdentity",
-          "line": 24,
+          "target": "TaxResidencyModule.assess",
+          "line": 41,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "loop": true,
-          "via": "TaxResidencyModule.assess"
-        },
-        {
-          "id": "s3",
-          "kind": "call",
-          "target": "BirthInfoModule.resolve",
-          "line": 25,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "loop": true,
-          "via": "TaxResidencyModule.assess"
-        },
-        {
-          "id": "s4",
-          "kind": "call",
-          "target": "NationalityModule.resolve",
-          "line": 26,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "loop": true,
-          "via": "TaxResidencyModule.assess"
-        },
-        {
-          "id": "s5",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.read",
-            "target": "tax_declarations",
-            "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-            "line": 27
-          },
-          "line": 27,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "loop": true,
-          "via": "TaxResidencyModule.assess"
-        },
-        {
-          "id": "s6",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.write",
-            "target": "tax_residency_assessments",
-            "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-            "line": 30
-          },
-          "line": 30,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "loop": true,
-          "via": "TaxResidencyModule.assess"
+          "loop": true
         }
       ],
       "edges": [
@@ -7230,54 +6856,12 @@
           "label": "user"
         },
         {
-          "from": "s2",
-          "to": "s3",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "s2",
-          "to": "s4",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "s1",
-          "to": "s5",
-          "kind": "data",
-          "label": "user"
-        },
-        {
-          "from": "s1",
-          "to": "s6",
-          "kind": "data",
-          "label": "user"
-        },
-        {
-          "from": "s4",
-          "to": "s6",
-          "kind": "data",
-          "label": "assessment"
-        },
-        {
-          "from": "s5",
-          "to": "s6",
-          "kind": "data",
-          "label": "assessment"
-        },
-        {
-          "from": "s3",
-          "to": "s6",
-          "kind": "data",
-          "label": "assessment"
-        },
-        {
           "from": "entry",
           "to": "s1",
           "kind": "control"
         },
         {
-          "from": "s6",
+          "from": "s2",
           "to": "exit",
           "kind": "control"
         }
@@ -8815,16 +8399,6 @@
     },
     {
       "rule": "new-side-effect",
-      "severity": "info",
-      "message": "KycCheck.runCheck now performs db.read `kyc_results`",
-      "subject": {
-        "type": "operation",
-        "id": "KycModule.runCheck"
-      },
-      "isNew": true
-    },
-    {
-      "rule": "new-side-effect",
       "severity": "warning",
       "message": "KycCheck.runCheck now performs outbox `kyc.manual_review_requested`",
       "subject": {
@@ -8833,6 +8407,16 @@
       },
       "isNew": true,
       "hint": "A new write runs on every flow that reaches this module. Check the zoom-out view."
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "info",
+      "message": "KycCheck.runCheck now performs db.read `kyc_results`",
+      "subject": {
+        "type": "operation",
+        "id": "KycModule.runCheck"
+      },
+      "isNew": true
     },
     {
       "rule": "new-side-effect",
@@ -8880,13 +8464,13 @@
       {
         "operation": "KycModule.runCheck",
         "risk": "high",
-        "reason": "output shape changed; +db.read kyc_results, +outbox kyc.manual_review_requested; 2 guards changed inside",
+        "reason": "output shape changed; +outbox kyc.manual_review_requested, +db.read kyc_results; now calls KycCheck.getStatus; 2 guards changed inside",
         "reach": 5
       },
       {
         "operation": "KycModule.recheckExpired",
         "risk": "high",
-        "reason": "+outbox kyc.recheck_requested; −db.write kyc_results, −outbox kyc.completed, −db.read user_documents, −http document-ai, −db.read country_codes, −http sanctions-api; 7 steps added or removed inside",
+        "reason": "+outbox kyc.recheck_requested; −db.write kyc_results, −outbox kyc.completed, −db.read user_documents, −http document-ai, −db.read country_codes, −http sanctions-api; 2 steps added or removed inside",
         "reach": 1
       },
       {

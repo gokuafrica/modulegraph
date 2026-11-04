@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T09:24:40.598Z",
+  "generatedAt": "2026-11-04T09:41:14.329Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
@@ -433,7 +433,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:24:40.487Z"
+              "extractedAt": "2026-11-04T09:41:14.207Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -458,7 +458,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:24:40.488Z"
+              "extractedAt": "2026-11-04T09:41:14.209Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -969,7 +969,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:24:40.484Z"
+              "extractedAt": "2026-11-04T09:41:14.204Z"
             }
           },
           "output": {
@@ -990,7 +990,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:24:40.487Z"
+              "extractedAt": "2026-11-04T09:41:14.208Z"
             }
           },
           "output": {
@@ -1251,7 +1251,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:24:40.484Z"
+              "extractedAt": "2026-11-04T09:41:14.204Z"
             }
           },
           "output": {
@@ -1631,7 +1631,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T09:24:40.484Z"
+            "extractedAt": "2026-11-04T09:41:14.204Z"
           }
         },
         {
@@ -1648,7 +1648,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T09:24:40.487Z"
+            "extractedAt": "2026-11-04T09:41:14.208Z"
           }
         }
       ]
@@ -1785,7 +1785,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-04T09:24:40.486Z"
+            "checkedAt": "2026-11-04T09:41:14.206Z"
           }
         },
         {
@@ -1795,7 +1795,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-04T09:24:40.488Z"
+            "checkedAt": "2026-11-04T09:41:14.208Z"
           }
         }
       ]
@@ -1858,7 +1858,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-04T09:24:40.486Z"
+            "checkedAt": "2026-11-04T09:41:14.206Z"
           }
         },
         {
@@ -1868,7 +1868,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-04T09:24:40.488Z"
+            "checkedAt": "2026-11-04T09:41:14.208Z"
           }
         }
       ]
@@ -1970,18 +1970,6 @@
           "target": "kyc_results",
           "file": "sample-service/src/modules/kyc/KycModule.ts",
           "line": 55
-        },
-        {
-          "kind": "db.write",
-          "target": "kyc_results",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 38
-        },
-        {
-          "kind": "outbox",
-          "target": "kyc.completed",
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "line": 39
         }
       ],
       "effects": [
@@ -2041,10 +2029,7 @@
         }
       ],
       "calls": [
-        "IdentityModule.fetchIdentity",
-        "BirthInfoModule.resolve",
-        "NationalityModule.resolve",
-        "SanctionsScreening.screen"
+        "KycModule.runCheck"
       ],
       "change": "unchanged",
       "containsChanges": true,
@@ -2215,7 +2200,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:24:40.484Z"
+              "extractedAt": "2026-11-04T09:41:14.204Z"
             }
           },
           "output": {
@@ -2236,7 +2221,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:24:40.487Z"
+              "extractedAt": "2026-11-04T09:41:14.208Z"
             }
           },
           "output": {
@@ -2456,7 +2441,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T09:24:40.484Z"
+              "extractedAt": "2026-11-04T09:41:14.204Z"
             }
           },
           "output": {
@@ -2478,7 +2463,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T09:24:40.487Z"
+              "extractedAt": "2026-11-04T09:41:14.208Z"
             }
           },
           "output": {
@@ -3024,10 +3009,7 @@
         }
       ],
       "calls": [
-        "IdentityModule.fetchIdentity",
-        "NationalityModule.resolve",
-        "PersonalDetailsModule.resolve",
-        "BirthInfoModule.resolve"
+        "ProfileService.getProfile"
       ],
       "change": "unchanged",
       "containsChanges": true,
@@ -3316,18 +3298,6 @@
           "target": "tax_declarations",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
           "line": 35
-        },
-        {
-          "kind": "db.read",
-          "target": "tax_declarations",
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 27
-        },
-        {
-          "kind": "db.write",
-          "target": "tax_residency_assessments",
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 30
         }
       ],
       "effects": [
@@ -3381,9 +3351,7 @@
         }
       ],
       "calls": [
-        "IdentityModule.fetchIdentity",
-        "BirthInfoModule.resolve",
-        "NationalityModule.resolve"
+        "TaxResidencyModule.assess"
       ],
       "change": "unchanged",
       "containsChanges": true,
@@ -3443,18 +3411,6 @@
           "target": "tax_residency_assessments",
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
           "line": 40
-        },
-        {
-          "kind": "db.read",
-          "target": "tax_declarations",
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 27
-        },
-        {
-          "kind": "db.write",
-          "target": "tax_residency_assessments",
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "line": 30
         }
       ],
       "effects": [
@@ -3508,9 +3464,7 @@
         }
       ],
       "calls": [
-        "IdentityModule.fetchIdentity",
-        "BirthInfoModule.resolve",
-        "NationalityModule.resolve"
+        "TaxResidencyModule.assess"
       ],
       "change": "unchanged",
       "containsChanges": true,
@@ -6562,66 +6516,10 @@
         {
           "id": "s2",
           "kind": "call",
-          "target": "IdentityModule.fetchIdentity",
-          "line": 30,
+          "target": "KycModule.runCheck",
+          "line": 56,
           "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "loop": true,
-          "via": "KycModule.runCheck"
-        },
-        {
-          "id": "s3",
-          "kind": "call",
-          "target": "BirthInfoModule.resolve",
-          "line": 31,
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "loop": true,
-          "via": "KycModule.runCheck"
-        },
-        {
-          "id": "s4",
-          "kind": "call",
-          "target": "NationalityModule.resolve",
-          "line": 31,
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "loop": true,
-          "via": "KycModule.runCheck"
-        },
-        {
-          "id": "s5",
-          "kind": "call",
-          "target": "SanctionsScreening.screen",
-          "line": 32,
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "loop": true,
-          "via": "KycModule.runCheck"
-        },
-        {
-          "id": "s6",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.write",
-            "target": "kyc_results",
-            "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 38
-          },
-          "line": 38,
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "loop": true,
-          "via": "KycModule.runCheck"
-        },
-        {
-          "id": "s7",
-          "kind": "effect",
-          "effect": {
-            "kind": "outbox",
-            "target": "kyc.completed",
-            "file": "sample-service/src/modules/kyc/KycModule.ts",
-            "line": 39
-          },
-          "line": 39,
-          "file": "sample-service/src/modules/kyc/KycModule.ts",
-          "loop": true,
-          "via": "KycModule.runCheck"
+          "loop": true
         }
       ],
       "edges": [
@@ -6630,60 +6528,6 @@
           "to": "s2",
           "kind": "data",
           "label": "row"
-        },
-        {
-          "from": "s2",
-          "to": "s3",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "s2",
-          "to": "s4",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "s2",
-          "to": "s5",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "s3",
-          "to": "s5",
-          "kind": "data",
-          "label": "birth"
-        },
-        {
-          "from": "s4",
-          "to": "s5",
-          "kind": "data",
-          "label": "nationality"
-        },
-        {
-          "from": "s1",
-          "to": "s6",
-          "kind": "data",
-          "label": "row"
-        },
-        {
-          "from": "s5",
-          "to": "s6",
-          "kind": "data",
-          "label": "result"
-        },
-        {
-          "from": "s1",
-          "to": "s7",
-          "kind": "data",
-          "label": "row"
-        },
-        {
-          "from": "s5",
-          "to": "s7",
-          "kind": "data",
-          "label": "result"
         },
         {
           "from": "s1",
@@ -6697,12 +6541,7 @@
           "kind": "control"
         },
         {
-          "from": "s6",
-          "to": "exit",
-          "kind": "control"
-        },
-        {
-          "from": "s7",
+          "from": "s2",
           "to": "exit",
           "kind": "control"
         }
@@ -7285,37 +7124,12 @@
         {
           "id": "s1",
           "kind": "call",
-          "target": "IdentityModule.fetchIdentity",
-          "line": 22,
-          "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "via": "ProfileService.getProfile"
+          "target": "ProfileService.getProfile",
+          "line": 48,
+          "file": "sample-service/src/modules/profile/ProfileService.ts"
         },
         {
           "id": "s2",
-          "kind": "call",
-          "target": "NationalityModule.resolve",
-          "line": 24,
-          "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "via": "ProfileService.getProfile"
-        },
-        {
-          "id": "s3",
-          "kind": "call",
-          "target": "PersonalDetailsModule.resolve",
-          "line": 25,
-          "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "via": "ProfileService.getProfile"
-        },
-        {
-          "id": "s4",
-          "kind": "call",
-          "target": "BirthInfoModule.resolve",
-          "line": 26,
-          "file": "sample-service/src/modules/profile/ProfileService.ts",
-          "via": "ProfileService.getProfile"
-        },
-        {
-          "id": "s5",
           "kind": "effect",
           "effect": {
             "kind": "db.write",
@@ -7327,7 +7141,7 @@
           "file": "sample-service/src/modules/profile/ProfileService.ts"
         },
         {
-          "id": "s6",
+          "id": "s3",
           "kind": "effect",
           "effect": {
             "kind": "kafka",
@@ -7347,66 +7161,30 @@
           "label": "userId"
         },
         {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
           "from": "s1",
           "to": "s2",
           "kind": "data",
-          "label": "identity"
+          "label": "profile"
         },
         {
           "from": "entry",
           "to": "s3",
           "kind": "data",
           "label": "userId"
-        },
-        {
-          "from": "s1",
-          "to": "s3",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "s1",
-          "to": "s4",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "entry",
-          "to": "s5",
-          "kind": "data",
-          "label": "userId, profile"
         },
         {
           "from": "s2",
-          "to": "s5",
-          "kind": "data",
-          "label": "profile"
-        },
-        {
-          "from": "s3",
-          "to": "s5",
-          "kind": "data",
-          "label": "profile"
-        },
-        {
-          "from": "s4",
-          "to": "s5",
-          "kind": "data",
-          "label": "profile"
-        },
-        {
-          "from": "entry",
-          "to": "s6",
-          "kind": "data",
-          "label": "userId"
-        },
-        {
-          "from": "s5",
           "to": "exit",
           "kind": "control"
         },
         {
-          "from": "s6",
+          "from": "s3",
           "to": "exit",
           "kind": "control"
         }
@@ -7671,52 +7449,9 @@
         {
           "id": "s2",
           "kind": "call",
-          "target": "IdentityModule.fetchIdentity",
-          "line": 24,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "via": "TaxResidencyModule.assess"
-        },
-        {
-          "id": "s3",
-          "kind": "call",
-          "target": "BirthInfoModule.resolve",
-          "line": 25,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "via": "TaxResidencyModule.assess"
-        },
-        {
-          "id": "s4",
-          "kind": "call",
-          "target": "NationalityModule.resolve",
-          "line": 26,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "via": "TaxResidencyModule.assess"
-        },
-        {
-          "id": "s5",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.read",
-            "target": "tax_declarations",
-            "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-            "line": 27
-          },
-          "line": 27,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "via": "TaxResidencyModule.assess"
-        },
-        {
-          "id": "s6",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.write",
-            "target": "tax_residency_assessments",
-            "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-            "line": 30
-          },
-          "line": 30,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "via": "TaxResidencyModule.assess"
+          "target": "TaxResidencyModule.assess",
+          "line": 36,
+          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts"
         }
       ],
       "edges": [
@@ -7734,71 +7469,11 @@
         },
         {
           "from": "s2",
-          "to": "s3",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "s2",
-          "to": "s4",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "entry",
-          "to": "s5",
-          "kind": "data",
-          "label": "userId"
-        },
-        {
-          "from": "entry",
-          "to": "s6",
-          "kind": "data",
-          "label": "userId"
-        },
-        {
-          "from": "s4",
-          "to": "s6",
-          "kind": "data",
-          "label": "assessment"
-        },
-        {
-          "from": "s5",
-          "to": "s6",
-          "kind": "data",
-          "label": "assessment"
-        },
-        {
-          "from": "s3",
-          "to": "s6",
-          "kind": "data",
-          "label": "assessment"
-        },
-        {
-          "from": "s4",
           "to": "exit",
-          "kind": "data",
-          "label": "assessment"
-        },
-        {
-          "from": "s5",
-          "to": "exit",
-          "kind": "data",
-          "label": "assessment"
-        },
-        {
-          "from": "s3",
-          "to": "exit",
-          "kind": "data",
-          "label": "assessment"
+          "kind": "data"
         },
         {
           "from": "s1",
-          "to": "exit",
-          "kind": "control"
-        },
-        {
-          "from": "s6",
           "to": "exit",
           "kind": "control"
         }
@@ -7826,57 +7501,10 @@
         {
           "id": "s2",
           "kind": "call",
-          "target": "IdentityModule.fetchIdentity",
-          "line": 24,
+          "target": "TaxResidencyModule.assess",
+          "line": 41,
           "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "loop": true,
-          "via": "TaxResidencyModule.assess"
-        },
-        {
-          "id": "s3",
-          "kind": "call",
-          "target": "BirthInfoModule.resolve",
-          "line": 25,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "loop": true,
-          "via": "TaxResidencyModule.assess"
-        },
-        {
-          "id": "s4",
-          "kind": "call",
-          "target": "NationalityModule.resolve",
-          "line": 26,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "loop": true,
-          "via": "TaxResidencyModule.assess"
-        },
-        {
-          "id": "s5",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.read",
-            "target": "tax_declarations",
-            "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-            "line": 27
-          },
-          "line": 27,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "loop": true,
-          "via": "TaxResidencyModule.assess"
-        },
-        {
-          "id": "s6",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.write",
-            "target": "tax_residency_assessments",
-            "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-            "line": 30
-          },
-          "line": 30,
-          "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
-          "loop": true,
-          "via": "TaxResidencyModule.assess"
+          "loop": true
         }
       ],
       "edges": [
@@ -7887,54 +7515,12 @@
           "label": "user"
         },
         {
-          "from": "s2",
-          "to": "s3",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "s2",
-          "to": "s4",
-          "kind": "data",
-          "label": "identity"
-        },
-        {
-          "from": "s1",
-          "to": "s5",
-          "kind": "data",
-          "label": "user"
-        },
-        {
-          "from": "s1",
-          "to": "s6",
-          "kind": "data",
-          "label": "user"
-        },
-        {
-          "from": "s4",
-          "to": "s6",
-          "kind": "data",
-          "label": "assessment"
-        },
-        {
-          "from": "s5",
-          "to": "s6",
-          "kind": "data",
-          "label": "assessment"
-        },
-        {
-          "from": "s3",
-          "to": "s6",
-          "kind": "data",
-          "label": "assessment"
-        },
-        {
           "from": "entry",
           "to": "s1",
           "kind": "control"
         },
         {
-          "from": "s6",
+          "from": "s2",
           "to": "exit",
           "kind": "control"
         }

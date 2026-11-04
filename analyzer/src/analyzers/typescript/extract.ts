@@ -703,7 +703,9 @@ export class Extractor implements RevisionAnalysis {
     if (site && site.owner && site.name !== 'new') {
       const { cls, owner, name, decl } = site;
       const moduleId = cls && this.moduleIds.get(cls);
-      if (cls && moduleId && cls !== this.currentClass && Node.isMethodDeclaration(decl) && decl.getScope() === MemberScope.Public) {
+      // Another operation, in this module or another, is a step of its own (`resolveHold` → `release` / `cancel`):
+      // the flow stays one module level deep. Only private helpers are inlined into the caller.
+      if (cls && moduleId && Node.isMethodDeclaration(decl) && this.isOperation(decl) && decl.getParent() === cls) {
         return { kind: 'op', opId: `${owner}.${name}` };
       }
       if (Node.isMethodDeclaration(decl) && decl.getBody() && this.isProjectFile(decl.getSourceFile().getFilePath())) {

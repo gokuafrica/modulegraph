@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "order-service",
-  "generatedAt": "2026-11-04T09:25:05.257Z",
+  "generatedAt": "2026-11-04T09:41:40.002Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
@@ -2011,44 +2011,7 @@
       "returns": {
         "type": "void"
       },
-      "directEffects": [
-        {
-          "kind": "db.read",
-          "target": "orders",
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "line": 127
-        },
-        {
-          "kind": "db.read",
-          "target": "order_lines",
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "line": 133
-        },
-        {
-          "kind": "db.write",
-          "target": "orders",
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "line": 69
-        },
-        {
-          "kind": "kafka",
-          "target": "orders.created",
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "line": 72
-        },
-        {
-          "kind": "event",
-          "target": "order.created",
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "line": 73
-        },
-        {
-          "kind": "kafka",
-          "target": "orders.cancelled",
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "line": 101
-        }
-      ],
+      "directEffects": [],
       "effects": [
         {
           "kind": "db.read",
@@ -2081,12 +2044,6 @@
           "line": 73
         },
         {
-          "kind": "kafka",
-          "target": "orders.cancelled",
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "line": 101
-        },
-        {
           "kind": "db.read",
           "target": "stock_items",
           "file": "sample-nest-service/src/inventory/inventory.service.ts",
@@ -2111,6 +2068,12 @@
           "line": 38
         },
         {
+          "kind": "kafka",
+          "target": "orders.cancelled",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 101
+        },
+        {
           "kind": "http",
           "target": "api.payments.example",
           "file": "sample-nest-service/src/payments/payments.service.ts",
@@ -2124,11 +2087,8 @@
         }
       ],
       "calls": [
-        "InventoryService.reserve",
-        "AuditService.record",
-        "CustomersService.profile",
-        "PaymentsService.refund",
-        "InventoryService.release"
+        "OrdersService.release",
+        "OrdersService.cancel"
       ],
       "change": "added",
       "containsChanges": true,
@@ -2182,72 +2142,6 @@
               "b": 81
             }
           ]
-        },
-        {
-          "name": "OrdersService.release",
-          "role": "helper",
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "line": 65,
-          "status": "added",
-          "added": 11,
-          "removed": 0,
-          "diff": [
-            {
-              "t": "+",
-              "text": "async release(id: string, reviewer: string): Promise<Order> {",
-              "b": 65
-            },
-            {
-              "t": "+",
-              "text": "  const order = await this.load(id);",
-              "b": 66
-            },
-            {
-              "t": "+",
-              "text": "  if (order.status !== 'held') throw new ConflictException(`order ${id} is ${order.status}, not held`);",
-              "b": 67
-            },
-            {
-              "t": "+",
-              "text": "  await this.inventory.reserve(order.lines);",
-              "b": 68
-            },
-            {
-              "t": "+",
-              "text": "  await this.orders.update({ id }, { status: 'pending' });",
-              "b": 69
-            },
-            {
-              "t": "+",
-              "text": "  await this.audit.record('order.released', id, { reviewer });",
-              "b": 70
-            },
-            {
-              "t": "+",
-              "text": "  const customer = await this.customers.profile(order.customerId);",
-              "b": 71
-            },
-            {
-              "t": "+",
-              "text": "  this.kafka.emit('orders.created', { orderId: id, total: order.total });",
-              "b": 72
-            },
-            {
-              "t": "+",
-              "text": "  this.events.emit('order.created', { ...order, email: customer.email });",
-              "b": 73
-            },
-            {
-              "t": "+",
-              "text": "  return { ...order, status: 'pending' };",
-              "b": 74
-            },
-            {
-              "t": "+",
-              "text": "}",
-              "b": 75
-            }
-          ]
         }
       ],
       "delta": {
@@ -2284,12 +2178,6 @@
             "line": 73
           },
           {
-            "kind": "kafka",
-            "target": "orders.cancelled",
-            "file": "sample-nest-service/src/orders/orders.service.ts",
-            "line": 101
-          },
-          {
             "kind": "db.read",
             "target": "stock_items",
             "file": "sample-nest-service/src/inventory/inventory.service.ts",
@@ -2314,6 +2202,12 @@
             "line": 38
           },
           {
+            "kind": "kafka",
+            "target": "orders.cancelled",
+            "file": "sample-nest-service/src/orders/orders.service.ts",
+            "line": 101
+          },
+          {
             "kind": "http",
             "target": "api.payments.example",
             "file": "sample-nest-service/src/payments/payments.service.ts",
@@ -2328,11 +2222,8 @@
         ],
         "effectsRemoved": [],
         "callsAdded": [
-          "InventoryService.reserve",
-          "AuditService.record",
-          "CustomersService.profile",
-          "PaymentsService.refund",
-          "InventoryService.release"
+          "OrdersService.release",
+          "OrdersService.cancel"
         ],
         "callsRemoved": [],
         "implementationOnly": false
@@ -5151,12 +5042,6 @@
           "line": 73
         },
         {
-          "kind": "kafka",
-          "target": "orders.cancelled",
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "line": 101
-        },
-        {
           "kind": "db.read",
           "target": "stock_items",
           "file": "sample-nest-service/src/inventory/inventory.service.ts",
@@ -5179,6 +5064,12 @@
           "target": "customers",
           "file": "sample-nest-service/src/customers/customers.service.ts",
           "line": 38
+        },
+        {
+          "kind": "kafka",
+          "target": "orders.cancelled",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 101
         },
         {
           "kind": "http",
@@ -5260,12 +5151,6 @@
           "line": 73
         },
         {
-          "kind": "kafka",
-          "target": "orders.cancelled",
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "line": 101
-        },
-        {
           "kind": "db.read",
           "target": "stock_items",
           "file": "sample-nest-service/src/inventory/inventory.service.ts",
@@ -5288,6 +5173,12 @@
           "target": "customers",
           "file": "sample-nest-service/src/customers/customers.service.ts",
           "line": 38
+        },
+        {
+          "kind": "kafka",
+          "target": "orders.cancelled",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 101
         },
         {
           "kind": "http",
@@ -6672,183 +6563,19 @@
       "steps": [
         {
           "id": "s1",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.read",
-            "target": "orders",
-            "file": "sample-nest-service/src/orders/orders.service.ts",
-            "line": 127
-          },
-          "line": 127,
+          "kind": "call",
+          "target": "OrdersService.release",
+          "line": 79,
           "file": "sample-nest-service/src/orders/orders.service.ts",
-          "condition": "if (decision === 'approve')",
-          "via": "OrdersService.load"
+          "condition": "if (decision === 'approve')"
         },
         {
           "id": "s2",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.read",
-            "target": "order_lines",
-            "file": "sample-nest-service/src/orders/orders.service.ts",
-            "line": 133
-          },
-          "line": 133,
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "condition": "if (decision === 'approve') and if (order)",
-          "via": "OrdersService.linesOf"
-        },
-        {
-          "id": "s3",
           "kind": "call",
-          "target": "InventoryService.reserve",
-          "line": 68,
+          "target": "OrdersService.cancel",
+          "line": 80,
           "file": "sample-nest-service/src/orders/orders.service.ts",
-          "condition": "if (decision === 'approve') and unless (order.status !== 'held')",
-          "via": "OrdersService.release"
-        },
-        {
-          "id": "s4",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.write",
-            "target": "orders",
-            "file": "sample-nest-service/src/orders/orders.service.ts",
-            "line": 69
-          },
-          "line": 69,
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "condition": "if (decision === 'approve') and unless (order.status !== 'held')",
-          "via": "OrdersService.release"
-        },
-        {
-          "id": "s5",
-          "kind": "call",
-          "target": "AuditService.record",
-          "line": 70,
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "condition": "if (decision === 'approve') and unless (order.status !== 'held')",
-          "via": "OrdersService.release"
-        },
-        {
-          "id": "s6",
-          "kind": "call",
-          "target": "CustomersService.profile",
-          "line": 71,
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "condition": "if (decision === 'approve') and unless (order.status !== 'held')",
-          "via": "OrdersService.release"
-        },
-        {
-          "id": "s7",
-          "kind": "effect",
-          "effect": {
-            "kind": "kafka",
-            "target": "orders.created",
-            "file": "sample-nest-service/src/orders/orders.service.ts",
-            "line": 72
-          },
-          "line": 72,
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "condition": "if (decision === 'approve') and unless (order.status !== 'held')",
-          "via": "OrdersService.release"
-        },
-        {
-          "id": "s8",
-          "kind": "effect",
-          "effect": {
-            "kind": "event",
-            "target": "order.created",
-            "file": "sample-nest-service/src/orders/orders.service.ts",
-            "line": 73
-          },
-          "line": 73,
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "condition": "if (decision === 'approve') and unless (order.status !== 'held')",
-          "via": "OrdersService.release"
-        },
-        {
-          "id": "s9",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.read",
-            "target": "orders",
-            "file": "sample-nest-service/src/orders/orders.service.ts",
-            "line": 127
-          },
-          "line": 127,
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "condition": "unless (decision === 'approve')",
-          "via": "OrdersService.load"
-        },
-        {
-          "id": "s10",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.read",
-            "target": "order_lines",
-            "file": "sample-nest-service/src/orders/orders.service.ts",
-            "line": 133
-          },
-          "line": 133,
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "condition": "unless (decision === 'approve') and if (order)",
-          "via": "OrdersService.linesOf"
-        },
-        {
-          "id": "s11",
-          "kind": "call",
-          "target": "PaymentsService.refund",
-          "line": 97,
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "condition": "unless (decision === 'approve') and if (order.status === 'paid')",
-          "via": "OrdersService.cancel"
-        },
-        {
-          "id": "s12",
-          "kind": "call",
-          "target": "InventoryService.release",
-          "line": 98,
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "condition": "unless (decision === 'approve')",
-          "via": "OrdersService.cancel"
-        },
-        {
-          "id": "s13",
-          "kind": "effect",
-          "effect": {
-            "kind": "db.write",
-            "target": "orders",
-            "file": "sample-nest-service/src/orders/orders.service.ts",
-            "line": 99
-          },
-          "line": 99,
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "condition": "unless (decision === 'approve')",
-          "via": "OrdersService.cancel"
-        },
-        {
-          "id": "s14",
-          "kind": "call",
-          "target": "AuditService.record",
-          "line": 100,
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "condition": "unless (decision === 'approve')",
-          "via": "OrdersService.cancel"
-        },
-        {
-          "id": "s15",
-          "kind": "effect",
-          "effect": {
-            "kind": "kafka",
-            "target": "orders.cancelled",
-            "file": "sample-nest-service/src/orders/orders.service.ts",
-            "line": 101
-          },
-          "line": 101,
-          "file": "sample-nest-service/src/orders/orders.service.ts",
-          "condition": "unless (decision === 'approve')",
-          "via": "OrdersService.cancel"
+          "condition": "unless (decision === 'approve')"
         }
       ],
       "edges": [
@@ -6866,213 +6593,11 @@
         },
         {
           "from": "s1",
-          "to": "s3",
-          "kind": "data",
-          "label": "order"
+          "to": "exit",
+          "kind": "control"
         },
         {
           "from": "s2",
-          "to": "s3",
-          "kind": "data",
-          "label": "order"
-        },
-        {
-          "from": "entry",
-          "to": "s4",
-          "kind": "data",
-          "label": "orderId"
-        },
-        {
-          "from": "s1",
-          "to": "s4",
-          "kind": "control",
-          "label": "guards"
-        },
-        {
-          "from": "s2",
-          "to": "s4",
-          "kind": "control",
-          "label": "guards"
-        },
-        {
-          "from": "entry",
-          "to": "s5",
-          "kind": "data",
-          "label": "orderId"
-        },
-        {
-          "from": "s1",
-          "to": "s5",
-          "kind": "control",
-          "label": "guards"
-        },
-        {
-          "from": "s2",
-          "to": "s5",
-          "kind": "control",
-          "label": "guards"
-        },
-        {
-          "from": "s1",
-          "to": "s6",
-          "kind": "data",
-          "label": "order"
-        },
-        {
-          "from": "s2",
-          "to": "s6",
-          "kind": "data",
-          "label": "order"
-        },
-        {
-          "from": "entry",
-          "to": "s7",
-          "kind": "data",
-          "label": "orderId"
-        },
-        {
-          "from": "s1",
-          "to": "s7",
-          "kind": "data",
-          "label": "order"
-        },
-        {
-          "from": "s2",
-          "to": "s7",
-          "kind": "data",
-          "label": "order"
-        },
-        {
-          "from": "s1",
-          "to": "s8",
-          "kind": "data",
-          "label": "order"
-        },
-        {
-          "from": "s2",
-          "to": "s8",
-          "kind": "data",
-          "label": "order"
-        },
-        {
-          "from": "s6",
-          "to": "s8",
-          "kind": "data",
-          "label": "customer"
-        },
-        {
-          "from": "entry",
-          "to": "s9",
-          "kind": "data",
-          "label": "orderId"
-        },
-        {
-          "from": "entry",
-          "to": "s10",
-          "kind": "data",
-          "label": "orderId"
-        },
-        {
-          "from": "s9",
-          "to": "s11",
-          "kind": "data",
-          "label": "order"
-        },
-        {
-          "from": "s10",
-          "to": "s11",
-          "kind": "data",
-          "label": "order"
-        },
-        {
-          "from": "s9",
-          "to": "s12",
-          "kind": "data",
-          "label": "order"
-        },
-        {
-          "from": "s10",
-          "to": "s12",
-          "kind": "data",
-          "label": "order"
-        },
-        {
-          "from": "entry",
-          "to": "s13",
-          "kind": "data",
-          "label": "orderId"
-        },
-        {
-          "from": "entry",
-          "to": "s14",
-          "kind": "data",
-          "label": "orderId"
-        },
-        {
-          "from": "s9",
-          "to": "s14",
-          "kind": "data",
-          "label": "order"
-        },
-        {
-          "from": "s10",
-          "to": "s14",
-          "kind": "data",
-          "label": "order"
-        },
-        {
-          "from": "entry",
-          "to": "s15",
-          "kind": "data",
-          "label": "orderId"
-        },
-        {
-          "from": "s3",
-          "to": "exit",
-          "kind": "control"
-        },
-        {
-          "from": "s4",
-          "to": "exit",
-          "kind": "control"
-        },
-        {
-          "from": "s5",
-          "to": "exit",
-          "kind": "control"
-        },
-        {
-          "from": "s7",
-          "to": "exit",
-          "kind": "control"
-        },
-        {
-          "from": "s8",
-          "to": "exit",
-          "kind": "control"
-        },
-        {
-          "from": "s11",
-          "to": "exit",
-          "kind": "control"
-        },
-        {
-          "from": "s12",
-          "to": "exit",
-          "kind": "control"
-        },
-        {
-          "from": "s13",
-          "to": "exit",
-          "kind": "control"
-        },
-        {
-          "from": "s14",
-          "to": "exit",
-          "kind": "control"
-        },
-        {
-          "from": "s15",
           "to": "exit",
           "kind": "control"
         }
@@ -9583,70 +9108,6 @@
     },
     {
       "rule": "new-side-effect",
-      "severity": "info",
-      "message": "Orders.resolveHold now performs db.read `orders` (new operation)",
-      "subject": {
-        "type": "operation",
-        "id": "OrdersService.resolveHold"
-      },
-      "isNew": true
-    },
-    {
-      "rule": "new-side-effect",
-      "severity": "info",
-      "message": "Orders.resolveHold now performs db.read `order_lines` (new operation)",
-      "subject": {
-        "type": "operation",
-        "id": "OrdersService.resolveHold"
-      },
-      "isNew": true
-    },
-    {
-      "rule": "new-side-effect",
-      "severity": "warning",
-      "message": "Orders.resolveHold now performs db.write `orders` (new operation)",
-      "subject": {
-        "type": "operation",
-        "id": "OrdersService.resolveHold"
-      },
-      "isNew": true,
-      "hint": "A new write runs on every flow that reaches this module. Check the zoom-out view."
-    },
-    {
-      "rule": "new-side-effect",
-      "severity": "warning",
-      "message": "Orders.resolveHold now performs kafka `orders.created` (new operation)",
-      "subject": {
-        "type": "operation",
-        "id": "OrdersService.resolveHold"
-      },
-      "isNew": true,
-      "hint": "A new write runs on every flow that reaches this module. Check the zoom-out view."
-    },
-    {
-      "rule": "new-side-effect",
-      "severity": "warning",
-      "message": "Orders.resolveHold now performs event `order.created` (new operation)",
-      "subject": {
-        "type": "operation",
-        "id": "OrdersService.resolveHold"
-      },
-      "isNew": true,
-      "hint": "A new write runs on every flow that reaches this module. Check the zoom-out view."
-    },
-    {
-      "rule": "new-side-effect",
-      "severity": "warning",
-      "message": "Orders.resolveHold now performs kafka `orders.cancelled` (new operation)",
-      "subject": {
-        "type": "operation",
-        "id": "OrdersService.resolveHold"
-      },
-      "isNew": true,
-      "hint": "A new write runs on every flow that reaches this module. Check the zoom-out view."
-    },
-    {
-      "rule": "new-side-effect",
       "severity": "warning",
       "message": "Orders.get now performs db.write `order_views`",
       "subject": {
@@ -9729,6 +9190,12 @@
         "reach": 2
       },
       {
+        "operation": "OrdersService.release",
+        "risk": "high",
+        "reason": "new operation; +db.read orders, +db.read order_lines, +db.write orders, +kafka orders.created, +event order.created, +db.read stock_items, +db.write stock_items, +db.write audit_log, +db.read customers; now calls Inventory.reserve, Audit.record, Customers.profile",
+        "reach": 2
+      },
+      {
         "operation": "OrdersService.get",
         "risk": "high",
         "reason": "output shape changed; +db.write order_views; −http carrier.example.com; 1 step added or removed inside",
@@ -9759,15 +9226,9 @@
         "reach": 1
       },
       {
-        "operation": "OrdersService.release",
-        "risk": "high",
-        "reason": "new operation; +db.read orders, +db.read order_lines, +db.write orders, +kafka orders.created, +event order.created, +db.read stock_items, +db.write stock_items, +db.write audit_log, +db.read customers; now calls Inventory.reserve, Audit.record, Customers.profile",
-        "reach": 1
-      },
-      {
         "operation": "OrdersService.resolveHold",
         "risk": "high",
-        "reason": "new operation; +db.read orders, +db.read order_lines, +db.write orders, +kafka orders.created, +event order.created, +kafka orders.cancelled, +db.read stock_items, +db.write stock_items, +db.write audit_log, +db.read customers, +http api.payments.example, +db.write payments; now calls Inventory.reserve, Audit.record, Customers.profile, Payments.refund, Inventory.release",
+        "reason": "new operation; +db.read orders, +db.read order_lines, +db.write orders, +kafka orders.created, +event order.created, +db.read stock_items, +db.write stock_items, +db.write audit_log, +db.read customers, +kafka orders.cancelled, +http api.payments.example, +db.write payments; now calls Orders.release, Orders.cancel",
         "reach": 1
       },
       {

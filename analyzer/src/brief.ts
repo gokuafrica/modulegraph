@@ -60,7 +60,7 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://localhos
       out.push(`- **Output** \`${d.returns.after.type}\`: ${parts.length ? parts.join(', ') : `${d.returns.before.type} → ${d.returns.after.type}`}`);
     }
     if (d?.effectsAdded.length || d?.effectsRemoved.length) {
-      out.push(`- **Side effects**: ${[...d.effectsAdded.map((e) => `+${fx(e)}${direct(op, e) ? '' : ' (via a submodule)'}`), ...d.effectsRemoved.map((e) => `−${fx(e)}`)].join(', ')}`);
+      out.push(`- **Side effects**: ${[...d.effectsAdded.map((e) => `+${fx(e)}${direct(op, e) ? '' : ` (via ${viaWhom(g, op, e)})`}`), ...d.effectsRemoved.map((e) => `−${fx(e)}`)].join(', ')}`);
     }
     if (d?.callsAdded.length || d?.callsRemoved.length) {
       out.push(`- **Calls**: ${[...d.callsAdded.map((c) => `+${opLabel(g, c)}`), ...d.callsRemoved.map((c) => `−${opLabel(g, c)}`)].join(', ')}`);
@@ -185,6 +185,12 @@ const label = (g: ModuleGraph, id: string) => g.entryPoints[id]?.label ?? opLabe
 const fx = (e: Effect) => `${e.kind} \`${e.target}\``;
 const isWrite = (e: Effect) => e.kind !== 'db.read' && e.kind !== 'http';
 const direct = (op: Operation, e: Effect) => op.directEffects.some((x) => x.kind === e.kind && x.target === e.target);
+/** The operation this one calls that brings the effect: named when it is in the same module, else "a submodule". */
+function viaWhom(g: ModuleGraph, op: Operation, e: Effect): string {
+  const callee = op.calls.map((c) => g.operations[c]).find((c) => c?.effects.some((x) => x.kind === e.kind && x.target === e.target));
+  if (!callee) return 'a submodule';
+  return callee.moduleId === op.moduleId ? `${g.modules[op.moduleId]?.name ?? op.moduleId}.${callee.name}` : 'a submodule';
+}
 const sig = (ps: { name: string; type: string }[]) => ps.map((p) => `${p.name}: ${p.type}`).join(', ');
 const list = (xs: string[], n: number) => (xs.length > n ? `${xs.slice(0, n).join(', ')}, … ${xs.length - n} more` : xs.join(', ') || 'none found');
 const quote = (t: string) => `“${t.trim().replace(/\s+/g, ' ').slice(0, 600)}”`;
