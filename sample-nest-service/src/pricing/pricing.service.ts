@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
 import { Column, Entity, In, PrimaryColumn, Repository } from 'typeorm';
 import type { OrderLine } from '../orders/order.entity.ts';
+import { PromotionsService } from './promotions.service.ts';
 
 @Entity('products')
 export class Product {
@@ -12,12 +13,17 @@ export class Product {
 
   @Column('numeric')
   price: number;
+
+  @Column('numeric')
+  weightKg: number;
 }
 
 export interface Quote {
   subtotal: number;
+  discount: number;
   tax: number;
   total: number;
+  promotionIds: string[];
 }
 
 /** Tax rates come from the finance team's tax API. */
@@ -31,18 +37,35 @@ export class TaxClient {
   }
 }
 
+/** Pricing: product prices, running promotions and tax for a basket. */
 @Injectable()
 export class PricingService {
   constructor(
     @InjectRepository(Product) private readonly products: Repository<Product>,
+    private readonly promotions: PromotionsService,
     private readonly tax: TaxClient,
   ) {}
 
   async quote(lines: OrderLine[], country: string): Promise<Quote> {
-    const products = await this.products.findBy({ id: In(lines.map((l) => l.productId)) });
-    const subtotal = lines.reduce((sum, l) => sum + (products.find((p) => p.id === l.productId)?.price ?? 0) * l.quantity, 0);
+    const ids = lines.map((l) => l.productId);
+    const products = await this.products.findBy({ id: In(ids) });
+    const promos = await this.promotions.activeFor(ids);
+    let subtotal = 0;
+    let discount = 0;
+    for (const line of lines) {
+      const price = (products.find((p) => p.id === line.productId)?.price ?? 0) * line.quantity;
+      const promo = promos.find((p) => p.productId === line.productId);
+      subtotal += price;
+      if (promo) discount += (price * promo.percentOff) / 100;
+    }
     const rate = await this.tax.rateFor(country);
-    return { subtotal, tax: round(subtotal * rate), total: round(subtotal * (1 + rate)) };
+    const taxable = subtotal - discount;
+    return { subtotal, discount: round(discount), tax: round(taxable * rate), total: round(taxable * (1 + rate)), promotionIds: promos.map((p) => p.id) };
+  }
+
+  /** Records that an order used the quote's promotions. */
+  async redeem(orderId: string, customerId: string, quote: Quote): Promise<void> {
+    if (quote.promotionIds.length) await this.promotions.redeem(orderId, customerId, quote.promotionIds);
   }
 }
 

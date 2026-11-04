@@ -11,8 +11,8 @@ import type { Order } from '../orders/order.entity.ts';
 export class NotificationsService {
   constructor(@InjectQueue('emails') private readonly emails: Queue) {}
 
-  async orderConfirmation(order: Order): Promise<void> {
-    await this.emails.add('order-confirmation', { to: order.customerId, orderId: order.id });
+  async orderConfirmation(order: Order & { email: string }): Promise<void> {
+    await this.emails.add('order-confirmation', { to: order.email, orderId: order.id, total: order.total });
   }
 
   async receipt(paymentId: string): Promise<void> {
@@ -46,7 +46,7 @@ export class OrderNotificationsListener {
   constructor(private readonly notifications: NotificationsService) {}
 
   @OnEvent('order.created')
-  async onCreated(order: Order): Promise<void> {
+  async onCreated(order: Order & { email: string }): Promise<void> {
     await this.notifications.orderConfirmation(order);
   }
 }

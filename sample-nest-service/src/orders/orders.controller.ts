@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { EventPattern, GrpcMethod, Payload } from '@nestjs/microservices';
 import { AuthGuard } from '../common/auth.guard.ts';
-import { type CreateOrderDto, Order } from './order.entity.ts';
+import { type CreateOrderDto, Order, type OrderView, type QuotePreview } from './order.entity.ts';
 import { OrdersService } from './orders.service.ts';
 
 @Controller('orders')
@@ -14,8 +14,13 @@ export class OrdersController {
     return this.orders.create(dto);
   }
 
+  @Get('quote')
+  quote(@Query() dto: CreateOrderDto): Promise<QuotePreview> {
+    return this.orders.preview(dto);
+  }
+
   @Get(':id')
-  get(@Param('id') id: string): Promise<Order> {
+  get(@Param('id') id: string): Promise<OrderView> {
     return this.orders.get(id);
   }
 
@@ -41,12 +46,12 @@ export class OrderEventsController {
   }
 
   @EventPattern('shipments.dispatched')
-  async onDispatched(@Payload() event: { orderId: string }): Promise<void> {
-    await this.orders.markShipped(event.orderId);
+  async onDispatched(@Payload() event: { orderId: string; carrier: string; trackingNo: string }): Promise<void> {
+    await this.orders.markShipped(event.orderId, event.carrier, event.trackingNo);
   }
 
   @GrpcMethod('OrderService', 'GetOrder')
-  getOrder(data: { id: string }): Promise<Order> {
+  getOrder(data: { id: string }): Promise<OrderView> {
     return this.orders.get(data.id);
   }
 }
