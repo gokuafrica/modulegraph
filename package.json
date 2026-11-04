@@ -3,6 +3,8 @@
   "private": true,
   "workspaces": [
     "sample-service",
+    "sample-nest-service",
+    "fixtures/frameworks",
     "analyzer",
     "ui"
   ],

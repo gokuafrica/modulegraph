@@ -4,18 +4,18 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { Project } from 'ts-morph';
 import type { Example, Finding, ModuleGraph, Source } from '../../schema/modulegraph.ts';
+import { pickAnalyzer } from './analyzers/index.ts';
+import type { OperationTarget, RevisionAnalysis } from './analyzers/types.ts';
 import { compare } from './compare.ts';
 import { findProfile, loadConfig } from './config.ts';
 import { brief } from './brief.ts';
-import { extract } from './extract.ts';
 import { LazySession } from './lazy.ts';
 import { serve } from './server.ts';
 import { commitMessages, diffBetween, fetchPullRequest, filesAtRef, git, mergeBase, repoRootOf, revParse, type RawDiff } from './git.ts';
 import { architectureFindings, changeFindings, markNew, opLabel, reviewSummary } from './rules.ts';
 
-const HELP = `modulegraph: module-level review graph for a TypeScript service
+const HELP = `modulegraph: module-level review graph for a service
 
 usage: modulegraph --project <dir> [mode] [options]
 
@@ -33,6 +33,9 @@ options
   --no-examples            don't run the profile's scenario
   --examples <file>        scenario script (outside the repo) run against the head revision; records real
                            inputs/outputs per operation. Branches/PRs run in a temporary git worktree
+  --analyzer <id>          language backend (default: detected; known: typescript)
+  --frameworks <a,b>       framework adapters to use instead of the detected ones (nestjs, express, fastify,
+                           kafkajs, bullmq, node-cron, typeorm, prisma, mongoose, axios, fetch)
   --title <text>           label shown in the UI
   --name <id>              output id (default derived from mode)
   --out <file>             output path (default: ui/public/graphs/<id>.json, also updates index.json)
@@ -68,6 +71,8 @@ const { values: args } = parseArgs({
     'seed-entries': { type: 'string' },
     serve: { type: 'boolean' },
     port: { type: 'string' },
+    analyzer: { type: 'string' },
+    frameworks: { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -97,20 +102,27 @@ if (!args.config) {
 }
 const configFile = args.config ? fromUser(args.config) : profile?.config;
 const config = loadConfig(projectDir, configFile);
+if (args.frameworks) config.frameworks = args.frameworks.split(',').map((f) => f.trim()).filter(Boolean);
 // The profile's scenario records example data unless told otherwise.
 if (!args.examples && !args['no-examples'] && profile?.scenario) args.examples = profile.scenario;
-const tsconfig = join(projectDir, config.tsconfig);
 
-function projectOf(files?: Map<string, string>): Project {
-  const project = files
-    ? new Project({ tsConfigFilePath: tsconfig, skipAddingFilesFromTsConfig: true })
-    : new Project({ tsConfigFilePath: tsconfig });
-  if (files) for (const [path, text] of files) project.createSourceFile(path, text, { overwrite: true });
-  return project;
+// The language backend: picked from the project's files, or named with --analyzer / the profile's "analyzer".
+const picked = pickAnalyzer(projectDir, args.analyzer ?? config.analyzer);
+if (!picked.analyzer) {
+  console.error(`analyzer: ${picked.reason}.`);
+  console.error('Review it through the agent path instead: write modulegraph/v1 JSON (.claude/skills/module-review/SKILL.md, "Services no backend understands").');
+  process.exit(2);
 }
+const analyzer = picked.analyzer;
+const detectedFrameworks = analyzer.frameworks(projectDir, config);
+const frameworkList = detectedFrameworks.map((f) => `${f.name} (${f.reason})`).join(', ');
+console.log(`analyzer: ${analyzer.id} (${picked.reason})`);
+console.log(`frameworks: ${frameworkList || "none recognised; only the profile's rules apply"}`);
+const open = (files?: Map<string, string>) => analyzer.open({ repo, projectDir, config, files });
+const filesAt = (ref: string) => filesAtRef(repo, ref, projectRel, analyzer.sourceFile);
 
-let headProject: Project;
-let baseProject: Project | undefined;
+let headProject: RevisionAnalysis;
+let baseProject: RevisionAnalysis | undefined;
 let diff: RawDiff | undefined;
 let intent = args.intent;
 let intentSource: Source['intentSource'] = intent ? 'flag' : undefined;
@@ -119,7 +131,7 @@ let source: Source;
 let headSha: string | undefined;
 
 if (args.snapshot) {
-  headProject = projectOf();
+  headProject = open();
   source = { mode: 'snapshot', repo, project: projectRel, files: [] };
 } else if (args.pr || args.head) {
   let headRef = args.head!;
@@ -146,17 +158,18 @@ if (args.snapshot) {
     }
   }
   headSha = revParse(repo, headRef);
-  headProject = projectOf(filesAtRef(repo, headSha, projectRel));
-  baseProject = projectOf(filesAtRef(repo, mb, projectRel));
+  headProject = open(filesAt(headSha));
+  baseProject = open(filesAt(mb));
   diff = diffBetween(repo, mb, headRef, projectRel);
   source = { mode: args.pr ? 'pr' : 'branch', repo, project: projectRel, base: baseRef, head: args.pr ? `#${args.pr}` : headRef, title, files: diff.files };
 } else {
-  headProject = projectOf();
-  baseProject = projectOf(filesAtRef(repo, 'HEAD', projectRel));
+  headProject = open();
+  baseProject = open(filesAt('HEAD'));
   diff = diffBetween(repo, 'HEAD', undefined, projectRel);
   source = { mode: 'uncommitted', repo, project: projectRel, base: 'HEAD', head: 'working tree', files: diff.files };
 }
 source.title ??= args.title;
+source.analyzer = { id: analyzer.id, language: analyzer.language, frameworks: detectedFrameworks };
 if (intent) {
   source.intent = intent;
   source.intentSource = intentSource;
@@ -172,14 +185,14 @@ let session: LazySession | undefined;
 
 if (args.lazy) {
   // Only what the review needs: the changed code, a few relevant entry points, the rest on demand.
-  session = new LazySession(headProject, baseProject, repo, projectDir, config, diff, source, intent);
+  session = new LazySession(headProject, baseProject, repo, config, diff, source, intent, {}, analyzer.generator);
   session.init({ seedCount: Number(args.seeds ?? 2), seedHints: args['seed-entries']?.split(',').map((x) => x.trim()).filter(Boolean) });
   if (args.examples) session.examples = recordExamples(args.examples, session.exampleTargets());
   output = session.graph();
   if (args.serve) output.lazy!.api = '/api';
 } else {
-  const head = extract(headProject, repo, projectDir, config);
-  const base = baseProject && extract(baseProject, repo, projectDir, config);
+  const head = headProject.run();
+  const base = baseProject?.run();
   const graph = compare(head, base);
   for (const file of source.files) {
     // A file belongs to a module when the module's class lives there or one of its operations inlines code from it.
@@ -202,7 +215,7 @@ if (args.lazy) {
     schema: 'modulegraph/v1',
     service: config.service,
     generatedAt: new Date().toISOString(),
-    generator: 'modulegraph-analyzer/0.2 (ts-morph)',
+    generator: analyzer.generator,
     source,
     ...graph,
     findings,
@@ -268,7 +281,7 @@ function slug(s: string): string {
 }
 
 /** Runs the scenario against the head revision and returns the recorded calls per operation. */
-function recordExamples(scenarioRel: string, targets: { opId: string; file: string; className: string; method: string; params: string[] }[]): Record<string, Example[]> {
+function recordExamples(scenarioRel: string, targets: OperationTarget[]): Record<string, Example[]> {
   const here = dirname(fileURLToPath(import.meta.url));
   const tmp = join(repo, '.modulegraph-tmp');
   mkdirSync(tmp, { recursive: true });

@@ -3,9 +3,11 @@
  * JSON Schema equivalent: modulegraph.schema.json (kept in sync by `npm run schema` in analyzer/).
  */
 
-export type EffectKind = 'db.read' | 'db.write' | 'outbox' | 'kafka' | 'http';
+/** `queue`: a background job (BullMQ, SQS). `event`: an in-process event (EventEmitter2, Nest `@OnEvent`). */
+export type EffectKind = 'db.read' | 'db.write' | 'outbox' | 'kafka' | 'http' | 'queue' | 'event';
 export type ChangeStatus = 'added' | 'modified' | 'removed' | 'unchanged';
-export type EntryKind = 'api' | 'grpc' | 'consumer' | 'cron';
+/** `consumer`: a message broker subscription (Kafka, …). `queue`: a job worker. `event`: an in-process event listener. */
+export type EntryKind = 'api' | 'grpc' | 'consumer' | 'cron' | 'queue' | 'event';
 export type Risk = 'high' | 'medium' | 'low' | 'none';
 
 export interface Effect {
@@ -77,6 +79,8 @@ export interface Source {
   intent?: string;
   /** Where the intent came from: the --intent flag, the PR description, or the branch's commit messages. */
   intentSource?: 'flag' | 'pr' | 'commits';
+  /** Which backend produced the graph and which framework adapters it used. */
+  analyzer?: { id: string; language: string; frameworks: { id: string; name: string; reason: string }[] };
   /** Scenario that was run against the head revision to capture example inputs/outputs. */
   examples?: { scenario: string; operationsCovered: number };
   files: FileChange[];

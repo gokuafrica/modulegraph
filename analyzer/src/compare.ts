@@ -1,7 +1,8 @@
 import { diffLines } from 'diff';
 import type { ContractDelta, DiffLine, Effect, Operation, Param, Risk, TypeShape } from '../../schema/modulegraph.ts';
 import { codeChanges, diffScope, functionIndex } from './compare-steps.ts';
-import { effectKey, type Snapshot } from './extract.ts';
+import { effectKey } from './effects.ts';
+import type { Snapshot } from './analyzers/types.ts';
 
 export type Graphish = Omit<Snapshot, 'fingerprints' | 'parts'>;
 

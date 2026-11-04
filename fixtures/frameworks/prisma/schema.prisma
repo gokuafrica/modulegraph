@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Customer {
+  id     String  @id
+  email  String
+  tier   String
+  orders Invoice[]
+}
+
+model Invoice {
+  id         String   @id
+  customerId String
+  amount     Decimal
+  status     String
+  customer   Customer @relation(fields: [customerId], references: [id])
+}

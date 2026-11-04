@@ -1,7 +1,7 @@
 import type { Effect, Finding, ReviewSummary, Risk } from '../../schema/modulegraph.ts';
 import type { Graphish } from './compare.ts';
 import type { Config } from './config.ts';
-import { dedupeEffects, effectKey } from './extract.ts';
+import { dedupeEffects, effectKey } from './effects.ts';
 import type { RawDiff } from './git.ts';
 
 const fmt = (e: Effect) => `${e.kind} \`${e.target}\``;

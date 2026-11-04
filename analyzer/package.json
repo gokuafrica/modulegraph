@@ -1,6 +1,6 @@
 {
   "name": "modulegraph-analyzer",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "bin": {
@@ -14,7 +14,8 @@
     "validate": "tsx src/validate.ts",
     "live": "tsx src/live-demo.ts",
     "lazy-check": "tsx src/lazy-check.ts",
-    "test": "tsx src/mentions-check.ts && tsx src/lazy-check.ts"
+    "test": "tsx src/mentions-check.ts && tsx src/framework-check.ts && tsx src/lazy-check.ts",
+    "framework-check": "tsx src/framework-check.ts"
   },
   "dependencies": {
     "diff": "^8.0.2",

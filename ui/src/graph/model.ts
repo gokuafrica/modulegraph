@@ -96,7 +96,7 @@ function entryNode(g: ModuleGraph, entry: EntryPoint, id = `entry:${entry.id}`, 
   };
 }
 
-const exitLabel: Record<EntryPoint['kind'], string> = { api: 'HTTP response', grpc: 'gRPC reply', consumer: 'commit offset', cron: 'job finished' };
+const exitLabel: Record<EntryPoint['kind'], string> = { api: 'HTTP response', grpc: 'gRPC reply', consumer: 'commit offset', cron: 'job finished', queue: 'job done', event: 'listener done' };
 
 function fieldsWithDelta(after: Param[] | undefined, before: Param[] | undefined) {
   const prev = new Set((before ?? []).map((f) => f.name));
@@ -273,12 +273,13 @@ export function resourceId(e: Effect): string {
   return `res:${resourceKind(e)}:${e.target}`;
 }
 
-export function resourceKind(e: Effect): 'table' | 'outbox' | 'topic' | 'service' {
-  return e.kind.startsWith('db.') ? 'table' : e.kind === 'outbox' ? 'outbox' : e.kind === 'kafka' ? 'topic' : 'service';
+export function resourceKind(e: Effect): 'table' | 'outbox' | 'topic' | 'service' | 'queue' | 'event' {
+  if (e.kind.startsWith('db.')) return 'table';
+  return ({ outbox: 'outbox', kafka: 'topic', queue: 'queue', event: 'event' } as const)[e.kind as 'outbox'] ?? 'service';
 }
 
 function verb(e: Effect): string {
-  return { 'db.read': 'reads', 'db.write': 'writes', outbox: 'emits', kafka: 'produces', http: 'calls' }[e.kind];
+  return { 'db.read': 'reads', 'db.write': 'writes', outbox: 'emits', kafka: 'produces', http: 'calls', queue: 'enqueues', event: 'emits' }[e.kind];
 }
 
 // ---------------- zoom-out (impact) ----------------

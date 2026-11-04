@@ -42,11 +42,11 @@ export function repoRootOf(dir: string): string {
   return git(dir, ['rev-parse', '--show-toplevel']).trim();
 }
 
-/** Source files of `projectRel` as they exist at `ref`, keyed by absolute path. */
-export function filesAtRef(repo: string, ref: string, projectRel: string): Map<string, string> {
+/** Source files of `projectRel` as they exist at `ref`, keyed by absolute path. `include` is the backend's file filter. */
+export function filesAtRef(repo: string, ref: string, projectRel: string, include: (path: string) => boolean = (f) => /\.tsx?$/.test(f) && !f.includes('node_modules/')): Map<string, string> {
   const names = git(repo, ['ls-tree', '-r', '--name-only', ref, '--', projectRel])
     .split('\n')
-    .filter((f) => /\.tsx?$/.test(f) && !f.includes('node_modules/'));
+    .filter((f) => f && include(f));
   const files = new Map<string, string>();
   for (const name of names) files.set(join(repo, name).replace(/\\/g, '/'), git(repo, ['show', `${ref}:${name}`]));
   return files;

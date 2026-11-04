@@ -1,9 +1,8 @@
 import { join } from 'node:path';
-import type { Project } from 'ts-morph';
 import type { Example, ModuleGraph, Source } from '../../schema/modulegraph.ts';
+import type { RevisionAnalysis } from './analyzers/types.ts';
 import { compare } from './compare.ts';
 import type { Config } from './config.ts';
-import { Extractor } from './extract.ts';
 import { hunks, type RawDiff } from './git.ts';
 import { architectureFindings, changeFindings, markNew, reviewSummary } from './rules.ts';
 
@@ -21,8 +20,10 @@ export type ExpandAction = 'callers' | 'reach' | 'entry' | 'op';
 /**
  * Builds the review graph on demand instead of all at once.
  *
+ * Works with any backend that implements the lazy half of `RevisionAnalysis` (the TypeScript one does).
+ *
  * 1. Map changed lines to the operations/entry points that contain them (directly, or through inlined helpers
- *    and changed types), using the TypeScript reference index. Analyze those, downward.
+ *    and changed types), using the backend's reference index. Analyze those, downward.
  * 2. Walk callers upward level by level, analyzing each caller's own scope only, until `seedCount` entry points
  *    are reached. Rank them against the PR (changed entry points, words from the title/intent, distance) and
  *    analyze the best ones fully.
@@ -30,25 +31,25 @@ export type ExpandAction = 'callers' | 'reach' | 'entry' | 'op';
  *    a flow, or a drill-in. Both revisions are always analyzed to the same extent, so change status stays exact.
  */
 export class LazySession {
-  private head: Extractor;
-  private base?: Extractor;
+  private head: RevisionAnalysis;
+  private base?: RevisionAnalysis;
   private callersLoaded = new Set<string>();
   private seeds: { id: string; reason: string }[] = [];
   private ms = 0;
 
   constructor(
-    headProject: Project,
-    baseProject: Project | undefined,
+    head: RevisionAnalysis,
+    base: RevisionAnalysis | undefined,
     private repo: string,
-    projectDir: string,
     private config: Config,
     private diff: RawDiff | undefined,
     private source: Source,
     private intent: string | undefined,
     public examples: Record<string, Example[]> = {},
+    private generator = 'modulegraph-analyzer',
   ) {
-    this.head = new Extractor(headProject, repo, projectDir, config);
-    if (baseProject) this.base = new Extractor(baseProject, repo, projectDir, config);
+    this.head = head;
+    this.base = base;
   }
 
   init(opts: LazyOptions): void {
@@ -115,7 +116,7 @@ export class LazySession {
       schema: 'modulegraph/v1',
       service: this.config.service,
       generatedAt: new Date().toISOString(),
-      generator: 'modulegraph-analyzer/0.2 (ts-morph, lazy)',
+      generator: `${this.generator}, lazy`,
       source: this.source,
       ...g,
       findings,
@@ -240,7 +241,7 @@ export class LazySession {
     }
   }
 
-  private sides(): Extractor[] {
+  private sides(): RevisionAnalysis[] {
     return this.base ? [this.head, this.base] : [this.head];
   }
 

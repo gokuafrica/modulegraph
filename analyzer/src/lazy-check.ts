@@ -5,11 +5,11 @@
  */
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Project } from 'ts-morph';
 import type { ModuleGraph } from '../../schema/modulegraph.ts';
+import { typescript } from './analyzers/typescript/index.ts';
 import { compare } from './compare.ts';
 import { loadConfig } from './config.ts';
-import { effectKey, extract } from './extract.ts';
+import { effectKey } from './effects.ts';
 import { diffBetween, filesAtRef, mergeBase, revParse } from './git.ts';
 import { LazySession } from './lazy.ts';
 
@@ -17,13 +17,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, '../..').replace(/\\/g, '/');
 const projectDir = join(repo, 'sample-service').replace(/\\/g, '/');
 const config = loadConfig(projectDir, join(repo, 'configs/identity-profile-service/modulegraph.config.json'));
-const tsconfig = join(projectDir, config.tsconfig);
-
-function project(files: Map<string, string>): Project {
-  const p = new Project({ tsConfigFilePath: tsconfig, skipAddingFilesFromTsConfig: true });
-  for (const [path, text] of files) p.createSourceFile(path, text, { overwrite: true });
-  return p;
-}
+const project = (files: Map<string, string>) => typescript.open({ repo, projectDir, config, files });
 
 let failures = 0;
 const fail = (msg: string) => {
@@ -43,12 +37,12 @@ for (const [branch, intent] of [
   const diff = diffBetween(repo, mb, branch, 'sample-service');
 
   let t = performance.now();
-  const full = compare(extract(project(headFiles), repo, projectDir, config), extract(project(baseFiles), repo, projectDir, config));
+  const full = compare(project(headFiles).run(), project(baseFiles).run());
   const fullMs = performance.now() - t;
 
   t = performance.now();
   const source = { mode: 'branch' as const, repo, project: 'sample-service', base: 'main', head: branch, files: diff.files };
-  const session = new LazySession(project(headFiles), project(baseFiles), repo, projectDir, config, diff, source, intent);
+  const session = new LazySession(project(headFiles), project(baseFiles), repo, config, diff, source, intent);
   session.init({ seedCount: 2 });
   let lazy = session.graph();
   const lazyMs = performance.now() - t;

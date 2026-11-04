@@ -64,6 +64,8 @@ export const EFFECT_META: Record<Effect['kind'], { icon: string; label: string; 
   outbox: { icon: '✉', label: 'outbox', cls: 'fx-outbox' },
   kafka: { icon: '⇶', label: 'kafka', cls: 'fx-kafka' },
   http: { icon: '⇄', label: 'http', cls: 'fx-http' },
+  queue: { icon: '☰', label: 'queue', cls: 'fx-queue' },
+  event: { icon: '⚡', label: 'event', cls: 'fx-event' },
 };
 
 const KIND_META: Record<string, { icon: string; label: string; cls: string }> = {
@@ -71,6 +73,8 @@ const KIND_META: Record<string, { icon: string; label: string; cls: string }> = 
   grpc: { icon: '⟶', label: 'gRPC', cls: 'k-grpc' },
   consumer: { icon: '⇶', label: 'Kafka consumer', cls: 'k-consumer' },
   cron: { icon: '⏱', label: 'cron', cls: 'k-cron' },
+  queue: { icon: '☰', label: 'queue worker', cls: 'k-queue' },
+  event: { icon: '⚡', label: 'event listener', cls: 'k-event' },
   input: { icon: '→', label: 'input', cls: 'k-input' },
 };
 
@@ -257,8 +261,8 @@ export function ExitNode({ data }: NodeProps) {
 }
 
 export function ResourceNode({ data }: NodeProps) {
-  const d = data as { kind: 'table' | 'outbox' | 'topic' | 'service'; target: string };
-  const icon = { table: '⛁', outbox: '✉', topic: '⇶', service: '☁' }[d.kind];
+  const d = data as { kind: 'table' | 'outbox' | 'topic' | 'service' | 'queue' | 'event'; target: string };
+  const icon = { table: '⛁', outbox: '✉', topic: '⇶', service: '☁', queue: '☰', event: '⚡' }[d.kind];
   return (
     <div className={`node resource r-${d.kind}`}>
       <Handle type="target" position={Position.Left} />

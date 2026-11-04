@@ -2,22 +2,67 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import type { EffectKind, EntryKind } from '../../schema/modulegraph.ts';
 
-/** Maps a platform method to a side effect. `targetArg` is the argument holding the table/topic/service name. */
-export interface SinkRule {
-  class: string;
-  method: string;
-  kind: EffectKind;
-  targetArg: number;
+/**
+ * Which calls a rule matches. `class` is the declaring class, interface or type alias (`Db`, `Repository`,
+ * `IRouter`); `module` is the npm package it comes from (`node-cron`, `global` for built-ins such as fetch).
+ * Both accept alternatives separated by `|`; `method` also accepts a list. `method: "new"` matches `new Class(…)`.
+ */
+export interface CallMatch {
+  class?: string;
+  module?: string;
+  method: string | string[];
 }
 
-/** Maps a framework registration call to an entry point. `label` interpolates literal args: "GET {0}". */
-export interface EntryRule {
-  class: string;
-  method: string;
+/**
+ * Maps a platform method to a side effect. The table/topic/service name comes from `target` (default: the
+ * literal argument `targetArg`, or 0):
+ * - `arg:N` literal argument N; `arg:N.prop` property of an object argument (`arg:0.topic`)
+ * - `url:N` host (or path) of a URL argument
+ * - `entity` the entity behind `Repository<Order>` (TypeORM `@Entity('orders')`, else the class name)
+ * - `model` a Mongoose model's collection (`@InjectModel(Order.name)`, `model('Order', …)`)
+ * - `injected` the name the receiver was injected or built with (`@InjectQueue('emails')`, `new Queue('emails')`)
+ * - `receiver` the receiver's property name; `const:<name>` a fixed name
+ * Alternatives: `injected|arg:0`.
+ */
+export interface SinkRule extends CallMatch {
+  kind: EffectKind;
+  targetArg?: number;
+  target?: string;
+}
+
+/**
+ * Maps a framework registration call to an entry point. `label` fills `{N}` / `{N.prop}` from literal
+ * arguments and `{verb}` / `{path}` / `{topics}` / `{handlerName}` / `{at}` from the call; `{a|b}` takes the first
+ * that exists. `handler` says where the handler function is: `arg:N`, `arg:N.prop`, `last` (default: `handlerArg`, or 1).
+ */
+export interface EntryRule extends CallMatch {
   kind: EntryKind;
   label: string;
-  handlerArg: number;
+  handlerArg?: number;
+  handler?: string;
   readOnly?: boolean;
+}
+
+/**
+ * Decorator-based handlers (NestJS and similar). A method is an entry point when it carries `decorator`
+ * imported from `from`, inside a class carrying `classDecorator` (if given). Without `decorator`, the class
+ * decorator marks the method named `method` (BullMQ's `process`). Label variables: `{N}` decorator arguments,
+ * `{class.N}` class decorator arguments, `{verb}`, `{path}` (global prefix + class path + method path),
+ * `{class}`, `{method}`, `{Method}`.
+ */
+export interface DecoratorEntryRule {
+  decorator?: string;
+  from: string;
+  classDecorator?: string;
+  method?: string;
+  kind: EntryKind;
+  label: string;
+  readOnly?: boolean;
+}
+
+/** A call whose argument is the handler's response (`res.json(x)`): it feeds the exit like a `return`. */
+export interface ResponseRule extends CallMatch {
+  arg: number;
 }
 
 /** Per-module facts an agent (or a person) supplies from outside the repo. All optional. */
@@ -37,6 +82,10 @@ export interface ModuleOverride {
  */
 export interface Config {
   service: string;
+  /** Language backend (default: detected, e.g. "typescript"). */
+  analyzer?: string;
+  /** Framework adapters to use (default: detected from package.json, e.g. ["nestjs", "typeorm"]). */
+  frameworks?: string[];
   tsconfig: string;
   /** Optional opt-in for teams that do want in-code markers: a JSDoc tag that forces a class to be a module. */
   moduleTag: string;
@@ -49,8 +98,11 @@ export interface Config {
   };
   /** Path glob (repo-relative) -> owner. CODEOWNERS in the repo, if any, is read as a fallback. */
   owners: Record<string, string>;
+  /** Platform-specific rules for code the framework adapters don't know. They are added to the adapters' rules. */
   sinks: SinkRule[];
   entryPoints: EntryRule[];
+  decoratorEntries: DecoratorEntryRule[];
+  responses: ResponseRule[];
   rules: {
     /** Operations that must run at most once per flow (expensive fetches meant to be shared). */
     fetchOnce: string[];
@@ -61,35 +113,16 @@ export interface Config {
   };
 }
 
-const http = (method: string, readOnly: boolean): EntryRule => ({
-  class: 'HttpRouter', method, kind: 'api', label: `${method.toUpperCase()} {0}`, handlerArg: 1, readOnly,
-});
-
 export const defaultConfig: Config = {
   service: 'service',
   tsconfig: 'tsconfig.json',
   moduleTag: 'module',
   modules: { include: [], exclude: [], overrides: {} },
   owners: {},
-  sinks: [
-    { class: 'Db', method: 'select', kind: 'db.read', targetArg: 0 },
-    { class: 'Db', method: 'insert', kind: 'db.write', targetArg: 0 },
-    { class: 'Db', method: 'update', kind: 'db.write', targetArg: 0 },
-    { class: 'Db', method: 'delete', kind: 'db.write', targetArg: 0 },
-    { class: 'Outbox', method: 'enqueue', kind: 'outbox', targetArg: 0 },
-    { class: 'KafkaProducer', method: 'produce', kind: 'kafka', targetArg: 0 },
-    { class: 'HttpClient', method: 'get', kind: 'http', targetArg: 0 },
-    { class: 'HttpClient', method: 'post', kind: 'http', targetArg: 0 },
-  ],
-  entryPoints: [
-    http('get', true),
-    http('post', false),
-    http('put', false),
-    http('delete', false),
-    { class: 'GrpcServer', method: 'unary', kind: 'grpc', label: 'gRPC {0}', handlerArg: 1 },
-    { class: 'KafkaConsumer', method: 'subscribe', kind: 'consumer', label: 'topic {0}', handlerArg: 1 },
-    { class: 'Scheduler', method: 'cron', kind: 'cron', label: 'cron {0} ({1})', handlerArg: 2 },
-  ],
+  sinks: [],
+  entryPoints: [],
+  decoratorEntries: [],
+  responses: [],
   rules: {
     fetchOnce: [],
     tableOwners: {},
@@ -137,6 +170,8 @@ export function loadConfig(projectDir: string, configPath?: string): Config {
     owners: user.owners ?? {},
     sinks: user.sinks ?? defaultConfig.sinks,
     entryPoints: user.entryPoints ?? defaultConfig.entryPoints,
+    decoratorEntries: user.decoratorEntries ?? [],
+    responses: user.responses ?? [],
     rules: { ...defaultConfig.rules, ...user.rules, budget: { ...defaultConfig.rules.budget, ...user.rules?.budget } },
   };
 }

@@ -12,7 +12,9 @@
         "db.write",
         "outbox",
         "kafka",
-        "http"
+        "http",
+        "queue",
+        "event"
       ]
     },
     "ChangeStatus": {
@@ -30,7 +32,9 @@
         "api",
         "grpc",
         "consumer",
-        "cron"
+        "cron",
+        "queue",
+        "event"
       ]
     },
     "Risk": {
@@ -280,6 +284,47 @@
             "commits"
           ],
           "description": "Where the intent came from: the --intent flag, the PR description, or the branch's commit messages."
+        },
+        "analyzer": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "language": {
+              "type": "string"
+            },
+            "frameworks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "id",
+            "language",
+            "frameworks"
+          ],
+          "additionalProperties": false,
+          "description": "Which backend produced the graph and which framework adapters it used."
         },
         "examples": {
           "type": "object",

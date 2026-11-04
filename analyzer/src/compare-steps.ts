@@ -1,6 +1,6 @@
 import { diffLines } from 'diff';
 import type { CodeChange, DiffLine, Edge, Scope, Step } from '../../schema/modulegraph.ts';
-import type { Part } from './extract.ts';
+import type { Part } from './analyzers/types.ts';
 
 /** Every function of a snapshot by name: operations by op id ("KycModule.getStatus", as helpers name them), helpers by name. */
 export function functionIndex(parts: Record<string, Part[]>): Map<string, Part> {

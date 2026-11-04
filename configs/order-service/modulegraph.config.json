@@ -1,0 +1,31 @@
+{
+  "$comment": "Profile for the NestJS demo. No sinks or entry point rules: the NestJS, TypeORM, BullMQ and axios adapters find them. Only what the code can't say lives here: owners and table ownership.",
+  "service": "order-service",
+  "tsconfig": "tsconfig.json",
+  "modules": {
+    "include": [],
+    "exclude": [],
+    "overrides": {
+      "OrdersService": { "summary": "Places, cancels and tracks orders. Owns the orders table and the orders.* topics." },
+      "MailClient": { "name": "Mail" },
+      "TaxClient": { "name": "TaxApi" }
+    }
+  },
+  "owners": {
+    "sample-nest-service/src/orders/**": "team-checkout",
+    "sample-nest-service/src/pricing/**": "team-checkout",
+    "sample-nest-service/src/inventory/**": "team-fulfilment",
+    "sample-nest-service/src/payments/**": "team-payments",
+    "sample-nest-service/src/notifications/**": "team-crm",
+    "sample-nest-service/src/jobs/**": "team-payments"
+  },
+  "rules": {
+    "fetchOnce": [],
+    "tableOwners": {
+      "orders": "OrdersService",
+      "stock_items": "InventoryService",
+      "payments": "PaymentsService",
+      "products": "PricingService"
+    }
+  }
+}

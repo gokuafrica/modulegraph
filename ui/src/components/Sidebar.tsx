@@ -100,6 +100,12 @@ export function Sidebar({ g }: { g: ModuleGraph }) {
         )}
         {showOld && old.map((f, i) => <CheckRow key={`o${i}`} f={f} onClick={() => focus(f)} />)}
       </section>
+      {g.source.analyzer && (
+        <div className="muted small analyzer-line" title={g.source.analyzer.frameworks.map((f) => `${f.name}: ${f.reason}`).join('\n')}>
+          Analyzed as {g.source.analyzer.language}
+          {g.source.analyzer.frameworks.length > 0 && ` · ${g.source.analyzer.frameworks.map((f) => f.name).join(', ')}`}
+        </div>
+      )}
     </nav>
   );
 }
