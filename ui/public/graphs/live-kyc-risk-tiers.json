@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T00:58:07.064Z",
+  "generatedAt": "2026-11-04T01:43:21.312Z",
   "generator": "modulegraph-analyzer/0.2 (ts-morph, lazy)",
   "source": {
     "mode": "branch",
@@ -54,6 +54,7 @@
       }
     ],
     "intent": "KYC: add risk tiers from sanctions score, birth country and nationality; send high-risk users to manual review (outbox kyc.manual_review_requested); make the nightly rescreen asynchronous via kyc.recheck_requested.",
+    "intentSource": "flag",
     "examples": {
       "scenario": "configs/identity-profile-service/scenario.ts",
       "operationsCovered": 25
@@ -285,11 +286,11 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
           },
           {
             "name": "riskTier",
-            "type": "RiskTier | undefined"
+            "type": "RiskTier | undefined [\"low\" | \"medium\" | \"high\"]"
           },
           {
             "name": "checkedAt",
@@ -748,7 +749,7 @@
               },
               {
                 "name": "status",
-                "type": "KycStatus"
+                "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
               },
               {
                 "name": "checkedAt",
@@ -765,11 +766,11 @@
               },
               {
                 "name": "status",
-                "type": "KycStatus"
+                "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
               },
               {
                 "name": "riskTier",
-                "type": "RiskTier | undefined"
+                "type": "RiskTier | undefined [\"low\" | \"medium\" | \"high\"]"
               },
               {
                 "name": "checkedAt",
@@ -806,7 +807,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T00:58:06.950Z"
+            "checkedAt": "2026-11-04T01:43:21.190Z"
           }
         },
         {
@@ -817,7 +818,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-04T00:58:06.952Z"
+            "checkedAt": "2026-11-04T01:43:21.192Z"
           }
         }
       ],
@@ -913,7 +914,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T00:58:06.947Z"
+            "extractedAt": "2026-11-04T01:43:21.187Z"
           }
         },
         {
@@ -930,7 +931,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T00:58:06.951Z"
+            "extractedAt": "2026-11-04T01:43:21.191Z"
           }
         }
       ],
@@ -1162,7 +1163,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T00:58:06.947Z"
+              "extractedAt": "2026-11-04T01:43:21.187Z"
             }
           },
           "output": {
@@ -1182,7 +1183,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T00:58:06.951Z"
+              "extractedAt": "2026-11-04T01:43:21.191Z"
             }
           },
           "output": {
@@ -1241,7 +1242,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T00:58:06.947Z"
+              "extractedAt": "2026-11-04T01:43:21.187Z"
             }
           },
           "output": {
@@ -1261,7 +1262,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T00:58:06.951Z"
+              "extractedAt": "2026-11-04T01:43:21.191Z"
             }
           },
           "output": {
@@ -1301,7 +1302,7 @@
           },
           {
             "name": "isEu",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -1338,7 +1339,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T00:58:06.947Z"
+              "extractedAt": "2026-11-04T01:43:21.187Z"
             }
           },
           "output": {
@@ -1359,7 +1360,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T00:58:06.951Z"
+              "extractedAt": "2026-11-04T01:43:21.191Z"
             }
           },
           "output": {
@@ -1392,7 +1393,7 @@
         "fields": [
           {
             "name": "hit",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           },
           {
             "name": "score",
@@ -1583,7 +1584,7 @@
             "fields": [
               {
                 "name": "hit",
-                "type": "boolean"
+                "type": "boolean [false | true]"
               },
               {
                 "name": "listVersion",
@@ -1596,7 +1597,7 @@
             "fields": [
               {
                 "name": "hit",
-                "type": "boolean"
+                "type": "boolean [false | true]"
               },
               {
                 "name": "score",
@@ -1664,7 +1665,7 @@
         },
         {
           "name": "status",
-          "type": "KycStatus"
+          "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
         },
         {
           "name": "reviewer",
@@ -1680,7 +1681,7 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
           }
         ]
       },
@@ -1716,6 +1717,72 @@
       "change": "unchanged",
       "containsChanges": false,
       "source": "async override(userId: string, status: KycStatus, reviewer: string) {\n  await this.db.update('kyc_results', { userId }, { status, overriddenBy: reviewer });\n  await this.outbox.enqueue('kyc.overridden', { userId, status, reviewer });\n  return { userId, status };\n}",
+      "delta": {
+        "risk": "high",
+        "params": {
+          "before": [
+            {
+              "name": "userId",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
+            },
+            {
+              "name": "reviewer",
+              "type": "string"
+            }
+          ],
+          "after": [
+            {
+              "name": "userId",
+              "type": "string"
+            },
+            {
+              "name": "status",
+              "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
+            },
+            {
+              "name": "reviewer",
+              "type": "string"
+            }
+          ]
+        },
+        "returns": {
+          "before": {
+            "type": "{ userId: string; status: KycStatus; }",
+            "fields": [
+              {
+                "name": "userId",
+                "type": "string"
+              },
+              {
+                "name": "status",
+                "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
+              }
+            ]
+          },
+          "after": {
+            "type": "{ userId: string; status: KycStatus; }",
+            "fields": [
+              {
+                "name": "userId",
+                "type": "string"
+              },
+              {
+                "name": "status",
+                "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
+              }
+            ]
+          }
+        },
+        "effectsAdded": [],
+        "effectsRemoved": [],
+        "callsAdded": [],
+        "callsRemoved": [],
+        "implementationOnly": false
+      },
       "examples": [
         {
           "input": {
@@ -1756,11 +1823,11 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
           },
           {
             "name": "riskTier",
-            "type": "RiskTier | undefined"
+            "type": "RiskTier | undefined [\"low\" | \"medium\" | \"high\"]"
           },
           {
             "name": "checkedAt",
@@ -1800,7 +1867,7 @@
               },
               {
                 "name": "status",
-                "type": "KycStatus"
+                "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
               },
               {
                 "name": "checkedAt",
@@ -1817,11 +1884,11 @@
               },
               {
                 "name": "status",
-                "type": "KycStatus"
+                "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
               },
               {
                 "name": "riskTier",
-                "type": "RiskTier | undefined"
+                "type": "RiskTier | undefined [\"low\" | \"medium\" | \"high\"]"
               },
               {
                 "name": "checkedAt",
@@ -1850,7 +1917,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T00:58:06.950Z"
+            "checkedAt": "2026-11-04T01:43:21.190Z"
           }
         },
         {
@@ -2070,7 +2137,7 @@
           },
           {
             "name": "onboarded",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -3029,11 +3096,11 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
           },
           {
             "name": "riskTier",
-            "type": "RiskTier | undefined"
+            "type": "RiskTier | undefined [\"low\" | \"medium\" | \"high\"]"
           },
           {
             "name": "checkedAt",
@@ -3631,7 +3698,7 @@
           },
           {
             "name": "isEu",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -3677,7 +3744,7 @@
         "fields": [
           {
             "name": "hit",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           },
           {
             "name": "score",
@@ -3752,7 +3819,7 @@
         },
         {
           "name": "status",
-          "type": "KycStatus"
+          "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
         },
         {
           "name": "reviewer",
@@ -3768,7 +3835,7 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
           }
         ]
       },
@@ -3840,11 +3907,11 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
           },
           {
             "name": "riskTier",
-            "type": "RiskTier | undefined"
+            "type": "RiskTier | undefined [\"low\" | \"medium\" | \"high\"]"
           },
           {
             "name": "checkedAt",
@@ -4101,7 +4168,7 @@
           },
           {
             "name": "onboarded",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -4234,11 +4301,11 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
           },
           {
             "name": "riskTier",
-            "type": "RiskTier | undefined"
+            "type": "RiskTier | undefined [\"low\" | \"medium\" | \"high\"]"
           },
           {
             "name": "checkedAt",
@@ -4286,11 +4353,11 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
           },
           {
             "name": "riskTier",
-            "type": "RiskTier | undefined"
+            "type": "RiskTier | undefined [\"low\" | \"medium\" | \"high\"]"
           },
           {
             "name": "checkedAt",
@@ -4338,7 +4405,7 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
           }
         ]
       },
@@ -4382,11 +4449,11 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\" | \"pending_review\"]"
           },
           {
             "name": "riskTier",
-            "type": "RiskTier | undefined"
+            "type": "RiskTier | undefined [\"low\" | \"medium\" | \"high\"]"
           },
           {
             "name": "checkedAt",
@@ -4569,7 +4636,7 @@
       "entryPointsReached": 5,
       "operationsKnown": 26,
       "operationsAnalyzed": 12,
-      "ms": 2005
+      "ms": 2023
     }
   }
 }

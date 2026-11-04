@@ -1,10 +1,41 @@
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { FileChange } from '../../schema/modulegraph.ts';
 
+let gitBin = process.env.MODULEGRAPH_GIT ?? 'git';
+
+/**
+ * Runs git. On Windows, shells such as Git Bash can hand child processes a PATH that native programs can't read
+ * (npm scripts started from an agent's shell hit this), so fall back to the usual install locations.
+ */
 export function git(repo: string, args: string[]): string {
-  return execFileSync('git', args, { cwd: repo, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
+  const run = (bin: string) => execFileSync(bin, args, { cwd: repo, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
+  try {
+    return run(gitBin);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+    const candidates = [
+      'C:\\Program Files\\Git\\cmd\\git.exe',
+      'C:\\Program Files\\Git\\mingw64\\bin\\git.exe',
+      'C:\\Program Files (x86)\\Git\\cmd\\git.exe',
+      '/usr/bin/git',
+      '/usr/local/bin/git',
+      '/opt/homebrew/bin/git',
+    ];
+    const found = candidates.find((c) => existsSync(c));
+    if (!found) throw new Error('git not found on PATH. Install git or set MODULEGRAPH_GIT to its full path.');
+    gitBin = found;
+    return run(gitBin);
+  }
+}
+
+/** Subjects and bodies of the commits in base..head: the change's stated intent when no PR text is given. */
+export function commitMessages(repo: string, base: string, head: string): { title?: string; intent?: string } {
+  const log = git(repo, ['log', '--reverse', '--format=%s%n%b%x1e', `${base}..${head}`]).split('\x1e').map((m) => m.trim()).filter(Boolean);
+  if (!log.length) return {};
+  const strip = (m: string) => m.split('\n').filter((l) => !/^(Co-Authored-By|Signed-off-by):/i.test(l.trim())).join('\n').trim();
+  return { title: log.length === 1 ? log[0].split('\n')[0] : undefined, intent: log.map(strip).join('\n\n') };
 }
 
 export function repoRootOf(dir: string): string {

@@ -272,6 +272,15 @@
           "type": "string",
           "description": "Stated intent (PR description). Used to flag undisclosed side effects."
         },
+        "intentSource": {
+          "type": "string",
+          "enum": [
+            "flag",
+            "pr",
+            "commits"
+          ],
+          "description": "Where the intent came from: the --intent flag, the PR description, or the branch's commit messages."
+        },
         "examples": {
           "type": "object",
           "properties": {

@@ -872,8 +872,13 @@ function unwrapPromise(type: Type): Type {
 }
 
 function typeText(type: Type, at: Node): string {
-  const text = type.getText(at, TypeFormatFlags.UseAliasDefinedOutsideCurrentScope).replace(/import\("[^"]+"\)\./g, '');
-  return short(text, MAX_TYPE);
+  let text = type.getText(at, TypeFormatFlags.UseAliasDefinedOutsideCurrentScope).replace(/import\("[^"]+"\)\./g, '');
+  // `status: KycStatus` hides which values exist; adding one is a contract change callers must handle.
+  const members = type.getNonNullableType().isUnion() ? type.getNonNullableType().getUnionTypes() : [];
+  if (members.length > 1 && members.length <= 12 && members.every((m) => m.isLiteral()) && !text.includes('"')) {
+    text += ` [${members.map((m) => m.getText()).join(' | ')}]`;
+  }
+  return short(text, MAX_TYPE + 60);
 }
 
 function short(text: string, max: number): string {

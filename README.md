@@ -51,7 +51,19 @@ npm run analyze -- --project sample-service --config $C/modulegraph.config.json 
 npm run analyze -- --project sample-service --config $C/modulegraph.config.json --head my-branch --examples $C/scenario.ts
 ```
 
-Each run writes `ui/public/graphs/<id>.json` and adds it to the UI's selector.
+Each run writes `ui/public/graphs/<id>.json` and adds it to the UI's selector. It also writes
+`<id>.brief.md`, the **review facts** as plain Markdown:
+- the verdict (blocking or not);
+- every contract change with the behaviour changes inside it (new and removed steps, changed guards) and the
+  changed functions;
+- entry points that now touch something different;
+- grouped findings, owners and UI links.
+
+Agents start from this file instead of the JSON, so even a small model with no context gets the facts right. It
+only adds judgment. `--config` and `--intent` are optional: the profile is found in `configs/` by the service's
+package name, and the intent comes from the PR or the branch's commit messages.
+
+Any coding agent (Claude Code, Codex, Cursor, …) finds the procedure through [AGENTS.md](AGENTS.md).
 
 ### Lazy analysis: only what the review needs
 

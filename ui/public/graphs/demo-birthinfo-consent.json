@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T00:57:49.345Z",
+  "generatedAt": "2026-11-04T01:43:04.152Z",
   "generator": "modulegraph-analyzer/0.2 (ts-morph)",
   "source": {
     "mode": "branch",
@@ -68,6 +68,7 @@
       }
     ],
     "intent": "BirthInfo: prefer user-consented birth data (birth_info_consents) over document data; add consent endpoint.",
+    "intentSource": "flag",
     "examples": {
       "scenario": "configs/identity-profile-service/scenario.ts",
       "operationsCovered": 28
@@ -427,7 +428,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T00:57:49.231Z"
+              "extractedAt": "2026-11-04T01:43:04.044Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -452,7 +453,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T00:57:49.232Z"
+              "extractedAt": "2026-11-04T01:43:04.045Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -963,7 +964,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T00:57:49.227Z"
+              "extractedAt": "2026-11-04T01:43:04.040Z"
             }
           },
           "output": {
@@ -984,7 +985,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T00:57:49.231Z"
+              "extractedAt": "2026-11-04T01:43:04.044Z"
             }
           },
           "output": {
@@ -1245,7 +1246,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T00:57:49.227Z"
+              "extractedAt": "2026-11-04T01:43:04.040Z"
             }
           },
           "output": {
@@ -1625,7 +1626,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T00:57:49.227Z"
+            "extractedAt": "2026-11-04T01:43:04.040Z"
           }
         },
         {
@@ -1642,7 +1643,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T00:57:49.231Z"
+            "extractedAt": "2026-11-04T01:43:04.044Z"
           }
         }
       ]
@@ -1669,7 +1670,7 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
           },
           {
             "name": "checkedAt",
@@ -1779,7 +1780,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-04T00:57:49.230Z"
+            "checkedAt": "2026-11-04T01:43:04.042Z"
           }
         },
         {
@@ -1789,7 +1790,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-04T00:57:49.232Z"
+            "checkedAt": "2026-11-04T01:43:04.044Z"
           }
         }
       ]
@@ -1816,7 +1817,7 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
           },
           {
             "name": "checkedAt",
@@ -1852,7 +1853,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-04T00:57:49.230Z"
+            "checkedAt": "2026-11-04T01:43:04.042Z"
           }
         },
         {
@@ -1862,7 +1863,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-04T00:57:49.232Z"
+            "checkedAt": "2026-11-04T01:43:04.044Z"
           }
         }
       ]
@@ -1881,7 +1882,7 @@
         },
         {
           "name": "status",
-          "type": "KycStatus"
+          "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
         },
         {
           "name": "reviewer",
@@ -1897,7 +1898,7 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
           }
         ]
       },
@@ -2089,7 +2090,7 @@
         "fields": [
           {
             "name": "hit",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           },
           {
             "name": "listVersion",
@@ -2172,7 +2173,7 @@
           },
           {
             "name": "isEu",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -2209,7 +2210,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T00:57:49.227Z"
+              "extractedAt": "2026-11-04T01:43:04.040Z"
             }
           },
           "output": {
@@ -2230,7 +2231,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T00:57:49.231Z"
+              "extractedAt": "2026-11-04T01:43:04.044Z"
             }
           },
           "output": {
@@ -2263,7 +2264,7 @@
           },
           {
             "name": "onboarded",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -2450,7 +2451,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T00:57:49.227Z"
+              "extractedAt": "2026-11-04T01:43:04.040Z"
             }
           },
           "output": {
@@ -2472,7 +2473,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T00:57:49.231Z"
+              "extractedAt": "2026-11-04T01:43:04.044Z"
             }
           },
           "output": {
@@ -2736,7 +2737,7 @@
           },
           {
             "name": "isEu",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -3076,7 +3077,7 @@
         "fields": [
           {
             "name": "purged",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -3139,7 +3140,7 @@
           },
           {
             "name": "usPerson",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -3300,7 +3301,7 @@
           },
           {
             "name": "usPerson",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -3562,7 +3563,7 @@
           },
           {
             "name": "visaRequired",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -3688,7 +3689,7 @@
         }
       ],
       "returns": {
-        "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; source: \"consent\" | \"document\"; legalName…",
+        "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; source: \"consent\" | \"document\"; legalName: string; preferredName: string; dateOfBirth: string; userId…",
         "fields": [
           {
             "name": "nationality",
@@ -3789,7 +3790,7 @@
         "risk": "high",
         "returns": {
           "before": {
-            "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; legalName: string; preferredName: string;…",
+            "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; legalName: string; preferredName: string; dateOfBirth: string; userId: string; }",
             "fields": [
               {
                 "name": "nationality",
@@ -3822,7 +3823,7 @@
             ]
           },
           "after": {
-            "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; source: \"consent\" | \"document\"; legalName…",
+            "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; source: \"consent\" | \"document\"; legalName: string; preferredName: string; dateOfBirth: string; userId…",
             "fields": [
               {
                 "name": "nationality",
@@ -6259,7 +6260,7 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
           },
           {
             "name": "checkedAt",
@@ -6417,7 +6418,7 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
           },
           {
             "name": "checkedAt",
@@ -6463,7 +6464,7 @@
         },
         {
           "name": "status",
-          "type": "KycStatus"
+          "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
         },
         {
           "name": "reviewer",
@@ -6479,7 +6480,7 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
           }
         ]
       },
@@ -6715,7 +6716,7 @@
         "fields": [
           {
             "name": "hit",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           },
           {
             "name": "listVersion",
@@ -6772,7 +6773,7 @@
           },
           {
             "name": "isEu",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -6822,7 +6823,7 @@
           },
           {
             "name": "onboarded",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -7157,7 +7158,7 @@
           },
           {
             "name": "isEu",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -7419,7 +7420,7 @@
         "fields": [
           {
             "name": "purged",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -7495,7 +7496,7 @@
           },
           {
             "name": "usPerson",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -7645,7 +7646,7 @@
           },
           {
             "name": "usPerson",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -7955,7 +7956,7 @@
           },
           {
             "name": "visaRequired",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -8048,7 +8049,7 @@
         }
       ],
       "returns": {
-        "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; source: \"consent\" | \"document\"; legalName…",
+        "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; source: \"consent\" | \"document\"; legalName: string; preferredName: string; dateOfBirth: string; userId…",
         "fields": [
           {
             "name": "nationality",
@@ -8595,7 +8596,7 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
           },
           {
             "name": "checkedAt",
@@ -8643,7 +8644,7 @@
           },
           {
             "name": "visaRequired",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -8735,7 +8736,7 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
           }
         ]
       },
@@ -8779,7 +8780,7 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
           },
           {
             "name": "checkedAt",
@@ -8827,7 +8828,7 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
           },
           {
             "name": "checkedAt",
@@ -8875,7 +8876,7 @@
           },
           {
             "name": "onboarded",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -8923,7 +8924,7 @@
           },
           {
             "name": "usPerson",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -8971,7 +8972,7 @@
           },
           {
             "name": "usPerson",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -9015,7 +9016,7 @@
           },
           {
             "name": "visaRequired",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -9051,7 +9052,7 @@
         }
       ],
       "returns": {
-        "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; source: \"consent\" | \"document\"; legalName…",
+        "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; source: \"consent\" | \"document\"; legalName: string; preferredName: string; dateOfBirth: string; userId…",
         "fields": [
           {
             "name": "nationality",
@@ -9227,7 +9228,7 @@
           },
           {
             "name": "isEu",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -9389,7 +9390,7 @@
         "fields": [
           {
             "name": "purged",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },

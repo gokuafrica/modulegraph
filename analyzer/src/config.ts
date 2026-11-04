@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { basename, join } from 'node:path';
 import type { EffectKind, EntryKind } from '../../schema/modulegraph.ts';
 
 /** Maps a platform method to a side effect. `targetArg` is the argument holding the table/topic/service name. */
@@ -97,6 +97,27 @@ export const defaultConfig: Config = {
     budget: { maxContractChanges: 5, maxChangedLines: 400, maxFiles: 20 },
   },
 };
+
+/**
+ * Finds the service's profile in this repo's `configs/` folder without being told: the profile whose `service`
+ * (or folder name) equals the analyzed project's package name. Agents never have to guess a path.
+ */
+export function findProfile(projectDir: string, configsDir: string): { config?: string; scenario?: string; tried: string } {
+  const pkg = join(projectDir, 'package.json');
+  const name = existsSync(pkg) ? (JSON.parse(readFileSync(pkg, 'utf8')).name as string) : basename(projectDir);
+  const tried = `configs/*/modulegraph.config.json with service "${name}"`;
+  if (!existsSync(configsDir)) return { tried };
+  for (const dir of readdirSync(configsDir)) {
+    const file = join(configsDir, dir, 'modulegraph.config.json');
+    if (!existsSync(file)) continue;
+    const service = (JSON.parse(readFileSync(file, 'utf8')) as { service?: string }).service;
+    if (service === name || dir === name) {
+      const scenario = join(configsDir, dir, 'scenario.ts');
+      return { config: file, scenario: existsSync(scenario) ? scenario : undefined, tried };
+    }
+  }
+  return { tried };
+}
 
 /** `configPath` (outside the repo) wins; an in-repo modulegraph.config.json is only an opt-in fallback. */
 export function loadConfig(projectDir: string, configPath?: string): Config {

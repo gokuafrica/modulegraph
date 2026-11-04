@@ -1,0 +1,100 @@
+diff --git a/sample-service/src/app.ts b/sample-service/src/app.ts
+index 55077af..d86e22f 100644
+--- a/sample-service/src/app.ts
++++ b/sample-service/src/app.ts
+@@ -35,7 +35,7 @@ export function buildApp() {
+ 
+   const identity = new IdentityModule(new DocumentStore(db), new DocumentExtractor(http));
+   const nationality = new NationalityModule(db);
+-  const personalDetails = new PersonalDetailsModule(db);
++  const personalDetails = new PersonalDetailsModule(db, identity, outbox);
+   const birthInfo = new BirthInfoModule(new DocumentBirthExtractor());
+ 
+   const profile = new ProfileService(db, kafka, identity, nationality, personalDetails, birthInfo);
+@@ -46,7 +46,7 @@ export function buildApp() {
+   const compliance = new ComplianceReportModule(db, http, tax);
+   const review = new IdentityReviewModule(db, identity, birthInfo);
+ 
+-  const modules = { profile, kyc, tax, travel, onboarding, compliance, review, birthInfo };
++  const modules = { profile, kyc, tax, travel, onboarding, compliance, review, birthInfo, personalDetails };
+   const router = new HttpRouter();
+   const grpc = new GrpcServer();
+   const consumer = new KafkaConsumer('identity-profile-service');
+diff --git a/sample-service/src/entrypoints/http/profileRoutes.ts b/sample-service/src/entrypoints/http/profileRoutes.ts
+index 3ac38ea..333bdb9 100644
+--- a/sample-service/src/entrypoints/http/profileRoutes.ts
++++ b/sample-service/src/entrypoints/http/profileRoutes.ts
+@@ -6,6 +6,7 @@ export function registerProfileRoutes(router: HttpRouter, m: Modules): void {
+   router.get('/v1/users/:userId/profile/summary', (req) => m.profile.getSummary(req.params.userId));
+   router.get('/v1/users/:userId/nationality', (req) => m.profile.getNationality(req.params.userId));
+   router.get('/v1/users/:userId/birth-info', (req) => m.profile.getBirthInfo(req.params.userId));
++  router.put('/v1/users/:userId/preferred-name', (req) => m.personalDetails.updatePreferredName(req.params.userId, req.body.preferredName));
+   router.post('/v1/users/:userId/export', (req) => m.profile.exportProfile(req.params.userId));
+   router.delete('/v1/users/:userId', (req) => m.profile.purge(req.params.userId));
+ }
+diff --git a/sample-service/src/modules/personal-details/PersonalDetailsModule.ts b/sample-service/src/modules/personal-details/PersonalDetailsModule.ts
+index 4678980..9e8f7fc 100644
+--- a/sample-service/src/modules/personal-details/PersonalDetailsModule.ts
++++ b/sample-service/src/modules/personal-details/PersonalDetailsModule.ts
+@@ -1,24 +1,44 @@
+ import { Db } from '../../platform/db.ts';
++import { Outbox } from '../../platform/outbox.ts';
++import { IdentityModule } from '../identity/IdentityModule.ts';
+ import type { IdentityData } from '../identity/types.ts';
+ 
+ export interface PersonalDetails {
+   legalName: string;
+   preferredName: string;
+   dateOfBirth: string;
++  /** When the user last changed their preferred name. */
++  preferredNameUpdatedAt?: string;
+ }
+ 
+ /**
+  * Legal name and date of birth from documents, preferred name from the user's profile.
+  */
+ export class PersonalDetailsModule {
+-  constructor(private readonly db: Db) {}
++  constructor(
++    private readonly db: Db,
++    private readonly identity: IdentityModule,
++    private readonly outbox: Outbox,
++  ) {}
+ 
+   async resolve(userId: string, identity: IdentityData): Promise<PersonalDetails> {
+     const [profile] = await this.db.select('user_profiles', { userId });
++    // Documents uploaded after the identity was fetched may have a better legal name.
++    const latest = identity.fullName ? identity : await this.identity.fetchIdentity(userId);
++    await this.db.update('user_profiles', { userId }, { lastResolvedAt: new Date().toISOString() });
+     return {
+-      legalName: identity.fullName,
+-      preferredName: (profile?.preferredName as string | undefined) ?? identity.fullName,
+-      dateOfBirth: identity.dateOfBirth,
++      legalName: latest.fullName,
++      preferredName: (profile?.preferredName as string | undefined) ?? latest.fullName,
++      dateOfBirth: latest.dateOfBirth,
++      preferredNameUpdatedAt: profile?.preferredNameUpdatedAt as string | undefined,
+     };
+   }
++
++  async updatePreferredName(userId: string, preferredName: string): Promise<PersonalDetails> {
++    const trimmed = preferredName.trim().slice(0, 80);
++    await this.db.update('user_profiles', { userId }, { preferredName: trimmed, preferredNameUpdatedAt: new Date().toISOString() });
++    await this.outbox.enqueue('profile.preferred_name_changed', { userId, preferredName: trimmed });
++    const identity = await this.identity.fetchIdentity(userId);
++    return this.resolve(userId, identity);
++  }
+ }
+diff --git a/sample-service/src/modules/tax/TaxResidencyModule.ts b/sample-service/src/modules/tax/TaxResidencyModule.ts
+index 7ab9d1d..e091790 100644
+--- a/sample-service/src/modules/tax/TaxResidencyModule.ts
++++ b/sample-service/src/modules/tax/TaxResidencyModule.ts
+@@ -28,6 +28,8 @@ export class TaxResidencyModule {
+     const residencies = [...new Set([nationality.alpha3, ...declarations.map((d) => d.country as string)])];
+     const assessment = { userId, residencies, usPerson: birth.countryOfBirth === 'USA' || nationality.alpha3 === 'USA' };
+     await this.db.insert('tax_residency_assessments', { ...assessment, assessedAt: new Date().toISOString() });
++    // Cache on the profile so the profile page can show it without another lookup.
++    await this.db.update('user_profiles', { userId }, { usPerson: assessment.usPerson });
+     return assessment;
+   }
+ 

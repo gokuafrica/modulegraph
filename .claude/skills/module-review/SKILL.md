@@ -1,73 +1,83 @@
 ---
 name: module-review
-description: Module-level review of a PR, branch/worktree or uncommitted changes. Runs the modulegraph analyzer, opens the interactive graph at the riskiest change, and writes a short reviewer brief. For a service it has not seen, reads the code and writes the service's modulegraph profile (config + scenario) OUTSIDE the service repo; never edits the analyzed code. Use when the user asks to review a change "at module level", "as a graph", or asks what a change affects.
+description: Module-level review of a PR, branch/worktree or uncommitted changes. Runs the modulegraph analyzer, which writes the review facts (contract changes, behaviour changes, findings, owners) to a brief file, then adds the human-judgment part and points to the interactive graph. For a service with no profile, writes one OUTSIDE the service repo; never edits the analyzed code. Use when the user asks to review a change "at module level", "as a graph", or asks what a change affects.
 ---
 
 # Module-level review
 
-The reviewer looks at **modules, contracts and flows**, not lines. Your job is to get the change into the
-graph quickly and point the reviewer at the 1–3 decisions only a human can make. Do not restate the line diff.
+Plain Markdown: any coding agent can follow it, not only Claude Code.
 
-**Hard rule: never modify the analyzed repository** (no tags, comments, config files or scripts in it).
-Everything modulegraph needs lives in the service's profile: `configs/<service>/` in the modulegraph repo.
+Reviewers look at **modules, contracts and flows**, not lines. The analyzer computes the facts. Your job is to
+turn them into a short brief and point the reviewer at the 1–3 decisions only a human can make.
 
-## 1. Pick the target
+**Hard rule: never modify the analyzed code** (no tags, comments, config files or scripts in it). Anything
+modulegraph needs about a service lives in its profile: `configs/<service>/` in the modulegraph repo.
 
-| User says | Mode |
+## 1. Run the analyzer (from the modulegraph repo root)
+
+Pick the mode from what the user said:
+
+| User says | Command |
 |---|---|
-| "PR 123" | `--pr 123` (needs `gh`; uses the PR description as intent) |
-| a branch or worktree name | `--head <branch> --base main` |
-| "my changes", nothing specific | `--uncommitted` (working tree + untracked vs HEAD) |
+| "branch X" / "worktree X" (committed) | `npm run analyze -- --project <service dir> --head X --base main` |
+| "my changes", "uncommitted", a worktree with edits | `npm run analyze -- --project <service dir inside that worktree> --uncommitted` |
+| "PR 123" | `npm run analyze -- --project <service dir> --pr 123` (needs `gh`) |
 
-## 2. Make sure the service has a profile
+- `<service dir>` is the folder with the service's `package.json` (e.g. `sample-service`, or
+  `.worktrees/review-test/sample-service`).
+- **Don't pass `--config`, `--intent`, `--title` or `--examples`.** The analyzer finds the profile by package
+  name, reads the intent from the PR or the branch's commits, and runs the profile's scenario. Pass `--intent`
+  only if the user gave you a description that is not in git.
+- Large service (hundreds of entry points)? Add `--lazy`, and `--seed-entries "<entry>,<entry>"` for the 1–2
+  flows that matter for this PR.
+- If the output says `profile: none found`, stop and do step 4 first. Never copy another service's profile.
+- If `npm run` fails for environment reasons, run the same arguments with `node --import tsx analyzer/src/cli.ts`.
 
-Look for `configs/<service>/modulegraph.config.json`. If it is missing, write it (step 5) and come back.
+The last lines print two paths: `<id>.json` (for the UI) and **`<id>.brief.md` (the facts: read this one)**.
 
-## 3. Analyze and open
+## 2. Read the facts, then the code behind them
 
-From the modulegraph repo root:
+Read `<id>.brief.md` completely. It has the verdict, every contract change with its **Behaviour inside**
+lines, entry-point changes, grouped findings, owners and UI links. Don't read the JSON; it's for the UI.
 
-```bash
-C=configs/<service>
-npm run analyze -- --project <path to service> --config $C/modulegraph.config.json <mode flags> \
-  --title "<one-line goal>" --intent "<PR description or stated goal>" [--examples $C/scenario.ts]
-npm run dev   # http://localhost:5173
+For each contract change, open the changed functions it lists (`file:line`) and read them. The facts tell you
+*what* changed; the code tells you whether it is right. Look especially at:
+- every `GUARD CHANGED` and `REMOVED` line: who relied on the old behaviour? (an event no longer emitted for
+  some users, a write that became an update and loses history, a check that no longer runs)
+- new side effects on read paths, and new writes to tables another module owns
+- policy constants and thresholds in new helpers (who decided them?)
+
+## 3. Write the brief (≤ 25 lines)
+
+```
+**Goal:** one sentence (from the intent), and whether the contract changes match it.
+**Verdict:** copy the brief's verdict (BLOCKING with the error rules, or not blocked).
+**Contract changes, riskiest first:** one bullet each: Module.op (reach N): output/effect deltas, and in
+  words every GUARD CHANGED / REMOVED / NEW step from "Behaviour inside". Don't drop any of those.
+**New entry points:** if any.
+**Findings:** errors first, grouped by rule with counts (e.g. "fetch-once ×7: …"). Pre-existing: count only.
+**Decisions for the human (1–3):** questions only a person can answer, each tied to a specific fact above.
+**Request review from:** the owners listed.
+**Start here:** the first UI link from the brief.
 ```
 
-**Large services: use `--lazy --serve`** instead of analyzing every flow. Read the PR first, then pick the
-1–2 entry points a reviewer of *this* change should look at, and pass them:
-`--seed-entries "PUT /v1/users/:userId/birth-info/consent,GET /v1/users/:userId/birth-info"` (ids or label
-fragments). Without it the analyzer ranks entry points itself: new or changed ones, words from the
-title/intent, then distance from the change. The reviewer expands the rest in the UI. Each expansion is saved
-back into the JSON.
+Rules: don't invent effects or entry points that aren't in the facts; if the facts and the code disagree,
+say so. Say "no PR description" if the intent is missing.
 
-Always pass `--intent` when you know the goal: the `undisclosed-effect` rule flags side effects the
-description doesn't mention (a common sign of agent-added scope). In CI add `--check` (exit 1 on new errors).
+## 4. Writing a profile for a new service (read-only on the service)
 
-## 4. Write the brief (≤ 10 lines)
-
-Read the generated JSON (`ui/public/graphs/<id>.json`): `review.queue`, `review.reviewers`, `findings` where `isNew`.
-
-1. **Goal** in one sentence, and whether the contract changes match it.
-2. **Contract changes**, riskiest first: `Module.op: +outbox X, +db.read Y, output +field` with reach (entry points affected).
-3. **New findings** (errors first). Pre-existing findings are not this change's problem; give their count only.
-4. **Decisions for the human** (1–3): wrong owner for a side effect? Interface widened? Existing module reusable?
-5. **Request review from** the owners listed.
-6. A deep link to start: `http://localhost:5173/#g=<id>&v=impact&op=<top queue op>&d=1`.
-
-## 5. Writing a profile for a new service (read-only on the service)
-
-Start from `configs/identity-profile-service/` as a template.
+Start from `configs/identity-profile-service/` as a template. Name the folder after the service's
+`package.json` name and set `"service"` to the same name; that's how the analyzer finds it.
 
 1. **Entry points**: find HTTP/gRPC route registrations, Kafka/queue consumers and schedulers. Add each
    framework class + method to `entryPoints` (which argument is the handler, how to label it, whether it is read-only).
 2. **Side-effect sinks**: find the DB client or repository base, outbox, Kafka producer, HTTP clients. Add each
    method to `sinks` with the argument index that names the table, topic or service.
-3. **Check module discovery**: run `npm run analyze -- --project <dir> --config <file> --snapshot` and look at the
+3. **Check module discovery**: run `npm run analyze -- --project <dir> --snapshot` and look at the
    module list. Discovery takes classes that take part in constructor injection. Fix it with `modules.exclude`
    (DTOs, utilities) and `modules.include` (function-style modules it missed).
 4. **Names, owners, summaries**: `modules.overrides.<Class>.name/summary` where the class name is unclear;
-   `owners` path globs (CODEOWNERS is read automatically if the repo has one).
+   `owners` path globs, relative to the repo root (CODEOWNERS is read automatically if the repo has one).
 5. **Rules**: `rules.tableOwners` (table → owning module), `rules.fetchOnce` (expensive fetches that must be
    shared, not repeated). Only add what you saw in the code.
 6. **Scenario (optional, for example data)**: `scenario.ts` exports `default async (projectRoot) => …`, loads the

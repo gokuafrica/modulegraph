@@ -7,11 +7,12 @@ import { parseArgs } from 'node:util';
 import { Project } from 'ts-morph';
 import type { Example, Finding, ModuleGraph, Source } from '../../schema/modulegraph.ts';
 import { compare } from './compare.ts';
-import { loadConfig } from './config.ts';
+import { findProfile, loadConfig } from './config.ts';
+import { brief } from './brief.ts';
 import { extract } from './extract.ts';
 import { LazySession } from './lazy.ts';
 import { serve } from './server.ts';
-import { diffBetween, fetchPullRequest, filesAtRef, git, mergeBase, repoRootOf, revParse, type RawDiff } from './git.ts';
+import { commitMessages, diffBetween, fetchPullRequest, filesAtRef, git, mergeBase, repoRootOf, revParse, type RawDiff } from './git.ts';
 import { architectureFindings, changeFindings, markNew, opLabel, reviewSummary } from './rules.ts';
 
 const HELP = `modulegraph: module-level review graph for a TypeScript service
@@ -26,8 +27,10 @@ modes (default: --uncommitted)
 
 options
   --intent <text>          what the change is supposed to do (enables undisclosed-effect rule)
-  --config <file>          modulegraph config kept OUTSIDE the analyzed repo (platform classes, owners,
+  --config <file>          (default: the profile in configs/ whose service = the project's package name)
+                           modulegraph config kept OUTSIDE the analyzed repo (platform classes, owners,
                            module names/contracts). The analyzed code is never modified
+  --no-examples            don't run the profile's scenario
   --examples <file>        scenario script (outside the repo) run against the head revision; records real
                            inputs/outputs per operation. Branches/PRs run in a temporary git worktree
   --title <text>           label shown in the UI
@@ -59,6 +62,7 @@ const { values: args } = parseArgs({
     name: { type: 'string' },
     out: { type: 'string' },
     check: { type: 'boolean' },
+    'no-examples': { type: 'boolean' },
     lazy: { type: 'boolean' },
     seeds: { type: 'string' },
     'seed-entries': { type: 'string' },
@@ -74,10 +78,27 @@ if (args.help) {
 }
 
 const started = Date.now();
-const projectDir = resolve(args.project!).replace(/\\/g, '/');
-const repo = (args.repo ? resolve(args.repo) : repoRootOf(projectDir)).replace(/\\/g, '/');
+// `npm run analyze` runs in analyzer/; INIT_CWD is where the command was typed. Relative paths mean that folder.
+const userCwd = process.env.INIT_CWD ?? process.cwd();
+const fromUser = (p: string) => resolve(userCwd, p);
+const projectDir = fromUser(args.project!).replace(/\\/g, '/');
+if (!existsSync(projectDir)) {
+  console.error(`project folder not found: ${projectDir} (paths are relative to ${userCwd})`);
+  process.exit(2);
+}
+const repo = (args.repo ? fromUser(args.repo) : repoRootOf(projectDir)).replace(/\\/g, '/');
 const projectRel = relative(repo, projectDir).replace(/\\/g, '/') || '.';
-const config = loadConfig(projectDir, args.config ? resolve(args.config) : undefined);
+// No --config: use the profile in configs/ whose service matches the project's package name.
+const profile = args.config ? undefined : findProfile(projectDir, resolve(dirname(fileURLToPath(import.meta.url)), '../../configs'));
+if (!args.config) {
+  console.log(profile?.config
+    ? `profile: ${relative(process.cwd(), profile.config)} (found by package name)`
+    : `profile: none found (looked for ${profile?.tried}); using defaults. Write one: .claude/skills/module-review/SKILL.md, step 5`);
+}
+const configFile = args.config ? fromUser(args.config) : profile?.config;
+const config = loadConfig(projectDir, configFile);
+// The profile's scenario records example data unless told otherwise.
+if (!args.examples && !args['no-examples'] && profile?.scenario) args.examples = profile.scenario;
 const tsconfig = join(projectDir, config.tsconfig);
 
 function projectOf(files?: Map<string, string>): Project {
@@ -92,6 +113,7 @@ let headProject: Project;
 let baseProject: Project | undefined;
 let diff: RawDiff | undefined;
 let intent = args.intent;
+let intentSource: Source['intentSource'] = intent ? 'flag' : undefined;
 let source: Source;
 /** Commit the head side was read from; undefined = working tree. */
 let headSha: string | undefined;
@@ -108,9 +130,21 @@ if (args.snapshot) {
     headRef = pr.headRef;
     baseRef = pr.baseRef;
     title ??= `PR #${pr.number}: ${pr.title}`;
-    intent ??= `${pr.title}\n${pr.body}`;
+    if (!intent) {
+      intent = `${pr.title}\n${pr.body}`;
+      intentSource = 'pr';
+    }
   }
   const mb = mergeBase(repo, baseRef, headRef);
+  if (!intent || !title) {
+    // No PR text given: the branch's own commit messages say what it is for.
+    const fromCommits = commitMessages(repo, mb, headRef);
+    title ??= fromCommits.title ?? headRef;
+    if (!intent && fromCommits.intent) {
+      intent = fromCommits.intent;
+      intentSource = 'commits';
+    }
+  }
   headSha = revParse(repo, headRef);
   headProject = projectOf(filesAtRef(repo, headSha, projectRel));
   baseProject = projectOf(filesAtRef(repo, mb, projectRel));
@@ -123,12 +157,15 @@ if (args.snapshot) {
   source = { mode: 'uncommitted', repo, project: projectRel, base: 'HEAD', head: 'working tree', files: diff.files };
 }
 source.title ??= args.title;
-if (intent) source.intent = intent;
+if (intent) {
+  source.intent = intent;
+  source.intentSource = intentSource;
+}
 
 const here = dirname(fileURLToPath(import.meta.url));
 const graphsDir = resolve(here, '../../ui/public/graphs');
 const id = args.name ?? slug(source.mode === 'snapshot' ? `snapshot-${config.service}` : `${source.mode}-${source.head}`);
-const outFile = args.out ? resolve(args.out) : join(graphsDir, `${id}.json`);
+const outFile = args.out ? fromUser(args.out) : join(graphsDir, `${id}.json`);
 
 let output: ModuleGraph;
 let session: LazySession | undefined;
@@ -174,9 +211,11 @@ if (args.lazy) {
 }
 
 // ---------- write ----------
+const briefFile = outFile.replace(/\.json$/, '') + '.brief.md';
 function write(graph: ModuleGraph): void {
   mkdirSync(dirname(outFile), { recursive: true });
   writeFileSync(outFile, JSON.stringify(graph, null, 2));
+  writeFileSync(briefFile, brief(graph, id));
   if (args.out) return;
   const indexFile = join(graphsDir, 'index.json');
   const index = existsSync(indexFile) ? (JSON.parse(readFileSync(indexFile, 'utf8')) as { id: string }[]) : [];
@@ -215,6 +254,7 @@ if (output.lazy) {
   for (const s of output.lazy.seeds) console.log(`  seed ${s.id}: ${s.reason}`);
 }
 console.log(`\nwrote ${relative(process.cwd(), outFile)}`);
+console.log(`wrote ${relative(process.cwd(), briefFile)}   <- review facts for agents and people: start here`);
 
 if (args.serve && session) serve(session, write, id, Number(args.port ?? 5174));
 
@@ -241,7 +281,7 @@ function recordExamples(scenarioRel: string, targets: { opId: string; file: stri
     codeRoot = worktree;
   }
   try {
-    const scenario = resolve(scenarioRel);
+    const scenario = fromUser(scenarioRel);
     if (!existsSync(scenario)) throw new Error(`scenario not found: ${scenarioRel}`);
     const projectRoot = join(codeRoot, projectRel).replace(/\\/g, '/');
     const out = join(tmp, 'examples.json');

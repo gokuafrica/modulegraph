@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T00:58:01.164Z",
+  "generatedAt": "2026-11-04T01:43:15.453Z",
   "generator": "modulegraph-analyzer/0.2 (ts-morph, lazy)",
   "source": {
     "mode": "branch",
@@ -68,6 +68,7 @@
       }
     ],
     "intent": "BirthInfo: prefer user-consented birth data (birth_info_consents) over document data; add consent endpoint.",
+    "intentSource": "flag",
     "examples": {
       "scenario": "configs/identity-profile-service/scenario.ts",
       "operationsCovered": 28
@@ -921,7 +922,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T00:58:01.000Z"
+              "extractedAt": "2026-11-04T01:43:15.333Z"
             }
           },
           "output": {
@@ -942,7 +943,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T00:58:01.005Z"
+              "extractedAt": "2026-11-04T01:43:15.336Z"
             }
           },
           "output": {
@@ -1099,7 +1100,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T00:58:01.000Z"
+              "extractedAt": "2026-11-04T01:43:15.333Z"
             }
           },
           "output": {
@@ -1140,7 +1141,7 @@
           },
           {
             "name": "usPerson",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -1299,7 +1300,7 @@
           },
           {
             "name": "usPerson",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -1645,7 +1646,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T00:58:01.005Z"
+              "extractedAt": "2026-11-04T01:43:15.336Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -1670,7 +1671,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T00:58:01.008Z"
+              "extractedAt": "2026-11-04T01:43:15.337Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -1708,7 +1709,7 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
           },
           {
             "name": "checkedAt",
@@ -1806,7 +1807,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-04T00:58:01.003Z"
+            "checkedAt": "2026-11-04T01:43:15.335Z"
           }
         },
         {
@@ -1816,7 +1817,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-04T00:58:01.007Z"
+            "checkedAt": "2026-11-04T01:43:15.337Z"
           }
         }
       ],
@@ -2374,7 +2375,7 @@
           },
           {
             "name": "visaRequired",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -2498,7 +2499,7 @@
         }
       ],
       "returns": {
-        "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; source: \"consent\" | \"document\"; legalName…",
+        "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; source: \"consent\" | \"document\"; legalName: string; preferredName: string; dateOfBirth: string; userId…",
         "fields": [
           {
             "name": "nationality",
@@ -2587,7 +2588,7 @@
         "risk": "high",
         "returns": {
           "before": {
-            "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; legalName: string; preferredName: string;…",
+            "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; legalName: string; preferredName: string; dateOfBirth: string; userId: string; }",
             "fields": [
               {
                 "name": "nationality",
@@ -2620,7 +2621,7 @@
             ]
           },
           "after": {
-            "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; source: \"consent\" | \"document\"; legalName…",
+            "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; source: \"consent\" | \"document\"; legalName: string; preferredName: string; dateOfBirth: string; userId…",
             "fields": [
               {
                 "name": "nationality",
@@ -2847,7 +2848,7 @@
           },
           {
             "name": "onboarded",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -3045,7 +3046,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T00:58:01.000Z"
+            "extractedAt": "2026-11-04T01:43:15.333Z"
           }
         },
         {
@@ -3062,7 +3063,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T00:58:01.005Z"
+            "extractedAt": "2026-11-04T01:43:15.336Z"
           }
         }
       ],
@@ -4933,7 +4934,7 @@
           },
           {
             "name": "usPerson",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -5083,7 +5084,7 @@
           },
           {
             "name": "usPerson",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -5481,7 +5482,7 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
           },
           {
             "name": "checkedAt",
@@ -6130,7 +6131,7 @@
           },
           {
             "name": "visaRequired",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -6223,7 +6224,7 @@
         }
       ],
       "returns": {
-        "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; source: \"consent\" | \"document\"; legalName…",
+        "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; source: \"consent\" | \"document\"; legalName: string; preferredName: string; dateOfBirth: string; userId…",
         "fields": [
           {
             "name": "nationality",
@@ -6506,7 +6507,7 @@
           },
           {
             "name": "usPerson",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -6554,7 +6555,7 @@
           },
           {
             "name": "usPerson",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -6674,7 +6675,7 @@
           },
           {
             "name": "onboarded",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -6807,7 +6808,7 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
           },
           {
             "name": "checkedAt",
@@ -6855,7 +6856,7 @@
           },
           {
             "name": "status",
-            "type": "KycStatus"
+            "type": "KycStatus [\"passed\" | \"failed\" | \"expired\"]"
           },
           {
             "name": "checkedAt",
@@ -7257,7 +7258,7 @@
           },
           {
             "name": "visaRequired",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -7301,7 +7302,7 @@
           },
           {
             "name": "visaRequired",
-            "type": "boolean"
+            "type": "boolean [false | true]"
           }
         ]
       },
@@ -7337,7 +7338,7 @@
         }
       ],
       "returns": {
-        "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; source: \"consent\" | \"document\"; legalName…",
+        "type": "{ nationality: string; countryOfBirth: string; cityOfBirth: string; source: \"consent\" | \"document\"; legalName: string; preferredName: string; dateOfBirth: string; userId…",
         "fields": [
           {
             "name": "nationality",
@@ -7784,7 +7785,7 @@
       "entryPointsReached": 18,
       "operationsKnown": 29,
       "operationsAnalyzed": 21,
-      "ms": 2200
+      "ms": 1997
     }
   }
 }

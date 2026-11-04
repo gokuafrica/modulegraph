@@ -75,6 +75,8 @@ export interface Source {
   title?: string;
   /** Stated intent (PR description). Used to flag undisclosed side effects. */
   intent?: string;
+  /** Where the intent came from: the --intent flag, the PR description, or the branch's commit messages. */
+  intentSource?: 'flag' | 'pr' | 'commits';
   /** Scenario that was run against the head revision to capture example inputs/outputs. */
   examples?: { scenario: string; operationsCovered: number };
   files: FileChange[];

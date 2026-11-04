@@ -255,7 +255,7 @@ export function changeFindings(g: Graphish, diff: RawDiff, config: Config, inten
   if (intent) {
     const text = intent.toLowerCase();
     const added = dedupeEffects(contractChanges.flatMap((op) => op.delta!.effectsAdded.filter((e) => op.directEffects.some((d) => effectKey(d) === effectKey(e)))));
-    for (const effect of added.filter((e) => !text.includes(e.target.toLowerCase()))) {
+    for (const effect of added.filter((e) => !mentions(intent, e.target))) {
       findings.push({
         rule: 'undisclosed-effect',
         severity: 'warning',
@@ -266,6 +266,21 @@ export function changeFindings(g: Graphish, diff: RawDiff, config: Config, inten
     }
   }
   return findings;
+}
+
+const GENERIC = new Set(['requested', 'request', 'created', 'updated', 'changed', 'completed', 'event', 'events', 'resolved', 'ready', 'table', 'api', 'service']);
+const words = (t: string) =>
+  t.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length >= 3).map((w) => w.replace(/(ies|s)$/, (m) => (m === 'ies' ? 'y' : '')));
+
+/** The intent mentions an effect target literally, or names all of its meaningful words close together ("manual review" for kyc.manual_review_requested). */
+export function mentions(intent: string, target: string): boolean {
+  if (intent.toLowerCase().includes(target.toLowerCase())) return true;
+  // All meaningful words of the target, close together (within a few words), e.g. "manual-review outbox event".
+  const said = words(intent);
+  const needed = [...new Set(words(target).filter((w) => !GENERIC.has(w)))];
+  if (!needed.length) return false;
+  const span = needed.length + 2;
+  return said.some((_, i) => needed.every((w) => said.slice(i, i + span).includes(w)));
 }
 
 export function markNew(head: Finding[], base: Finding[]): Finding[] {
