@@ -95,9 +95,8 @@ On a large service, analyzing every flow up front wastes time and buries the cha
    to the JSON file, so the file always holds what has been explored.
 
 ```bash
-npm run live            # live lazy analysis of the BirthInfo branch; open http://localhost:5173
-npm run live -- kyc     # same for the multi-file KYC branch
-npm run live -- orders  # same for the NestJS service
+npm run live            # live lazy analysis of all three live demos (BirthInfo, KYC, NestJS); open http://localhost:5173
+npm run live -- orders  # just one of them: birthinfo | kyc | orders
 npm run analyze -- --project <dir> --config <cfg> --head <branch> --lazy --serve
 npm run lazy-check --workspace analyzer   # proves lazy == full on everything lazy analyzed
 ```

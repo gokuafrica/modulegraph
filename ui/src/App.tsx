@@ -147,8 +147,16 @@ export default function App() {
     const cur = gRef.current;
     if (!cur?.lazy) return true;
     if (!liveRef.current) {
-      setToast('This part is not analyzed in the saved file. Start the live server (npm run live) to expand it.');
-      return false;
+      // The server may have started after this page loaded: look again before giving up.
+      const fresh = await fetchLive(cur, graphIdRef.current!);
+      if (!fresh) {
+        setToast('This part is not analyzed in the saved file, and the live server is not answering. Run `npm run live` (all live demos), then try again.');
+        return false;
+      }
+      liveRef.current = true;
+      setLive(true);
+      gRef.current = fresh;
+      setG(fresh);
     }
     setBusy(what);
     try {
