@@ -3,6 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { InjectRepository } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
 import { Column, Entity, In, PrimaryColumn, Repository } from 'typeorm';
+import type { Tier } from '../customers/customers.service.ts';
 import type { OrderLine } from '../orders/order.entity.ts';
 import { PromotionsService } from './promotions.service.ts';
 
@@ -18,9 +19,13 @@ export class Product {
   weightKg: number;
 }
 
+/** Loyalty discount on what is left after promotions. */
+const LOYALTY: Record<Tier, number> = { standard: 0, gold: 0.05, platinum: 0.1 };
+
 export interface Quote {
   subtotal: number;
   discount: number;
+  loyaltyDiscount: number;
   tax: number;
   total: number;
   promotionIds: string[];
@@ -46,7 +51,7 @@ export class PricingService {
     private readonly tax: TaxClient,
   ) {}
 
-  async quote(lines: OrderLine[], country: string): Promise<Quote> {
+  async quote(lines: OrderLine[], country: string, tier: Tier): Promise<Quote> {
     const ids = lines.map((l) => l.productId);
     const products = await this.products.findBy({ id: In(ids) });
     const promos = await this.promotions.activeFor(ids);
@@ -58,9 +63,13 @@ export class PricingService {
       subtotal += price;
       if (promo) discount += (price * promo.percentOff) / 100;
     }
+    const loyaltyDiscount = (subtotal - discount) * LOYALTY[tier];
     const rate = await this.tax.rateFor(country);
-    const taxable = subtotal - discount;
-    return { subtotal, discount: round(discount), tax: round(taxable * rate), total: round(taxable * (1 + rate)), promotionIds: promos.map((p) => p.id) };
+    const taxable = subtotal - discount - loyaltyDiscount;
+    return {
+      subtotal, discount: round(discount), loyaltyDiscount: round(loyaltyDiscount), tax: round(taxable * rate), total: round(taxable * (1 + rate)),
+      promotionIds: promos.map((p) => p.id),
+    };
   }
 
   /** Records that an order used the quote's promotions. */

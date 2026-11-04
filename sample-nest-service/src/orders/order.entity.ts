@@ -3,7 +3,7 @@ import type { Tier } from '../customers/customers.service.ts';
 import type { Quote } from '../pricing/pricing.service.ts';
 import type { Tracking } from '../shipping/shipping.service.ts';
 
-export type OrderStatus = 'pending' | 'paid' | 'cancelled' | 'shipped' | 'expired';
+export type OrderStatus = 'held' | 'pending' | 'paid' | 'cancelled' | 'shipped' | 'expired';
 
 export interface OrderLine {
   productId: string;
@@ -46,6 +46,19 @@ export class OrderLineRow {
   quantity: number;
 }
 
+/** Who looked at which order (support asked for it). */
+@Entity('order_views')
+export class OrderViewLog {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column()
+  orderId: string;
+
+  @CreateDateColumn()
+  at: Date;
+}
+
 export interface CreateOrderDto {
   customerId: string;
   country: string;
@@ -67,4 +80,6 @@ export interface OrderView extends OrderDetails {
 export interface QuotePreview extends Quote {
   shippingCost: number;
   grandTotal: number;
+  /** The order would wait for a fraud reviewer before stock is reserved. */
+  needsReview: boolean;
 }

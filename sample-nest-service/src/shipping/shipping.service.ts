@@ -18,6 +18,19 @@ export class Shipment {
 
   @Column()
   dispatchedAt: Date;
+
+  @Column({ default: 'dispatched' })
+  status: string;
+
+  @Column({ nullable: true })
+  eta?: string;
+}
+
+/** The carrier's status webhook, relayed by the logistics team on `shipments.status`. */
+export interface CarrierStatusEvent {
+  trackingNo: string;
+  status: string;
+  eta?: string;
 }
 
 export interface Tracking {
@@ -27,7 +40,7 @@ export interface Tracking {
   eta?: string;
 }
 
-/** The carrier's API: shipping rates and live parcel status. */
+/** The carrier's API: shipping rates. Parcel status arrives as events (see ShippingService.updateStatus). */
 @Injectable()
 export class CarrierClient {
   constructor(private readonly http: HttpService) {}
@@ -37,10 +50,6 @@ export class CarrierClient {
     return res.data.cost;
   }
 
-  async status(trackingNo: string): Promise<{ status: string; eta?: string }> {
-    const res = await firstValueFrom(this.http.get<{ status: string; eta?: string }>(`https://carrier.example.com/v2/parcels/${trackingNo}`));
-    return res.data;
-  }
 }
 
 /** Shipping: what delivery costs, and where a dispatched order is. Owns the shipments table. */
@@ -60,10 +69,13 @@ export class ShippingService {
     await this.shipments.save({ orderId, carrier, trackingNo, dispatchedAt: new Date() });
   }
 
+  async updateStatus(event: CarrierStatusEvent): Promise<void> {
+    await this.shipments.update({ trackingNo: event.trackingNo }, { status: event.status, eta: event.eta });
+  }
+
   async tracking(orderId: string): Promise<Tracking | undefined> {
     const shipment = await this.shipments.findOneBy({ orderId });
     if (!shipment) return undefined;
-    const live = await this.carrier.status(shipment.trackingNo);
-    return { carrier: shipment.carrier, trackingNo: shipment.trackingNo, status: live.status, eta: live.eta };
+    return { carrier: shipment.carrier, trackingNo: shipment.trackingNo, status: shipment.status, eta: shipment.eta };
   }
 }

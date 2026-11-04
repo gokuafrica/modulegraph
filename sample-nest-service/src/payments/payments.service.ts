@@ -45,7 +45,7 @@ export class PaymentsService {
   async handleWebhook(event: ProviderEvent): Promise<Payment> {
     const status = event.type === 'charge.succeeded' ? 'succeeded' : 'failed';
     const payment = await this.payments.save({ id: event.paymentId, orderId: event.orderId, status, amount: event.amount });
-    await this.receipts.add('send-receipt', { paymentId: payment.id });
+    if (status === 'succeeded') await this.receipts.add('send-receipt', { paymentId: payment.id });
     return payment;
   }
 
