@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BirthInfoVerifier } from './birth-info/birth-info-verifier.ts';
 import { BirthInfoController } from './birth-info/birth-info.controller.ts';
 import { BirthInfoService } from './birth-info/birth-info.service.ts';
 import { KycBirthInfo, KycBirthInfoStore } from './birth-info/kyc-birth-info.store.ts';
@@ -18,6 +19,6 @@ const entities = [DocumentBirthInfo, KycBirthInfo];
     EventEmitterModule.forRoot(),
   ],
   controllers: [BirthInfoController, EligibilityController],
-  providers: [BirthInfoService, KycBirthInfoStore, DocumentBirthInfoService, EligibilityService, CountryPolicy],
+  providers: [BirthInfoService, BirthInfoVerifier, KycBirthInfoStore, DocumentBirthInfoService, EligibilityService, CountryPolicy],
 })
 export class AppModule {}

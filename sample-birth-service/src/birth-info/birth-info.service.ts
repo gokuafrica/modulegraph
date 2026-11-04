@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DocumentBirthInfoService } from '../documents/document-birth-info.service.ts';
+import { BirthInfoVerifier } from './birth-info-verifier.ts';
 import type { BirthInfoView, KycBirthInfoDto } from './birth-info.types.ts';
 import { KycBirthInfoStore } from './kyc-birth-info.store.ts';
 
@@ -10,6 +11,7 @@ export class BirthInfoService {
   constructor(
     private readonly documents: DocumentBirthInfoService,
     private readonly kyc: KycBirthInfoStore,
+    private readonly verifier: BirthInfoVerifier,
     private readonly events: EventEmitter2,
   ) {}
 
@@ -22,9 +24,18 @@ export class BirthInfoService {
     };
   }
 
-  /** Saves what the user submitted as their KYC birth info, replacing what they submitted before. */
+  /**
+   * Saves what the user submitted as their KYC birth info, replacing what they submitted before.
+   * It must agree with their identity document: each part the document has is enforced, a missing part isn't.
+   */
   async updateKycBirthInfo(userId: string, dto: KycBirthInfoDto): Promise<BirthInfoView> {
-    await this.kyc.save(userId, { countryOfBirth: dto.countryOfBirth.trim().toUpperCase(), placeOfBirth: dto.placeOfBirth.trim() });
+    const submitted = { countryOfBirth: dto.countryOfBirth.trim().toUpperCase(), placeOfBirth: dto.placeOfBirth.trim() };
+    const document = await this.documents.forUser(userId);
+    const check = this.verifier.verify(submitted, document);
+    if (!check.ok) {
+      throw new UnprocessableEntityException({ message: 'Birth info does not match the identity document', mismatches: check.mismatches });
+    }
+    await this.kyc.save(userId, submitted);
     this.events.emit('kyc.birth_info.updated', { userId });
     return this.get(userId);
   }

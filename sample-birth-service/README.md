@@ -10,7 +10,7 @@ A small, ordinary NestJS service with no modulegraph markers. It knows two versi
 |---|---|
 | `GET /api/users/:userId/birth-info` | both versions side by side |
 | `GET /api/users/:userId/eligibility` | eligible when the birth info is complete and the country isn't restricted (KYC answer first, document as fallback) |
-| `POST /api/users/:userId/birth-info` | saves the user's KYC birth info, overwriting the previous one |
+| `POST /api/users/:userId/birth-info` | saves the user's KYC birth info, overwriting the previous one. It must match the identity document: each part the document has is enforced (422 otherwise); with no document data, anything goes |
 
 ```
 GET  /birth-info  → BirthInfo.get → DocumentBirthInfo.forUser   document_birth_info
