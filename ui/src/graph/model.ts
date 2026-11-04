@@ -1,6 +1,6 @@
 import type { Effect, EntryPoint, ModuleGraph, Operation, Param, Step } from '../../../schema/modulegraph.ts';
 
-export type NodeKind = 'module' | 'effect' | 'entry' | 'exit' | 'resource' | 'entrygroup' | 'code' | 'decision';
+export type NodeKind = 'module' | 'effect' | 'entry' | 'exit' | 'resource' | 'entrygroup' | 'code' | 'decision' | 'frontier';
 export type EdgeKind = 'data' | 'control' | 'call' | 'read' | 'write' | 'branch' | 'removed';
 
 export interface VNode {
@@ -51,7 +51,8 @@ export function chipsFor(op: Operation): Chip[] {
 
 function moduleNode(g: ModuleGraph, id: string, opId: string, extra: Record<string, unknown> = {}): VNode {
   const op = g.operations[opId];
-  const mod = op && g.modules[op.moduleId];
+  // Lazy graphs can reference operations that are not analyzed yet: name them from their class.
+  const mod = op ? g.modules[op.moduleId] : Object.values(g.modules).find((m) => m.className === opId.split('.')[0]);
   const all = (extra.chipsOverride as Chip[] | undefined) ?? (op ? chipsFor(op) : []);
   // Compact (zoom-out) nodes only show what the change did to their effects; the full list is in the inspector.
   const chips = extra.compact && !extra.focus ? all.filter((c) => c.delta) : all;
@@ -75,6 +76,9 @@ function moduleNode(g: ModuleGraph, id: string, opId: string, extra: Record<stri
       totalEffects: all.length,
       hasInternals: (g.scopes[opId]?.steps.length ?? 0) > 0,
       hasDiff: !!op?.changes?.length,
+      stub: !op,
+      partial: !!g.lazy && !!op && !op.lazy?.calleesLoaded,
+      reachPartial: !!g.lazy && !!op && !op.lazy?.callersLoaded,
       ...extra,
       chipsOverride: undefined,
     },
@@ -87,8 +91,8 @@ function entryNode(g: ModuleGraph, entry: EntryPoint, id = `entry:${entry.id}`, 
     id,
     type: 'entry',
     width: 250,
-    height: 70 + (entry.effectsAdded?.length ? 22 : 0) + (extra.via ? 18 : 0),
-    data: { entryId: entry.id, kind: entry.kind, label: entry.label, change: entry.change, containsChanges: entry.containsChanges, readOnly: entry.readOnly, effectsAdded: entry.effectsAdded ?? [], params, ...extra },
+    height: 70 + (entry.effectsAdded?.length ? 22 : 0) + (extra.via ? 18 : 0) + (extra.compact && entry.analysis === 'reached' ? 16 : 0),
+    data: { entryId: entry.id, kind: entry.kind, label: entry.label, change: entry.change, containsChanges: entry.containsChanges, readOnly: entry.readOnly, effectsAdded: entry.effectsAdded ?? [], params, analysis: entry.analysis, ...extra },
   };
 }
 
@@ -322,6 +326,8 @@ export interface ImpactOptions {
 }
 
 export interface ImpactModel extends Model {
+  /** Lazy graphs: visible operations whose callers are not loaded yet. */
+  frontier: string[];
   maxDepth: number;
   entriesShown: number;
   entriesTotal: number;
@@ -417,6 +423,10 @@ export function impactModel(g: ModuleGraph, index: CallerIndex, opId: string, op
       }),
     );
   }
+  // Lazy graphs: callers not looked up yet hang off the node as a "load" stub.
+  const unloaded = g.lazy ? visible.filter((id) => g.operations[id] && !g.operations[id].lazy?.callersLoaded) : [];
+  const frontierByNode = new Map<string, string[]>();
+  for (const id of unloaded) frontierByNode.set(nodeOf(id), [...(frontierByNode.get(nodeOf(id)) ?? []), id]);
   const finalEdges = new Map<string, VEdge>();
   for (const e of edges) {
     if (!visibleSet.has(e.source) || !visibleSet.has(e.target)) continue;
@@ -426,9 +436,14 @@ export function impactModel(g: ModuleGraph, index: CallerIndex, opId: string, op
     const key = `${source}->${target}`;
     finalEdges.set(key, { ...e, id: `c:${key}`, source, target });
   }
+  for (const [nid, ops] of frontierByNode) {
+    nodes.push({ id: `fr:${nid}`, type: 'frontier', width: 190, height: 40, data: { opIds: ops } });
+    finalEdges.set(`fr:${nid}`, { id: `fr:${nid}`, source: `fr:${nid}`, target: nid, kind: 'control' });
+  }
   return {
     nodes,
     edges: [...finalEdges.values()],
+    frontier: unloaded,
     maxDepth,
     entriesShown: entries.length,
     entriesTotal: index.reach.get(opId)?.size ?? 0,

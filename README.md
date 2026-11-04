@@ -18,7 +18,15 @@ lives in a config file kept outside the repo, which an agent can write.
   `+outbox …` and `+db.read …` contract deltas on every node.
 - **Review queue and checks**: contract changes sorted by risk, plus machine-checked rules (new side effects,
   table ownership, read endpoints that write, CI weakening, side effects the PR description doesn't mention).
-- **Example data**: real inputs and outputs recorded by running a scenario against the code under review.
+- **Example data**: real inputs and outputs recorded by running a scenario against the code under review,
+  shown as expandable object trees (like the browser devtools). Input and output ends of a flow show the same call.
+- **Big changes, function by function**: a changed module lists every changed function (its own method and inlined
+  helpers, across files) before any code. The diff folds unchanged lines and marks the edited words. In the flow,
+  new calls are outlined, removed calls stay as red ghosts, and changed guards are labelled.
+- **Lazy analysis for large codebases** (`--lazy`): starts at the changed lines and analyzes only the 1–2 entry
+  points that fit the PR. Everything else is analyzed when you open it (see below).
+- **Browser Back works**: every view is a history entry, so the browser's Back/Forward and the in-app ← back
+  are the same thing.
 
 Design background: [docs/feasibility.md](docs/feasibility.md) · research: [docs/research-summary.md](docs/research-summary.md) ·
 how it is applied: [docs/review-conventions.md](docs/review-conventions.md).
@@ -45,6 +53,33 @@ npm run analyze -- --project sample-service --config $C/modulegraph.config.json 
 
 Each run writes `ui/public/graphs/<id>.json` and adds it to the UI's selector.
 
+### Lazy analysis: only what the review needs
+
+On a large service, analyzing every flow up front wastes time and buries the change. With `--lazy`:
+
+1. Changed lines are mapped to the operations and entry points that contain them. This includes changes reached
+   through inlined helpers and changed types, found with the TypeScript reference index. Those are analyzed.
+2. Callers are walked upward one level at a time, parsing only each caller's own function, until a few entry
+   points are reached.
+3. Entry points are ranked against the PR: new or changed entry points, words from the title and description,
+   and distance from the change. The best 2 are analyzed fully (`--seeds <n>`). An agent that knows better can
+   pick them with `--seed-entries "PUT /v1/…,kyc.recheck"`.
+4. The rest is listed but not analyzed. With `--serve`, the UI analyzes more when you ask: *load* callers of a
+   node, *all entry points* of a change, open a flow, or drill into a module. Each expansion is also written back
+   to the JSON file, so the file always holds what has been explored.
+
+```bash
+npm run live            # live lazy analysis of the BirthInfo branch; open http://localhost:5173
+npm run live -- kyc     # same for the multi-file KYC branch
+npm run analyze -- --project <dir> --config <cfg> --head <branch> --lazy --serve
+npm run lazy-check --workspace analyzer   # proves lazy == full on everything lazy analyzed
+```
+
+The top bar says `● live · 2 of 28 flows analyzed`. Unanalyzed parts are marked *flow not analyzed yet*,
+*not analyzed yet: drill in*, or *⋯ callers not loaded · load*. On the demo, lazy mode builds 19 of 54 scopes
+for the KYC change. Wall time is the same at this size, because loading the TypeScript program dominates. The
+saving grows with the parts of a codebase a change doesn't reach.
+
 ## The demo
 
 Code map, and where the before/after versions live: [sample-service/README.md](sample-service/README.md).
@@ -69,6 +104,13 @@ Things to try:
    *zoom out +* adds one caller level at a time; *all entry points* shows all 21, grouped.
 3. **Checks**: BirthInfo now performs an outbox write that runs on 8 read-only endpoints, and the PR
    description never mentions it.
+4. **A change spread over several files** (`feature/kyc-risk-tiers`, "KYC: risk tiers … (multi-file)"):
+   - KycCheck.runCheck now uses a new helper file (`riskTier.ts`) and a new private `persist`, and gets a
+     manual-review branch.
+   - SanctionsScreening gains a retry and a score.
+   - The nightly rescreen stops running checks inline and enqueues them instead.
+   - Open *KycCheck.runCheck*, then *code changes ±*: 4 functions in 2 files. Open the cron
+     `kyc-nightly-rescreen` flow to see the removed steps as ghosts.
 
 ## Setting up a new service (no code changes)
 
@@ -110,9 +152,9 @@ base + head sources        steps, data edges, side effects      modulegraph/v1  
 | Path | What |
 |---|---|
 | `schema/` | `modulegraph.ts` (types) and generated `modulegraph.schema.json` |
-| `analyzer/` | CLI: `cli.ts`, `extract.ts` (ts-morph), `compare.ts` (base vs head), `rules.ts` (guardrails), `git.ts` |
+| `analyzer/` | CLI: `cli.ts`, `extract.ts` (ts-morph), `compare.ts` + `compare-steps.ts` (base vs head, per-function and per-step deltas), `rules.ts` (guardrails), `lazy.ts` + `server.ts` (lazy analysis, live expansion), `lazy-check.ts`, `git.ts` |
 | `ui/` | Vite + React + `@xyflow/react` + `elkjs` |
-| `sample-service/` | demo microservice, an ordinary codebase with no modulegraph markers. Branch `feature/birthinfo-consent` holds the demo change |
+| `sample-service/` | demo microservice, an ordinary codebase with no modulegraph markers. Branches `feature/birthinfo-consent` and `feature/kyc-risk-tiers` hold the demo changes |
 | `configs/` | per-service profiles (config + scenario), kept outside the analyzed code |
 | `docs/` | feasibility, research summary, review conventions |
 

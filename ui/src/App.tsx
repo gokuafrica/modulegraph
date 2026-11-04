@@ -2,6 +2,7 @@ import { Background, Controls, ReactFlow, useReactFlow, type Edge, type Node } f
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ModuleGraph } from '../../schema/modulegraph.ts';
 import { Inspector, type Selection } from './components/Inspector.tsx';
+import { expand, fetchLive, type ExpandAction } from './api.ts';
 import { DiffPanel } from './components/DiffView.tsx';
 import { edgeTypes } from './components/Edges.tsx';
 import { ActionsContext, ExampleContext, nodeTypes, type Actions } from './components/Nodes.tsx';
@@ -69,11 +70,14 @@ export default function App() {
   const [canGoBack, setCanGoBack] = useState(false);
   const [toast, setToast] = useState<string>();
   const [diffFor, setDiffFor] = useState<string>();
+  /** Lazy graphs: the analysis server is reachable, so unanalyzed parts can be expanded. */
+  const [live, setLive] = useState(false);
+  const [busy, setBusy] = useState<string>();
   const [selection, setSelection] = useState<Selection>();
   const [collapsePassthrough, setCollapse] = useState(true);
   const [showResources, setShowResources] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  const [canvas, setCanvas] = useState<{ nodes: Node[]; edges: Edge[]; key: string; meta?: { maxDepth: number; shown: number; total: number }; chain?: string[] }>();
+  const [canvas, setCanvas] = useState<{ nodes: Node[]; edges: Edge[]; key: string; meta?: { maxDepth: number; shown: number; total: number; frontier: string[] }; chain?: string[] }>();
   const [error, setError] = useState<string>();
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('modulegraph-theme') as Theme) ?? 'dark');
   const [exampleIndex, setExampleIndex] = useState(0);
@@ -102,6 +106,14 @@ export default function App() {
       .then((r) => r.json())
       .then((data: ModuleGraph) => {
         setG(data);
+        setLive(false);
+        if (data.lazy) {
+          fetchLive(data, graphId).then((fresh) => {
+            if (!fresh) return;
+            setG(fresh);
+            setLive(true);
+          });
+        }
         setExpandedGroups(new Set());
         const h = readHash();
         if (h.g === graphId && h.v === 'flow' && h.t) {
@@ -126,6 +138,29 @@ export default function App() {
 
   const graphIdRef = useRef<string>(undefined);
   graphIdRef.current = graphId;
+  const gRef = useRef<ModuleGraph>(undefined);
+  gRef.current = g;
+  const liveRef = useRef(false);
+  liveRef.current = live;
+  /** Runs one expansion on the analysis server. False when it isn't available. */
+  const runExpand = useCallback(async (action: ExpandAction, id: string, what: string): Promise<boolean> => {
+    const cur = gRef.current;
+    if (!cur?.lazy) return true;
+    if (!liveRef.current) {
+      setToast('This part is not analyzed in the saved file. Start the live server (npm run live) to expand it.');
+      return false;
+    }
+    setBusy(what);
+    try {
+      setG(await expand(cur, graphIdRef.current!, action, id));
+      return true;
+    } catch (err) {
+      setToast(`Analysis failed: ${String(err)}`);
+      return false;
+    } finally {
+      setBusy(undefined);
+    }
+  }, []);
   const viewRef = useRef<View>(undefined);
   viewRef.current = view;
   const chainRef = useRef<string[]>(undefined);
@@ -171,7 +206,22 @@ export default function App() {
         setToast('This is where the review started. Press Back again to leave modulegraph.');
         return;
       }
-      if (st?.mg !== 'view') return;
+      if (st?.mg !== 'view') {
+        // A hash edited by hand (or a link to another view): read the view from the URL and adopt the entry.
+        const h = readHash();
+        const fromHash: View | undefined =
+          h.v === 'flow' && h.t ? { mode: 'flow', trail: h.t.split('|'), focus: h.f }
+          : h.v === 'impact' && h.op ? { mode: 'impact', op: h.op, depth: Number(h.d ?? 1) } : undefined;
+        if (h.g && h.g !== graphIdRef.current) {
+          nextWrite.current = 'replace';
+          setGraphId(h.g);
+        } else if (fromHash) {
+          nextWrite.current = 'replace';
+          histIdx.current += 1;
+          setView(fromHash);
+        }
+        return;
+      }
       setToast(undefined);
       histIdx.current = st.idx;
       setCanGoBack(st.idx > 0);
@@ -202,11 +252,15 @@ export default function App() {
       const scopeId = view.trail.at(-1)!;
       const model = flowModel(g, scopeId, { collapsePassthrough, showResources, focusOp: view.focus, focusPath: view.focus ? ancestors(index, view.focus) : undefined });
       for (const n of model.nodes) if (n.type === 'module') n.data.reach = index.reach.get(n.data.opId as string)?.size ?? 0;
-      layout(model, theme).then((res) => !cancelled && setCanvas({ ...res, key: `${graphId}|${view.trail.join('>')}|${collapsePassthrough}|${showResources}|${theme}`, chain: model.chain }));
+      layout(model, theme).then((res) => !cancelled && setCanvas({ ...res, key: `${graphId}|${view.trail.join('>')}|${collapsePassthrough}|${showResources}|${theme}|${Object.keys(g.scopes).length}`, chain: model.chain }));
     } else {
       const model = impactModel(g, index, view.op, { depth: view.depth, groupThreshold: 12, expandedGroups });
+      if (view.depth > model.maxDepth && model.maxDepth > 0) {
+        setView({ ...view, depth: model.maxDepth });
+        return;
+      }
       layout(model, theme).then((res) =>
-        !cancelled && setCanvas({ ...res, key: `${graphId}|impact|${view.op}|${view.depth}|${[...expandedGroups].join()}|${theme}`, meta: { maxDepth: model.maxDepth, shown: model.entriesShown, total: model.entriesTotal } }),
+        !cancelled && setCanvas({ ...res, key: `${graphId}|impact|${view.op}|${view.depth}|${[...expandedGroups].join()}|${theme}|${Object.keys(g.scopes).length}`, meta: { maxDepth: model.maxDepth, shown: model.entriesShown, total: model.entriesTotal, frontier: model.frontier } }),
       );
     }
     return () => {
@@ -216,7 +270,13 @@ export default function App() {
 
   const actions: Actions = useMemo(
     () => ({
-      drill: (opId) => {
+      drill: async (opId) => {
+        const cg = gRef.current;
+        const op = cg?.operations[opId];
+        if (cg?.lazy && !op?.lazy?.calleesLoaded) {
+          const ok = await runExpand('op', opId, `${opId} and everything it calls`);
+          if (!ok && !op) return;
+        }
         const cur = viewRef.current;
         const trail = cur?.mode === 'flow' ? [...cur.trail.slice(0, -1), ...(chainRef.current ?? cur.trail.slice(-1))] : [];
         navigate({ mode: 'flow', trail: [...trail.filter((t) => t !== opId), opId], focus: cur?.mode === 'flow' ? cur.focus : undefined });
@@ -230,14 +290,22 @@ export default function App() {
         }
         navigate({ mode: 'impact', op: opId, depth: 1 });
       },
-      openEntry: (entryId) => {
+      openEntry: async (entryId) => {
+        const cg = gRef.current;
+        if (cg?.lazy && cg.entryPoints[entryId]?.analysis !== 'full') {
+          const ok = await runExpand('entry', entryId, `the flow of ${cg.entryPoints[entryId]?.label ?? entryId}`);
+          if (!ok && !cg.scopes[entryId]) return;
+        }
         const cur = viewRef.current;
         navigate({ mode: 'flow', trail: [entryId], focus: cur?.mode === 'impact' ? cur.op : cur?.mode === 'flow' ? cur.focus : undefined });
       },
       expandGroup: (gid) => setExpandedGroups((s) => new Set([...s, gid])),
       showDiff: (id) => setDiffFor(id),
+      loadCallers: async (opIds) => {
+        for (const id of opIds) if (!(await runExpand('callers', id, `callers of ${id}`))) return;
+      },
     }),
-    [navigate],
+    [navigate, runExpand],
   );
 
   if (error) return <div className="splash">{error}</div>;
@@ -268,6 +336,14 @@ export default function App() {
             {graphs.map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
           </select>
           <span className="muted small">{g.service} · {Object.keys(g.modules).length} modules · {Object.keys(g.entryPoints).length} entry points</span>
+          {g.lazy && (
+            <span className={`lazy-badge ${live ? 'live' : ''}`}
+              title={live
+                ? 'Lazy analysis, live: only what this review needed is analyzed. Opening a flow, drilling in or loading callers analyzes more on demand.'
+                : 'Lazy analysis, saved file: shows what was analyzed so far. Run `npm run live` to expand the rest.'}>
+              {live ? '● live' : '○ saved'} · {g.lazy.stats.entryPointsAnalyzed} of {g.lazy.stats.entryPointsKnown} flows analyzed
+            </span>
+          )}
           <div className="spacer" />
           <button className={`panel-toggle ${railOpen ? 'on' : ''}`} onClick={() => setRailOpen(!railOpen)} title="Show or hide the review rail">◧ review</button>
           <label className="small"><input type="checkbox" checked={collapsePassthrough} onChange={(e) => setCollapse(e.target.checked)} /> skip pass-through wrappers</label>
@@ -315,8 +391,18 @@ export default function App() {
                   {' '}{canvas?.meta?.shown ?? 0} of {canvas?.meta?.total ?? 0} entry points shown · {view.depth} level{view.depth > 1 ? 's' : ''} up
                 </span>
                 <button disabled={view.depth <= 0} onClick={() => setView({ ...view, depth: view.depth - 1 })}>− zoom in</button>
-                <button disabled={!!canvas?.meta && view.depth >= canvas.meta.maxDepth} onClick={() => setView({ ...view, depth: view.depth + 1 })}>zoom out +</button>
-                <button disabled={!!canvas?.meta && view.depth >= canvas.meta.maxDepth} onClick={() => setView({ ...view, depth: canvas?.meta?.maxDepth ?? 9 })}>all entry points</button>
+                <button
+                  disabled={!!canvas?.meta && view.depth >= canvas.meta.maxDepth && !canvas.meta.frontier.length}
+                  onClick={async () => {
+                    if (canvas?.meta && view.depth >= canvas.meta.maxDepth && canvas.meta.frontier.length) await actions.loadCallers(canvas.meta.frontier);
+                    setView({ ...view, depth: view.depth + 1 });
+                  }}>zoom out +</button>
+                <button
+                  disabled={!!canvas?.meta && view.depth >= canvas.meta.maxDepth && !canvas.meta.frontier.length}
+                  onClick={async () => {
+                    if (g.lazy && !(await runExpand('reach', view.op, `every entry point that reaches ${opTitle(g, view.op)}`))) return;
+                    setView({ ...view, depth: 99 });
+                  }}>all entry points</button>
                 {expandedGroups.size > 0 && <button onClick={() => setExpandedGroups(new Set())}>regroup</button>}
               </>
             )}
@@ -345,6 +431,7 @@ export default function App() {
           )}
           <Legend />
           {toast && <div className="toast">{toast}</div>}
+          {busy && <div className="busy">⏳ analyzing {busy}…</div>}
           {diffFor && (g.operations[diffFor]?.changes ?? g.entryPoints[diffFor]?.changes)?.length ? (
             <DiffPanel title={label(diffFor)} changes={(g.operations[diffFor]?.changes ?? g.entryPoints[diffFor]?.changes)!} onClose={() => setDiffFor(undefined)} />
           ) : null}

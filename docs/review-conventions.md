@@ -12,9 +12,18 @@ How this project turns [research-summary.md](research-summary.md) into practice.
    and each group shows how many read-only endpoints now write. *(R5)*
 3. **Open one flow** that matters (double-click an entry). Check the data path: is shared data fetched once
    and passed down? Does the new side effect belong here?
-4. **Drill in** only where the graph says *changes inside*. Check the example input and output at each end. At a
-   leaf the line diff is there if you need it.
-5. **Checks** list what the machine already found. Errors block the merge; you don't re-check them. *(R3, R6, R8)*
+4. **Drill in** only where the graph says *changes inside*. Check the example call at both ends (input and
+   output are the same recorded call; expand nested values like in the devtools). Inside a changed flow, outlined
+   steps are new calls, red ghosts are calls the change removed, and purple labels mark changed guards.
+5. **Read code last, function by function**. *code changes ±* lists every changed function behind the
+   operation, including inlined helpers in other files, with +/− counts, before showing any code. Start with the
+   operation's own method, which holds the contract-relevant logic, then the helpers. Unchanged lines are folded and
+   edited words are marked. A helper that is only newly called, with no code change, is not listed: it shows up
+   as a new step instead.
+6. **On a large service, let the graph grow with you** (`--lazy`). Start from the 1–2 flows picked for the
+   PR and load more callers or flows only when a question needs them. Each loaded part is checked as exactly as
+   in a full analysis (`npm run lazy-check --workspace analyzer`).
+7. **Checks** list what the machine already found. Errors block the merge; you don't re-check them. *(R3, R6, R8)*
 
 ## Module contract (derived, never written into the code)
 

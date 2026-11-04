@@ -11,7 +11,9 @@
     "demo": "tsx src/demo.ts",
     "typecheck": "tsc --noEmit",
     "schema": "tsx src/schema-gen.ts",
-    "validate": "tsx src/validate.ts"
+    "validate": "tsx src/validate.ts",
+    "live": "tsx src/live-demo.ts",
+    "lazy-check": "tsx src/lazy-check.ts"
   },
   "dependencies": {
     "diff": "^8.0.2",

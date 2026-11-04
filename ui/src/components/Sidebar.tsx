@@ -75,6 +75,18 @@ export function Sidebar({ g }: { g: ModuleGraph }) {
         </section>
       )}
 
+      {g.lazy && g.lazy.seeds.length > 0 && (
+        <section>
+          <h3>Flows analyzed for this review <span className="muted small">· others on demand</span></h3>
+          {g.lazy.seeds.map((s) => (
+            <div key={s.id} className="queue-item" onClick={() => actions.openEntry(s.id)} title={s.reason}>
+              <span className="queue-name">{g.entryPoints[s.id]?.label ?? s.id}</span>
+              <div className="queue-reason">{s.reason}</div>
+            </div>
+          ))}
+        </section>
+      )}
+
       <section>
         <h3>
           Checks

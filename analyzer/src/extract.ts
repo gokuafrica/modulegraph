@@ -59,9 +59,20 @@ export function extract(project: Project, repoRoot: string, projectDir: string, 
   return new Extractor(project, repoRoot, projectDir, config).run();
 }
 
-class Extractor {
+/**
+ * Turns code into the graph. Two ways to drive it:
+ * - `run()`: everything (every operation, every entry point). Simple, and fine for small services.
+ * - lazy (`init()` then `ensureOp` / `ensureEntry` / `callersOf` / `scopesForLines`): only what a review needs,
+ *   found from the changed lines outwards with the TypeScript reference index. See lazy.ts.
+ */
+export class Extractor {
   private moduleIds = new Map<ClassDeclaration, string>();
-  private snapshot: Snapshot = { modules: {}, operations: {}, entryPoints: {}, scopes: {}, fingerprints: {}, parts: {} };
+  /** Registration call of every entry point found so far (lazy mode builds scopes from these on demand). */
+  private entryCalls = new Map<string, CallExpression>();
+  private entryIdCache = new Map<CallExpression, string | undefined>();
+  /** Scopes analyzed downward completely (every callee analyzed too). */
+  readonly deep = new Set<string>();
+  snapshot: Snapshot = { modules: {}, operations: {}, entryPoints: {}, scopes: {}, fingerprints: {}, parts: {} };
   private stepCounter = 0;
   private currentClass?: ClassDeclaration;
 
@@ -73,12 +84,186 @@ class Extractor {
   ) {}
 
   run(): Snapshot {
-    const files = this.project.getSourceFiles().filter((f) => this.isProjectFile(f.getFilePath()));
-    for (const cls of this.discoverModules(files.flatMap((f) => f.getClasses()))) this.registerModule(cls);
+    this.init();
     for (const [cls, moduleId] of this.moduleIds) this.extractOperations(cls, moduleId);
-    for (const file of files) for (const call of file.getDescendantsOfKind(SyntaxKind.CallExpression)) this.extractEntry(call);
+    for (const file of this.projectFiles()) for (const call of file.getDescendantsOfKind(SyntaxKind.CallExpression)) this.extractEntry(call);
     this.computeTransitiveEffects();
     return this.snapshot;
+  }
+
+  /** Module discovery only: which classes are modules. Cheap: no function bodies are analyzed. */
+  init(): void {
+    for (const cls of this.discoverModules(this.projectFiles().flatMap((f) => f.getClasses()))) this.registerModule(cls);
+  }
+
+  private projectFiles() {
+    return this.project.getSourceFiles().filter((f) => this.isProjectFile(f.getFilePath()));
+  }
+
+  // ---------- lazy API ----------
+
+  /** Public methods of all modules: the operations that exist, analyzed or not. */
+  knownOperations(): string[] {
+    return [...this.moduleIds.keys()].flatMap((cls) => this.publicMethods(cls).map((m) => `${cls.getName()}.${m.getName()}`));
+  }
+
+  /** Class, file and parameter names of every module method: what the example recorder wraps. */
+  operationTargets(): { opId: string; file: string; className: string; method: string; params: string[] }[] {
+    return [...this.moduleIds.keys()].flatMap((cls) =>
+      this.publicMethods(cls).map((m) => ({
+        opId: `${cls.getName()}.${m.getName()}`,
+        file: this.rel(cls.getSourceFile().getFilePath()),
+        className: cls.getName()!,
+        method: m.getName(),
+        params: m.getParameters().map((p) => p.getName()),
+      })),
+    );
+  }
+
+  /**
+   * Lists every entry point without analyzing any: finds the registration calls (router.get, consumer.subscribe, …)
+   * through the reference index of the framework methods named in the config.
+   */
+  listEntryPoints(): void {
+    for (const rule of this.config.entryPoints) {
+      const method = this.projectFiles().map((f) => f.getClass(rule.class)).find(Boolean)?.getMethod(rule.method);
+      if (!method) {
+        // Framework class not in the project (e.g. from node_modules): fall back to scanning call sites.
+        for (const file of this.projectFiles()) for (const call of file.getDescendantsOfKind(SyntaxKind.CallExpression)) this.entryStub(call);
+        continue;
+      }
+      for (const ref of method.findReferencesAsNodes()) {
+        const call = callOf(ref);
+        if (call) this.entryStub(call);
+      }
+    }
+  }
+
+  /** Analyzes an operation (its own scope); `deep` also analyzes everything it calls, recursively. */
+  ensureOp(opId: string, deep = false): boolean {
+    if (!this.snapshot.operations[opId]) {
+      const found = this.findOp(opId);
+      if (!found) return false;
+      this.extractOperation(found.cls, found.method);
+    }
+    if (deep && !this.deep.has(opId)) {
+      this.deep.add(opId);
+      for (const callee of this.snapshot.operations[opId].calls) this.ensureOp(callee, true);
+    }
+    return true;
+  }
+
+  ensureEntry(id: string, deep = false): boolean {
+    if (!this.snapshot.entryPoints[id]) return false;
+    if (!this.snapshot.scopes[id]) this.buildEntry(id);
+    if (deep && !this.deep.has(id)) {
+      this.deep.add(id);
+      for (const step of this.snapshot.scopes[id]?.steps ?? []) if (step.target) this.ensureOp(step.target, true);
+    }
+    return true;
+  }
+
+  /** Scopes (operations or entry points) with a step that calls `opId`. One level up, via the reference index. */
+  callersOf(opId: string): string[] {
+    const found = this.findOp(opId);
+    if (!found) return [];
+    const out = new Set<string>();
+    for (const ref of found.method.findReferencesAsNodes()) {
+      const call = callOf(ref);
+      if (!call) continue;
+      // Calls from the same class are inlined into the caller, not a step: same rule as `resolve`.
+      for (const id of this.scopesAt(call)) if (!id.startsWith(`${found.cls.getName()}.`)) out.add(id);
+    }
+    return [...out];
+  }
+
+  /** Scopes whose analysis covers the given lines of a file: where a diff hunk lands in the graph. */
+  scopesForLines(absPath: string, ranges: [number, number][]): string[] {
+    const sf = this.project.getSourceFile(absPath);
+    if (!sf) return [];
+    const out = new Set<string>();
+    const memo = new Map<Node, string[]>();
+    const lines = sf.getFullText().split('\n');
+    for (const [from, to] of ranges) {
+      for (let line = from; line <= Math.min(to, lines.length); line++) {
+        const text = lines[line - 1] ?? '';
+        if (!text.trim()) continue;
+        const pos = sf.compilerNode.getPositionOfLineAndCharacter(line - 1, text.length - text.trimStart().length);
+        const node = sf.getDescendantAtPos(pos);
+        if (!node) continue;
+        const key = node.getFirstAncestor(isFnNode) ?? node.getFirstAncestor(isTypeDecl) ?? node;
+        if (!memo.has(key)) memo.set(key, this.scopesOfChange(node));
+        memo.get(key)!.forEach((id) => out.add(id));
+      }
+    }
+    return [...out];
+  }
+
+  private scopesOfChange(node: Node): string[] {
+    const typeDecl = node.getFirstAncestor(isTypeDecl);
+    if (typeDecl && !node.getFirstAncestor(isFnNode)) {
+      // A changed type changes every operation whose signature or body uses it.
+      const out = new Set<string>();
+      for (const ref of (typeDecl as unknown as { findReferencesAsNodes(): Node[] }).findReferencesAsNodes()) {
+        if (ref.getFirstAncestor(isFnNode) || ref.getFirstAncestor(isTypeDecl) === undefined) this.scopesAt(ref).forEach((id) => out.add(id));
+      }
+      return [...out];
+    }
+    return this.scopesAt(node);
+  }
+
+  /**
+   * Scopes whose steps would include something located at `node`: the entry handler or operation around it,
+   * and, for helpers that get inlined, everything that calls the helper.
+   */
+  scopesAt(node: Node, seen = new Set<Node>()): string[] {
+    for (let cur = node.getParent(); cur; cur = cur.getParent()) {
+      if (Node.isCallExpression(cur)) {
+        const id = this.entryIdOf(cur);
+        if (id) return [id];
+      }
+      if (isFnNode(cur) && !isAnonymous(cur)) break;
+    }
+    let fn: Node | undefined = isFnNode(node) ? node : node.getFirstAncestor(isFnNode);
+    while (fn && isAnonymous(fn) && !Node.isVariableDeclaration(fn.getParent())) fn = fn.getFirstAncestor(isFnNode);
+    if (!fn || seen.has(fn)) return [];
+    seen.add(fn);
+    const out: string[] = [];
+    if (Node.isMethodDeclaration(fn)) {
+      const cls = fn.getParent();
+      if (Node.isClassDeclaration(cls) && this.moduleIds.has(cls) && fn.getScope() === MemberScope.Public && !fn.isStatic()) {
+        out.push(`${cls.getName()}.${fn.getName()}`);
+        // Public methods of the same class that call this one inline it.
+        for (const ref of fn.findReferencesAsNodes()) {
+          const call = callOf(ref);
+          if (call && call.getFirstAncestor((n) => Node.isClassDeclaration(n)) === cls) out.push(...this.scopesAt(call, seen));
+        }
+        return out;
+      }
+    }
+    // A helper (private method, function, arrow in a variable): inlined wherever it is called.
+    const named = Node.isVariableDeclaration(fn.getParent()) ? fn.getParent()! : fn;
+    const refs = 'findReferencesAsNodes' in named ? (named as unknown as { findReferencesAsNodes(): Node[] }).findReferencesAsNodes() : [];
+    for (const ref of refs) out.push(...this.scopesAt(ref, seen));
+    return [...new Set(out)];
+  }
+
+  private entryIdOf(call: CallExpression): string | undefined {
+    if (!this.entryIdCache.has(call)) this.entryIdCache.set(call, this.entryStub(call));
+    return this.entryIdCache.get(call);
+  }
+
+  private findOp(opId: string): { cls: ClassDeclaration; method: MethodDeclaration } | undefined {
+    const dot = opId.indexOf('.');
+    const className = opId.slice(0, dot);
+    const name = opId.slice(dot + 1);
+    const cls = [...this.moduleIds.keys()].find((c) => c.getName() === className);
+    const method = cls && this.publicMethods(cls).find((m) => m.getName() === name);
+    return cls && method ? { cls, method } : undefined;
+  }
+
+  private publicMethods(cls: ClassDeclaration): MethodDeclaration[] {
+    return cls.getMethods().filter((m) => m.getScope() === MemberScope.Public && !m.getName().startsWith('#') && !m.isStatic());
   }
 
   // ---------- modules & operations ----------
@@ -145,15 +330,20 @@ class Extractor {
     this.snapshot.fingerprints[`module:${id}`] = normalise(cls.getText());
   }
 
-  private extractOperations(cls: ClassDeclaration, moduleId: string): void {
-    for (const method of cls.getMethods()) {
-      if (method.getScope() !== MemberScope.Public || method.getName().startsWith('#') || method.isStatic()) continue;
+  private extractOperations(cls: ClassDeclaration, _moduleId: string): void {
+    for (const method of this.publicMethods(cls)) this.extractOperation(cls, method);
+  }
+
+  private extractOperation(cls: ClassDeclaration, method: MethodDeclaration): void {
+    const moduleId = this.moduleIds.get(cls)!;
+    {
       const id = `${cls.getName()}.${method.getName()}`;
+      if (this.snapshot.operations[id]) return;
       this.currentClass = cls;
       const scope = this.buildScope(id, method);
       this.currentClass = undefined;
       const steps = scope.result.steps;
-      this.snapshot.modules[moduleId].operations.push(id);
+      if (!this.snapshot.modules[moduleId].operations.includes(id)) this.snapshot.modules[moduleId].operations.push(id);
       this.snapshot.operations[id] = {
         id,
         moduleId,
@@ -177,16 +367,22 @@ class Extractor {
   // ---------- entry points ----------
 
   private extractEntry(call: CallExpression): void {
+    const id = this.entryStub(call);
+    if (id) this.buildEntry(id);
+  }
+
+  /** Registers an entry point from its registration call, without analyzing the handler. Returns its id. */
+  private entryStub(call: CallExpression): string | undefined {
     const target = this.methodTarget(call);
-    if (!target) return;
+    if (!target) return undefined;
     const rule = this.config.entryPoints.find((r) => r.class === target.className && r.method === target.method);
-    if (!rule) return;
+    if (!rule) return undefined;
     const args = call.getArguments();
-    const handler = this.toFn(args[rule.handlerArg]);
-    if (!handler) return;
+    if (!this.toFn(args[rule.handlerArg])) return undefined;
     const label = rule.label.replace(/\{(\d+)\}/g, (_, i) => this.literal(args[Number(i)]));
     const id = `${rule.kind}:${label}`;
-    const scope = this.buildScope(id, handler);
+    if (this.entryCalls.has(id)) return id;
+    this.entryCalls.set(id, call);
     this.snapshot.entryPoints[id] = {
       id,
       kind: rule.kind,
@@ -198,6 +394,14 @@ class Extractor {
       change: 'unchanged',
       containsChanges: false,
     };
+    return id;
+  }
+
+  private buildEntry(id: string): void {
+    const call = this.entryCalls.get(id)!;
+    const handler = this.toFn(call.getArguments()[this.ruleFor(call)!.handlerArg])!;
+    const scope = this.buildScope(id, handler);
+    const label = this.snapshot.entryPoints[id].label;
     this.recordParts(id, { name: label, role: 'handler', file: this.rel(call.getSourceFile().getFilePath()), line: call.getStartLineNumber(), text: call.getText() }, scope.result.parts);
   }
 
@@ -427,7 +631,12 @@ class Extractor {
 
   // ---------- effects ----------
 
-  private computeTransitiveEffects(): void {
+  private ruleFor(call: CallExpression) {
+    const target = this.methodTarget(call);
+    return target && this.config.entryPoints.find((r) => r.class === target.className && r.method === target.method);
+  }
+
+  computeTransitiveEffects(): void {
     const memo = new Map<string, Effect[]>();
     const visit = (opId: string, stack: Set<string>): Effect[] => {
       if (memo.has(opId)) return memo.get(opId)!;
@@ -441,7 +650,7 @@ class Extractor {
     };
     for (const op of Object.values(this.snapshot.operations)) op.effects = visit(op.id, new Set());
     for (const entry of Object.values(this.snapshot.entryPoints)) {
-      const steps = this.snapshot.scopes[entry.id].steps;
+      const steps = this.snapshot.scopes[entry.id]?.steps ?? [];
       entry.effects = dedupeEffects(steps.flatMap((s) => (s.effect ? [s.effect] : s.target ? visit(s.target, new Set()) : [])));
     }
   }
@@ -547,6 +756,24 @@ function guardOf(call: Node, fn: Node): { condition?: string; loop?: boolean; gu
     node = node.getParent();
   }
   return { condition: conditions.reverse().join(' and ') || undefined, loop: loop || undefined, guardNodes };
+}
+
+/** The call expression a reference names: `x.method(…)` or `fn(…)`. */
+function callOf(ref: Node): CallExpression | undefined {
+  const parent = ref.getParent();
+  if (Node.isPropertyAccessExpression(parent) && parent.getNameNode() === ref) {
+    const call = parent.getParent();
+    return Node.isCallExpression(call) && call.getExpression() === parent ? call : undefined;
+  }
+  return Node.isCallExpression(parent) && parent.getExpression() === ref ? parent : undefined;
+}
+
+function isAnonymous(fn: Node): boolean {
+  return Node.isArrowFunction(fn) || Node.isFunctionExpression(fn);
+}
+
+function isTypeDecl(n: Node): boolean {
+  return Node.isInterfaceDeclaration(n) || Node.isTypeAliasDeclaration(n) || Node.isEnumDeclaration(n);
 }
 
 function exits(stmt: Node): boolean {

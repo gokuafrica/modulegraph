@@ -34,6 +34,13 @@ npm run analyze -- --project <path to service> --config $C/modulegraph.config.js
 npm run dev   # http://localhost:5173
 ```
 
+**Large services: use `--lazy --serve`** instead of analyzing every flow. Read the PR first, then pick the
+1–2 entry points a reviewer of *this* change should look at, and pass them:
+`--seed-entries "PUT /v1/users/:userId/birth-info/consent,GET /v1/users/:userId/birth-info"` (ids or label
+fragments). Without it the analyzer ranks entry points itself: new or changed ones, words from the
+title/intent, then distance from the change. The reviewer expands the rest in the UI. Each expansion is saved
+back into the JSON.
+
 Always pass `--intent` when you know the goal: the `undisclosed-effect` rule flags side effects the
 description doesn't mention (a common sign of agent-added scope). In CI add `--check` (exit 1 on new errors).
 

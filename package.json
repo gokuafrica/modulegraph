@@ -1,11 +1,16 @@
 {
   "name": "modular-programming",
   "private": true,
-  "workspaces": ["sample-service", "analyzer", "ui"],
+  "workspaces": [
+    "sample-service",
+    "analyzer",
+    "ui"
+  ],
   "scripts": {
     "analyze": "npm run analyze --workspace analyzer --",
     "dev": "npm run dev --workspace ui",
     "demo": "npm run demo --workspace analyzer && npm run dev --workspace ui",
-    "check": "npm run typecheck --workspaces --if-present"
+    "check": "npm run typecheck --workspaces --if-present",
+    "live": "npm run live --workspace analyzer --"
   }
 }

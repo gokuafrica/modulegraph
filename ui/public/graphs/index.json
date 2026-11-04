@@ -1,9 +1,38 @@
 [
   {
+    "id": "live-kyc-risk-tiers",
+    "title": "Live (lazy): KYC risk tiers, manual review, async rescreen",
+    "mode": "branch",
+    "lazy": true,
+    "generatedAt": "2026-11-04T00:58:07.064Z",
+    "stats": {
+      "files": 5,
+      "linesAdded": 74,
+      "linesRemoved": 8,
+      "contractChanges": 3,
+      "entryPointsAffected": 5
+    }
+  },
+  {
+    "id": "live-birthinfo-consent",
+    "title": "Live (lazy): BirthInfo consented data wins over documents",
+    "mode": "branch",
+    "lazy": true,
+    "generatedAt": "2026-11-04T00:58:01.164Z",
+    "stats": {
+      "files": 7,
+      "linesAdded": 57,
+      "linesRemoved": 4,
+      "contractChanges": 5,
+      "entryPointsAffected": 20
+    }
+  },
+  {
     "id": "demo-kyc-risk-tiers",
     "title": "KYC: risk tiers, manual review, async rescreen (multi-file)",
     "mode": "branch",
-    "generatedAt": "2026-11-04T00:42:49.073Z",
+    "lazy": false,
+    "generatedAt": "2026-11-04T00:57:54.963Z",
     "stats": {
       "files": 5,
       "linesAdded": 74,
@@ -16,7 +45,8 @@
     "id": "demo-birthinfo-consent",
     "title": "BirthInfo: consented data wins over documents",
     "mode": "branch",
-    "generatedAt": "2026-11-04T00:42:43.640Z",
+    "lazy": false,
+    "generatedAt": "2026-11-04T00:57:49.345Z",
     "stats": {
       "files": 7,
       "linesAdded": 57,
@@ -29,7 +59,8 @@
     "id": "snapshot-main",
     "title": "Snapshot: identity-profile-service (main)",
     "mode": "snapshot",
-    "generatedAt": "2026-11-04T00:42:38.250Z",
+    "lazy": false,
+    "generatedAt": "2026-11-04T00:57:43.937Z",
     "stats": {
       "files": 0,
       "linesAdded": 0,

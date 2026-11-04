@@ -151,6 +151,10 @@
         },
         "review": {
           "$ref": "#/definitions/ReviewSummary"
+        },
+        "lazy": {
+          "$ref": "#/definitions/LazyInfo",
+          "description": "Present when the graph was built lazily: only what the review needed so far."
         }
       },
       "required": [
@@ -165,6 +169,75 @@
         "scopes",
         "findings",
         "review"
+      ],
+      "additionalProperties": false
+    },
+    "LazyInfo": {
+      "type": "object",
+      "properties": {
+        "api": {
+          "type": "string",
+          "description": "Where the live analysis server answers expand requests, relative to the UI (\"/api\"). Absent = static file."
+        },
+        "seeds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "reason"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Entry points analyzed up front, and why each was picked."
+        },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "entryPointsKnown": {
+              "type": "number"
+            },
+            "entryPointsAnalyzed": {
+              "type": "number",
+              "description": "Flow fully analyzed (handler and everything below it)."
+            },
+            "entryPointsReached": {
+              "type": "number",
+              "description": "Known to reach the change, flow not analyzed yet."
+            },
+            "operationsKnown": {
+              "type": "number"
+            },
+            "operationsAnalyzed": {
+              "type": "number"
+            },
+            "ms": {
+              "type": "number",
+              "description": "Milliseconds spent on analysis so far (initial + expansions)."
+            }
+          },
+          "required": [
+            "entryPointsKnown",
+            "entryPointsAnalyzed",
+            "entryPointsReached",
+            "operationsKnown",
+            "operationsAnalyzed",
+            "ms"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "seeds",
+        "stats"
       ],
       "additionalProperties": false
     },
@@ -416,6 +489,23 @@
         },
         "source": {
           "type": "string"
+        },
+        "lazy": {
+          "type": "object",
+          "properties": {
+            "callersLoaded": {
+              "type": "boolean"
+            },
+            "calleesLoaded": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "callersLoaded",
+            "calleesLoaded"
+          ],
+          "additionalProperties": false,
+          "description": "Lazy analyses only: whether callers (up) and callees (down) of this operation have been analyzed."
         }
       },
       "required": [
@@ -673,6 +763,15 @@
             "$ref": "#/definitions/CodeChange"
           },
           "description": "Changed functions behind the handler (handler + inlined helpers)."
+        },
+        "analysis": {
+          "type": "string",
+          "enum": [
+            "listed",
+            "reached",
+            "full"
+          ],
+          "description": "Lazy analyses only. listed: only its registration is known; reached: known to reach the change; full: flow analyzed."
         }
       },
       "required": [

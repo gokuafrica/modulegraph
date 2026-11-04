@@ -32,3 +32,11 @@ run([
   '--title', 'KYC: risk tiers, manual review, async rescreen (multi-file)',
   '--intent', 'KYC: add risk tiers from sanctions score, birth country and nationality; send high-risk users to manual review (outbox kyc.manual_review_requested); make the nightly rescreen asynchronous via kyc.recheck_requested.',
 ]);
+// Lazy versions of both: only the changed code and the 2 best-matching entry points analyzed.
+// `npm run live [-- kyc]` serves them live so the UI can expand the rest.
+for (const [head, title, intent] of [
+  ['feature/birthinfo-consent', 'Live (lazy): BirthInfo consented data wins over documents', 'BirthInfo: prefer user-consented birth data (birth_info_consents) over document data; add consent endpoint.'],
+  ['feature/kyc-risk-tiers', 'Live (lazy): KYC risk tiers, manual review, async rescreen', 'KYC: add risk tiers from sanctions score, birth country and nationality; send high-risk users to manual review (outbox kyc.manual_review_requested); make the nightly rescreen asynchronous via kyc.recheck_requested.'],
+]) {
+  run(['--head', head, '--base', 'main', '--lazy', '--examples', scenario, '--name', `live-${head.split('/').pop()}`, '--title', title, '--intent', intent]);
+}

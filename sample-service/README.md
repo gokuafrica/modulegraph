@@ -7,12 +7,15 @@ Kafka, and stubbed HTTP dependencies, so there is nothing to install.
 
 | Version | Folder | What the diagrams call it |
 |---|---|---|
-| Before the change (`main`) | [`sample-service/`](.) | *base* |
-| After the change (`feature/birthinfo-consent`) | [`.worktrees/birthinfo-consent/sample-service/`](../.worktrees/birthinfo-consent/sample-service) | *head*: what the demo review shows |
+| Before any change (`main`) | [`sample-service/`](.) | *base* |
+| BirthInfo consent (`feature/birthinfo-consent`) | [`.worktrees/birthinfo-consent/sample-service/`](../.worktrees/birthinfo-consent/sample-service) | *head* of the BirthInfo demo |
+| KYC risk tiers, multi-file (`feature/kyc-risk-tiers`) | [`.worktrees/kyc-risk-tiers/sample-service/`](../.worktrees/kyc-risk-tiers/sample-service) | *head* of the KYC demo |
 
-The diagram for the demo PR shows the **head** version. To compare, open
-`.worktrees/birthinfo-consent/sample-service/src/modules/birth-info/BirthInfoModule.ts` next to the same file here.
-The full diff is `git diff main...feature/birthinfo-consent -- sample-service`.
+**A review diagram always shows the head version.** The files in this folder are `main`, the *before*. For example,
+`src/modules/birth-info/BirthInfoModule.ts` here only remaps document data. The consent check the diagram
+shows is in `.worktrees/birthinfo-consent/sample-service/src/modules/birth-info/BirthInfoModule.ts`. The
+inspector says which revision a file path refers to ("on feature/birthinfo-consent (not main)").
+Full diffs: `git diff main...feature/birthinfo-consent -- sample-service`, and the same for `feature/kyc-risk-tiers`.
 
 ## Modules (what the boxes are)
 

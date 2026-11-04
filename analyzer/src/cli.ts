@@ -5,10 +5,12 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { Project } from 'ts-morph';
-import type { Finding, ModuleGraph, Source } from '../../schema/modulegraph.ts';
+import type { Example, Finding, ModuleGraph, Source } from '../../schema/modulegraph.ts';
 import { compare } from './compare.ts';
 import { loadConfig } from './config.ts';
-import { extract, type Snapshot } from './extract.ts';
+import { extract } from './extract.ts';
+import { LazySession } from './lazy.ts';
+import { serve } from './server.ts';
 import { diffBetween, fetchPullRequest, filesAtRef, git, mergeBase, repoRootOf, revParse, type RawDiff } from './git.ts';
 import { architectureFindings, changeFindings, markNew, opLabel, reviewSummary } from './rules.ts';
 
@@ -32,6 +34,13 @@ options
   --name <id>              output id (default derived from mode)
   --out <file>             output path (default: ui/public/graphs/<id>.json, also updates index.json)
   --check                  exit 1 when the change introduces new error-level findings (CI gate)
+
+lazy analysis (large codebases)
+  --lazy                   start at the changed code; analyze only the few entry points that matter for
+                           this change, list the rest without analyzing them
+  --seeds <n>              entry points to analyze up front (default 2)
+  --seed-entries <a,b>     entry point ids or label fragments to analyze up front (e.g. an agent's pick)
+  --serve [--port 5174]    keep running and answer the UI's expand requests (callers, flows, drill-ins)
 `;
 
 const { values: args } = parseArgs({
@@ -50,6 +59,11 @@ const { values: args } = parseArgs({
     name: { type: 'string' },
     out: { type: 'string' },
     check: { type: 'boolean' },
+    lazy: { type: 'boolean' },
+    seeds: { type: 'string' },
+    'seed-entries': { type: 'string' },
+    serve: { type: 'boolean' },
+    port: { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -66,16 +80,16 @@ const projectRel = relative(repo, projectDir).replace(/\\/g, '/') || '.';
 const config = loadConfig(projectDir, args.config ? resolve(args.config) : undefined);
 const tsconfig = join(projectDir, config.tsconfig);
 
-function snapshotOf(files?: Map<string, string>): Snapshot {
+function projectOf(files?: Map<string, string>): Project {
   const project = files
     ? new Project({ tsConfigFilePath: tsconfig, skipAddingFilesFromTsConfig: true })
     : new Project({ tsConfigFilePath: tsconfig });
   if (files) for (const [path, text] of files) project.createSourceFile(path, text, { overwrite: true });
-  return extract(project, repo, projectDir, config);
+  return project;
 }
 
-let head: Snapshot;
-let base: Snapshot | undefined;
+let headProject: Project;
+let baseProject: Project | undefined;
 let diff: RawDiff | undefined;
 let intent = args.intent;
 let source: Source;
@@ -83,7 +97,7 @@ let source: Source;
 let headSha: string | undefined;
 
 if (args.snapshot) {
-  head = snapshotOf();
+  headProject = projectOf();
   source = { mode: 'snapshot', repo, project: projectRel, files: [] };
 } else if (args.pr || args.head) {
   let headRef = args.head!;
@@ -98,64 +112,87 @@ if (args.snapshot) {
   }
   const mb = mergeBase(repo, baseRef, headRef);
   headSha = revParse(repo, headRef);
-  head = snapshotOf(filesAtRef(repo, headSha, projectRel));
-  base = snapshotOf(filesAtRef(repo, mb, projectRel));
+  headProject = projectOf(filesAtRef(repo, headSha, projectRel));
+  baseProject = projectOf(filesAtRef(repo, mb, projectRel));
   diff = diffBetween(repo, mb, headRef, projectRel);
   source = { mode: args.pr ? 'pr' : 'branch', repo, project: projectRel, base: baseRef, head: args.pr ? `#${args.pr}` : headRef, title, files: diff.files };
 } else {
-  head = snapshotOf();
-  base = snapshotOf(filesAtRef(repo, 'HEAD', projectRel));
+  headProject = projectOf();
+  baseProject = projectOf(filesAtRef(repo, 'HEAD', projectRel));
   diff = diffBetween(repo, 'HEAD', undefined, projectRel);
   source = { mode: 'uncommitted', repo, project: projectRel, base: 'HEAD', head: 'working tree', files: diff.files };
 }
 source.title ??= args.title;
 if (intent) source.intent = intent;
 
-const graph = compare(head, base);
-for (const file of source.files) {
-  // A file belongs to a module when the module's class lives there or one of its operations inlines code from it.
-  const viaOps = Object.values(graph.operations).filter((op) => op.changes?.some((c) => c.file === file.path)).map((op) => op.moduleId);
-  file.modules = [...new Set([...Object.values(graph.modules).filter((m) => m.file === file.path).map((m) => m.id), ...viaOps])];
-}
-
-if (args.examples) captureExamples(args.examples);
-
-let findings: Finding[] = architectureFindings(graph, config);
-if (base) {
-  findings = markNew(findings, architectureFindings(compare(base), config));
-  findings.push(...changeFindings(graph, diff!, config, intent));
-}
-
-const output: ModuleGraph = {
-  schema: 'modulegraph/v1',
-  service: config.service,
-  generatedAt: new Date().toISOString(),
-  generator: 'modulegraph-analyzer/0.1 (ts-morph)',
-  source,
-  ...graph,
-  findings,
-  review: reviewSummary(graph, diff),
-};
-
-// ---------- write ----------
 const here = dirname(fileURLToPath(import.meta.url));
 const graphsDir = resolve(here, '../../ui/public/graphs');
 const id = args.name ?? slug(source.mode === 'snapshot' ? `snapshot-${config.service}` : `${source.mode}-${source.head}`);
 const outFile = args.out ? resolve(args.out) : join(graphsDir, `${id}.json`);
-mkdirSync(dirname(outFile), { recursive: true });
-writeFileSync(outFile, JSON.stringify(output, null, 2));
-if (!args.out) {
+
+let output: ModuleGraph;
+let session: LazySession | undefined;
+
+if (args.lazy) {
+  // Only what the review needs: the changed code, a few relevant entry points, the rest on demand.
+  session = new LazySession(headProject, baseProject, repo, projectDir, config, diff, source, intent);
+  session.init({ seedCount: Number(args.seeds ?? 2), seedHints: args['seed-entries']?.split(',').map((x) => x.trim()).filter(Boolean) });
+  if (args.examples) session.examples = recordExamples(args.examples, session.exampleTargets());
+  output = session.graph();
+  if (args.serve) output.lazy!.api = '/api';
+} else {
+  const head = extract(headProject, repo, projectDir, config);
+  const base = baseProject && extract(baseProject, repo, projectDir, config);
+  const graph = compare(head, base);
+  for (const file of source.files) {
+    // A file belongs to a module when the module's class lives there or one of its operations inlines code from it.
+    const viaOps = Object.values(graph.operations).filter((op) => op.changes?.some((c) => c.file === file.path)).map((op) => op.moduleId);
+    file.modules = [...new Set([...Object.values(graph.modules).filter((m) => m.file === file.path).map((m) => m.id), ...viaOps])];
+  }
+  if (args.examples) {
+    const targets = Object.values(graph.operations)
+      .filter((op) => op.change !== 'removed')
+      .map((op) => ({ opId: op.id, file: op.file, className: graph.modules[op.moduleId].className, method: op.name, params: op.params.map((p) => p.name) }));
+    const recorded = recordExamples(args.examples, targets);
+    for (const [opId, examples] of Object.entries(recorded)) if (graph.operations[opId]) graph.operations[opId].examples = examples;
+  }
+  let findings: Finding[] = architectureFindings(graph, config);
+  if (base) {
+    findings = markNew(findings, architectureFindings(compare(base), config));
+    findings.push(...changeFindings(graph, diff!, config, intent));
+  }
+  output = {
+    schema: 'modulegraph/v1',
+    service: config.service,
+    generatedAt: new Date().toISOString(),
+    generator: 'modulegraph-analyzer/0.2 (ts-morph)',
+    source,
+    ...graph,
+    findings,
+    review: reviewSummary(graph, diff),
+  };
+}
+
+// ---------- write ----------
+function write(graph: ModuleGraph): void {
+  mkdirSync(dirname(outFile), { recursive: true });
+  writeFileSync(outFile, JSON.stringify(graph, null, 2));
+  if (args.out) return;
   const indexFile = join(graphsDir, 'index.json');
   const index = existsSync(indexFile) ? (JSON.parse(readFileSync(indexFile, 'utf8')) as { id: string }[]) : [];
   const entry = {
     id,
     title: source.title ?? `${source.mode}: ${source.base ?? ''} → ${source.head ?? 'tree'}`,
     mode: source.mode,
-    generatedAt: output.generatedAt,
-    stats: output.review.stats,
+    lazy: !!graph.lazy,
+    generatedAt: graph.generatedAt,
+    stats: graph.review.stats,
   };
   writeFileSync(indexFile, JSON.stringify([entry, ...index.filter((e) => e.id !== id)], null, 2));
 }
+write(output);
+const findings = output.findings;
+const base = baseProject;
 
 // ---------- report ----------
 const r = output.review;
@@ -172,7 +209,14 @@ if (shown.length) console.log(`\n${base ? 'new findings' : 'findings'}:`);
 for (const f of shown) console.log(`  ${f.severity.toUpperCase().padEnd(7)} ${f.rule.padEnd(20)} ${f.message}`);
 const preexisting = findings.length - shown.length;
 if (preexisting) console.log(`  (+${preexisting} pre-existing findings, shown in the UI)`);
+if (output.lazy) {
+  const st = output.lazy.stats;
+  console.log(`\nlazy: analyzed ${st.entryPointsAnalyzed} of ${st.entryPointsKnown} entry points (${st.entryPointsReached} more known to reach the change), ${st.operationsAnalyzed} of ${st.operationsKnown} operations, ${st.ms} ms`);
+  for (const s of output.lazy.seeds) console.log(`  seed ${s.id}: ${s.reason}`);
+}
 console.log(`\nwrote ${relative(process.cwd(), outFile)}`);
+
+if (args.serve && session) serve(session, write, id, Number(args.port ?? 5174));
 
 if (args.check && findings.some((f) => f.isNew && f.severity === 'error')) {
   console.error('\nmodulegraph check failed: the change introduces error-level findings');
@@ -183,8 +227,8 @@ function slug(s: string): string {
   return s.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
 }
 
-/** Runs the scenario against the head revision and attaches recorded calls to each operation. */
-function captureExamples(scenarioRel: string): void {
+/** Runs the scenario against the head revision and returns the recorded calls per operation. */
+function recordExamples(scenarioRel: string, targets: { opId: string; file: string; className: string; method: string; params: string[] }[]): Record<string, Example[]> {
   const here = dirname(fileURLToPath(import.meta.url));
   const tmp = join(repo, '.modulegraph-tmp');
   mkdirSync(tmp, { recursive: true });
@@ -202,16 +246,13 @@ function captureExamples(scenarioRel: string): void {
     const projectRoot = join(codeRoot, projectRel).replace(/\\/g, '/');
     const out = join(tmp, 'examples.json');
     const spec = join(tmp, 'examples-spec.json');
-    const targets = Object.values(graph.operations)
-      .filter((op) => op.change !== 'removed')
-      .map((op) => ({ opId: op.id, file: join(codeRoot, op.file), className: graph.modules[op.moduleId].className, method: op.name, params: op.params.map((p) => p.name) }));
-    writeFileSync(spec, JSON.stringify({ scenario, projectRoot, out, targets }));
+    writeFileSync(spec, JSON.stringify({ scenario, projectRoot, out, targets: targets.map((t) => ({ ...t, file: join(codeRoot, t.file) })) }));
     execFileSync(process.execPath, ['--import', 'tsx', join(here, 'examples-runner.ts'), spec], { cwd: resolve(here, '..'), stdio: 'inherit' });
-    const recorded = JSON.parse(readFileSync(out, 'utf8')) as Record<string, NonNullable<ModuleGraph['operations'][string]['examples']>>;
-    for (const [opId, examples] of Object.entries(recorded)) if (graph.operations[opId]) graph.operations[opId].examples = examples;
+    const recorded = JSON.parse(readFileSync(out, 'utf8')) as Record<string, Example[]>;
     source.examples = { scenario: relative(resolve(here, '../..'), scenario).replace(/\\/g, '/'), operationsCovered: Object.keys(recorded).length };
     rmSync(out, { force: true });
     rmSync(spec, { force: true });
+    return recorded;
   } finally {
     if (worktree) git(repo, ['worktree', 'remove', '--force', worktree]);
   }

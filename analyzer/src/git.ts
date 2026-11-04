@@ -61,6 +61,41 @@ export function diffBetween(repo: string, base: string, head: string | undefined
   return { files, patch };
 }
 
+export interface FileHunks {
+  /** Path relative to the repo (head side; base side for deletions). */
+  path: string;
+  basePath?: string;
+  /** Changed line ranges on the base side (removed/replaced lines). */
+  base: [number, number][];
+  /** Changed line ranges on the head side (added/replaced lines). */
+  head: [number, number][];
+}
+
+/** Changed line ranges per file from a zero-context patch (`git diff -U0`). */
+export function hunks(patch: string): FileHunks[] {
+  const out: FileHunks[] = [];
+  let cur: FileHunks | undefined;
+  for (const line of patch.split('\n')) {
+    if (line.startsWith('diff --git ')) {
+      cur = { path: '', base: [], head: [] };
+      out.push(cur);
+    } else if (cur && line.startsWith('--- ')) {
+      if (line !== '--- /dev/null') cur.basePath = line.slice(6);
+    } else if (cur && line.startsWith('+++ ')) {
+      cur.path = line === '+++ /dev/null' ? cur.basePath ?? '' : line.slice(6);
+    } else if (cur && line.startsWith('@@')) {
+      const m = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(line);
+      if (!m) continue;
+      const [b, bn, h, hn] = [Number(m[1]), m[2] === undefined ? 1 : Number(m[2]), Number(m[3]), m[4] === undefined ? 1 : Number(m[4])];
+      if (bn > 0) cur.base.push([b, b + bn - 1]);
+      if (hn > 0) cur.head.push([h, h + hn - 1]);
+    }
+  }
+  // Untracked files are appended without hunk headers: the whole file is new.
+  for (const f of out) if (!f.head.length && !f.base.length && f.path) f.head.push([1, 100000]);
+  return out.filter((f) => f.path);
+}
+
 export function mergeBase(repo: string, a: string, b: string): string {
   return git(repo, ['merge-base', a, b]).trim();
 }

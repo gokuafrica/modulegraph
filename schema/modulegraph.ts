@@ -40,6 +40,30 @@ export interface ModuleGraph {
   scopes: Record<string, Scope>;
   findings: Finding[];
   review: ReviewSummary;
+  /** Present when the graph was built lazily: only what the review needed so far. */
+  lazy?: LazyInfo;
+}
+
+/**
+ * Lazy analysis: start at the changed code, walk callers up only until a few relevant entry points are found,
+ * analyze those fully, and leave the rest for the reviewer to expand on demand.
+ */
+export interface LazyInfo {
+  /** Where the live analysis server answers expand requests, relative to the UI ("/api"). Absent = static file. */
+  api?: string;
+  /** Entry points analyzed up front, and why each was picked. */
+  seeds: { id: string; reason: string }[];
+  stats: {
+    entryPointsKnown: number;
+    /** Flow fully analyzed (handler and everything below it). */
+    entryPointsAnalyzed: number;
+    /** Known to reach the change, flow not analyzed yet. */
+    entryPointsReached: number;
+    operationsKnown: number;
+    operationsAnalyzed: number;
+    /** Milliseconds spent on analysis so far (initial + expansions). */
+    ms: number;
+  };
 }
 
 export interface Source {
@@ -108,6 +132,8 @@ export interface Operation {
   /** Real calls recorded while running the scenario on the head revision (up to 3 distinct). */
   examples?: Example[];
   source: string;
+  /** Lazy analyses only: whether callers (up) and callees (down) of this operation have been analyzed. */
+  lazy?: { callersLoaded: boolean; calleesLoaded: boolean };
 }
 
 export interface Example {
@@ -167,6 +193,8 @@ export interface EntryPoint {
   effectsRemoved?: Effect[];
   /** Changed functions behind the handler (handler + inlined helpers). */
   changes?: CodeChange[];
+  /** Lazy analyses only. listed: only its registration is known; reached: known to reach the change; full: flow analyzed. */
+  analysis?: 'listed' | 'reached' | 'full';
 }
 
 export interface Scope {

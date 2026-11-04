@@ -12,6 +12,8 @@ export interface Actions {
   expandGroup: (groupId: string) => void;
   /** Open the code-changes drawer for an operation or entry point. */
   showDiff: (id: string) => void;
+  /** Lazy graphs: analyze one more level of callers of these operations. */
+  loadCallers: (opIds: string[]) => Promise<void>;
 }
 export const ActionsContext = createContext<Actions>(null!);
 
@@ -117,7 +119,7 @@ export function ModuleNode({ data, selected }: NodeProps) {
     opId: string; title: string; operation: string; change: string; containsChanges: boolean; chips: Chip[];
     condition?: string; loop?: boolean; via?: string; focus?: boolean; onPath?: boolean; hasInternals: boolean; reach?: number;
     compact?: boolean; inImpact?: boolean; totalEffects: number; ops?: string[]; opIds?: string[];
-    delta?: string; conditionBefore?: string; ghost?: boolean; hasDiff?: boolean;
+    delta?: string; conditionBefore?: string; ghost?: boolean; hasDiff?: boolean; stub?: boolean; partial?: boolean; reachPartial?: boolean;
   };
   const inside = d.containsChanges && !d.compact && !d.inImpact;
   const actions = useContext(ActionsContext);
@@ -146,19 +148,21 @@ export function ModuleNode({ data, selected }: NodeProps) {
       <div className="chips">
         {d.chips.slice(0, 6).map((c) => <EffectChip key={`${c.kind}${c.target}${c.delta}`} chip={c} />)}
         {extra > 0 && <span className="chip more">+{extra} more</span>}
-        {d.chips.length === 0 && (
+        {d.stub && <span className="pure">not analyzed yet: drill in to analyze</span>}
+        {!d.stub && d.chips.length === 0 && !d.partial && (
           <span className="pure">{d.compact ? `${d.totalEffects} side effects, none changed` : 'no side effects'}</span>
         )}
+        {d.partial && !d.compact && <span className="chip more" title="Some modules below this one are not analyzed yet. Drill in to analyze them.">+ ? below, not analyzed</span>}
       </div>
       <div className="node-actions">
-        {d.hasInternals || d.change !== 'unchanged' ? (
-          <button className="link nodrag" onClick={(e) => { e.stopPropagation(); actions.drill(d.opId); }}>drill in ⤵</button>
+        {d.hasInternals || d.change !== 'unchanged' || d.stub || d.partial ? (
+          <button className="link nodrag" onClick={(e) => { e.stopPropagation(); actions.drill(d.opId); }}>{d.stub ? 'analyze ⤵' : 'drill in ⤵'}</button>
         ) : <span />}
         {d.hasDiff && !d.ghost && (
           <button className="link nodrag diff-link" onClick={(e) => { e.stopPropagation(); actions.showDiff(d.opId); }} title="Code changes, function by function">diff ±</button>
         )}
         <button className="link nodrag" onClick={(e) => { e.stopPropagation(); actions.zoomOut(d.opId); }}>
-          zoom out ⤴{d.reach !== undefined ? ` (${d.reach})` : ''}
+          zoom out ⤴{d.reach !== undefined ? ` (${d.reachPartial ? '≥' : ''}${d.reach})` : ''}
         </button>
       </div>
     </div>
@@ -188,7 +192,7 @@ export function EntryNode({ data, selected }: NodeProps) {
   const d = data as {
     kind: string; label: string; change: string; containsChanges?: boolean; readOnly?: boolean; effectsAdded?: Effect[];
     params?: Param[]; via?: string; entryId?: string; paramsDelta?: unknown; compact?: boolean;
-    examples?: Example[]; exampleParams?: string[];
+    examples?: Example[]; exampleParams?: string[]; analysis?: string;
   };
   const { index } = useContext(ExampleContext);
   const example = d.examples?.length ? d.examples[index % d.examples.length] : undefined;
@@ -206,6 +210,7 @@ export function EntryNode({ data, selected }: NodeProps) {
       <div className="entry-label">{d.label}</div>
       {d.kind === 'input' && d.params?.map((p) => <div className="param" key={p.name}>{p.name}: <span>{p.type}</span></div>)}
       {d.via && <div className="via">via {d.via}</div>}
+      {d.compact && d.analysis === 'reached' && <div className="via" title="Known to reach the change; its flow is analyzed when you open it">flow not analyzed yet · double-click to open</div>}
       {example && (
         <div className="example">
           <div className="example-head"><span>example call {d.examples!.length > 1 ? (index % d.examples!.length) + 1 : ''} · input</span><ExampleTabs examples={d.examples!} /></div>
@@ -213,8 +218,10 @@ export function EntryNode({ data, selected }: NodeProps) {
         </div>
       )}
       {(d.effectsAdded?.length ?? 0) > 0 && (
-        <div className={`entry-delta ${d.readOnly && writes.length ? 'warn' : ''}`}>
-          +{d.effectsAdded!.map((e) => `${e.kind} ${e.target}`).join(', +')}
+        <div className={`entry-delta ${d.readOnly && writes.length ? 'warn' : ''}`} title={d.effectsAdded!.map((e) => `+${e.kind} ${e.target}`).join('\n')}>
+          {d.change === 'added'
+            ? `new entry point · ${d.effectsAdded!.length} side effects`
+            : `+${d.effectsAdded!.slice(0, 3).map((e) => `${e.kind} ${e.target}`).join(', +')}${d.effectsAdded!.length > 3 ? ` +${d.effectsAdded!.length - 3} more` : ''}`}
         </div>
       )}
     </div>
@@ -281,6 +288,19 @@ export function GroupNode({ data }: NodeProps) {
   );
 }
 
+/** Lazy graphs: callers above this node that have not been looked up yet. */
+export function FrontierNode({ data }: NodeProps) {
+  const d = data as { opIds: string[] };
+  const actions = useContext(ActionsContext);
+  return (
+    <div className="node frontier" title="Callers of this module are not analyzed yet">
+      <Handle type="source" position={Position.Right} />
+      <span className="muted">⋯ callers not loaded</span>
+      <button className="link nodrag" onClick={(e) => { e.stopPropagation(); void actions.loadCallers(d.opIds); }}>load ⤴</button>
+    </div>
+  );
+}
+
 export function DecisionNode({ data }: NodeProps) {
   const d = data as { label: string };
   return (
@@ -332,4 +352,5 @@ export const nodeTypes = {
   entrygroup: GroupNode,
   code: CodeNode,
   decision: DecisionNode,
+  frontier: FrontierNode,
 };

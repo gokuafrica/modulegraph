@@ -45,12 +45,13 @@ function integrity(g: ModuleGraph, errors: string[]): void {
   for (const op of Object.values(g.operations)) {
     if (!g.modules[op.moduleId]) errors.push(`operation ${op.id}: unknown module ${op.moduleId}`);
     if (!g.scopes[op.id]) errors.push(`operation ${op.id}: no scope`);
-    for (const c of op.calls) if (!g.operations[c]) errors.push(`operation ${op.id}: calls unknown ${c}`);
+    for (const c of op.calls) if (!g.lazy && !g.operations[c]) errors.push(`operation ${op.id}: calls unknown ${c}`);
   }
-  for (const e of Object.values(g.entryPoints)) if (!g.scopes[e.id]) errors.push(`entry ${e.id}: no scope`);
+  // Lazy graphs list entry points before analyzing them, and steps may target operations not analyzed yet.
+  for (const e of Object.values(g.entryPoints)) if (!g.scopes[e.id] && !(g.lazy && e.analysis === 'listed')) errors.push(`entry ${e.id}: no scope`);
   for (const scope of Object.values(g.scopes)) {
     const ids = new Set(['entry', 'exit', ...scope.steps.map((s) => s.id)]);
-    for (const s of scope.steps) if (s.kind === 'call' && !g.operations[s.target!]) errors.push(`scope ${scope.id}: step ${s.id} targets unknown ${s.target}`);
+    for (const s of scope.steps) if (s.kind === 'call' && !g.lazy && !g.operations[s.target!]) errors.push(`scope ${scope.id}: step ${s.id} targets unknown ${s.target}`);
     for (const e of scope.edges) if (!ids.has(e.from) || !ids.has(e.to)) errors.push(`scope ${scope.id}: edge ${e.from}->${e.to} dangles`);
   }
 }
