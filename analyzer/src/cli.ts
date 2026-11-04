@@ -283,7 +283,8 @@ function slug(s: string): string {
 /** Runs the scenario against the head revision and returns the recorded calls per operation. */
 function recordExamples(scenarioRel: string, targets: OperationTarget[]): Record<string, Example[]> {
   const here = dirname(fileURLToPath(import.meta.url));
-  const tmp = join(repo, '.modulegraph-tmp');
+  // One folder per process: several analyses (npm run live) may record examples at the same time.
+  const tmp = join(repo, '.modulegraph-tmp', String(process.pid));
   mkdirSync(tmp, { recursive: true });
   let codeRoot = repo;
   let worktree: string | undefined;
@@ -308,5 +309,6 @@ function recordExamples(scenarioRel: string, targets: OperationTarget[]): Record
     return recorded;
   } finally {
     if (worktree) git(repo, ['worktree', 'remove', '--force', worktree]);
+    rmSync(tmp, { recursive: true, force: true });
   }
 }

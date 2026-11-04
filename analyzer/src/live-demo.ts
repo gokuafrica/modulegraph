@@ -5,7 +5,7 @@
  * With several demos, each runs its own analysis server (one TypeScript program each) on 5175, 5176, …, and
  * :5174 routes every /api/graphs/<id> request to the server that owns <id>.
  */
-import { spawn } from 'node:child_process';
+import { type ChildProcess, spawn } from 'node:child_process';
 import { createServer } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -57,23 +57,28 @@ if (wanted && !demos[wanted]) {
 }
 const picked = wanted ? [demos[wanted]] : Object.values(demos);
 
-const children = picked.map((demo, i) => {
-  const port = picked.length === 1 ? PORT : PORT + 1 + i;
-  const child = spawn(process.execPath, [
-    '--import', 'tsx', resolve(here, 'cli.ts'), ...demo.args, '--lazy', '--serve', '--port', String(port), '--name', demo.id,
-  ], { stdio: 'inherit' });
-  child.on('exit', (code) => {
-    console.error(`${demo.id} analysis server stopped (exit ${code})`);
-    process.exit(code ?? 1);
-  });
-  return { ...demo, port, child };
-});
-const stopAll = () => {
-  for (const c of children) c.child.kill();
-  process.exit(0);
-};
-process.on('SIGINT', stopAll);
-process.on('SIGTERM', stopAll);
+const children = picked.map((demo, i) => ({ ...demo, port: picked.length === 1 ? PORT : PORT + 1 + i, child: undefined as ChildProcess | undefined }));
+const healthy = (port: number) => fetch(`http://localhost:${port}/api/health`).then((r) => r.ok, () => false);
+
+// One at a time: each analysis loads a TypeScript program and may check out a git worktree to record examples.
+void (async () => {
+  for (const c of children) {
+    c.child = spawn(process.execPath, [
+      '--import', 'tsx', resolve(here, 'cli.ts'), ...c.args, '--lazy', '--serve', '--port', String(c.port), '--name', c.id,
+    ], { stdio: 'inherit' });
+    c.child.on('exit', (code) => {
+      console.error(`${c.id} analysis server stopped (exit ${code})`);
+      stopAll(code ?? 1);
+    });
+    while (!(await healthy(c.port))) await new Promise((r) => setTimeout(r, 500));
+  }
+})();
+function stopAll(code = 0): never {
+  for (const c of children) c.child?.kill();
+  process.exit(code);
+}
+process.on('SIGINT', () => stopAll());
+process.on('SIGTERM', () => stopAll());
 
 if (children.length > 1) {
   // One address for the UI: route each graph's requests to the server that owns it.
@@ -84,7 +89,7 @@ if (children.length > 1) {
     const owner = children.find((c) => c.id === id);
     try {
       if (url.pathname === '/api/health') {
-        const up = await Promise.all(children.map((c) => fetch(`http://localhost:${c.port}/api/health`).then((r) => r.ok, () => false)));
+        const up = await Promise.all(children.map((c) => healthy(c.port)));
         return send(200, { ok: up.every(Boolean), graphs: children.filter((_, i) => up[i]).map((c) => c.id), starting: children.filter((_, i) => !up[i]).map((c) => c.id) });
       }
       if (!owner) return send(404, { error: `no live analysis for ${id}; serving ${children.map((c) => c.id).join(', ')}` });
