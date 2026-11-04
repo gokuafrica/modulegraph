@@ -17,8 +17,27 @@ export interface Actions {
 }
 export const ActionsContext = createContext<Actions>(null!);
 
-/** Which recorded example the input and output nodes show; shared so both ends of a flow stay in sync. */
-export const ExampleContext = createContext<{ index: number; setIndex: (i: number) => void }>({ index: 0, setIndex: () => {} });
+/**
+ * The example request every node shows: one request of the scenario, followed through every module it reached,
+ * so the ids and data you see stay the same from the entry point down to the deepest module.
+ */
+export const ExampleContext = createContext<{ caseId?: string; setCase: (id: string) => void; cases: Record<string, string> }>({ setCase: () => {}, cases: {} });
+
+/** The requests an example happened in. Graphs recorded before cases existed: one per example position. */
+export function casesOf(e: Example, i: number): string[] {
+  return e.cases ?? [`#${i}`];
+}
+
+/** The call this operation got in the given request, if the request reached it. */
+export function exampleFor(examples: Example[] | undefined, caseId: string | undefined): Example | undefined {
+  if (!examples?.length || !caseId) return undefined;
+  return examples.find((e, i) => casesOf(e, i).includes(caseId));
+}
+
+/** The request's name, e.g. "POST /users/u-1/birth-info", for the case being shown. */
+function caseName(cases: Record<string, string>, caseId: string | undefined): string | undefined {
+  return caseId && !caseId.startsWith('#') ? cases[caseId] : undefined;
+}
 
 export function compact(value: unknown, max = 60): string {
   const text = typeof value === 'string' ? JSON.stringify(value) : JSON.stringify(value) ?? String(value);
@@ -41,20 +60,42 @@ export function ExampleLines({ value, added }: { value: unknown; added?: Set<str
   return <div className="example-line" title={JSON.stringify(value, null, 2)}><span className="v">{compact(value)}</span></div>;
 }
 
-/** Call picker shared by the input and output ends of a flow: both always show the same recorded call. */
+/** Request picker on the input end of a flow. Picking one switches every node in every view to that request. */
 export function ExampleTabs({ examples }: { examples: Example[] }) {
-  const { index, setIndex } = useContext(ExampleContext);
+  const { caseId, setCase, cases } = useContext(ExampleContext);
   if (examples.length < 2) return null;
   const labels = exampleLabels(examples.map((e) => e.input));
   return (
     <span className="example-tabs nodrag">
-      {examples.map((_, i) => (
-        <button key={i} className={i === index % examples.length ? 'on' : ''} title={labels[i] ? `call ${i + 1}: ${labels[i]}` : `call ${i + 1}`}
-          onClick={(e) => { e.stopPropagation(); setIndex(i); }}>
-          {i + 1}{labels[i] && <span className="tab-label"> {labels[i]}</span>}
-        </button>
-      ))}
+      {examples.map((ex, i) => {
+        const ids = casesOf(ex, i);
+        const names = ids.map((id) => cases[id]).filter(Boolean);
+        return (
+          <button key={i} className={caseId && ids.includes(caseId) ? 'on' : ''}
+            title={names.length ? `${labels[i] ? `${labels[i]}: ` : ''}${names.slice(0, 6).join('\n')}${names.length > 6 ? `\n…and ${names.length - 6} more requests` : ''}` : `call ${i + 1}`}
+            onClick={(e) => { e.stopPropagation(); setCase(ids[0]); }}>
+            {i + 1}{labels[i] && <span className="tab-label"> {labels[i]}</span>}
+          </button>
+        );
+      })}
     </span>
+  );
+}
+
+/** One line of what this module got and returned in the request being followed. */
+function ExampleLine({ examples }: { examples?: Example[] }) {
+  const { caseId, cases } = useContext(ExampleContext);
+  if (!examples?.length || !caseId) return null;
+  const ex = exampleFor(examples, caseId);
+  const name = caseName(cases, caseId) ?? 'this request';
+  if (!ex) return <div className="node-example none" title={`Not called in ${name}`}>not called in this request</div>;
+  const args = Object.values(ex.input);
+  const input = args.length === 1 ? compact(args[0], 40) : compact(ex.input, 40);
+  return (
+    <div className="node-example" title={`${name}\n\nin: ${JSON.stringify(ex.input, null, 2)}\n\n${ex.error ? `throws: ${ex.error}` : `out: ${JSON.stringify(ex.output, null, 2)}`}`}>
+      <div><span className="ex-tag">in</span>{input}</div>
+      <div className={ex.error ? 'err' : ''}><span className="ex-tag">{ex.error ? 'throws' : 'out'}</span>{ex.error ? compact(ex.error, 40) : compact(ex.output, 40)}</div>
+    </div>
   );
 }
 
@@ -124,6 +165,7 @@ export function ModuleNode({ data, selected }: NodeProps) {
     condition?: string; loop?: boolean; via?: string; through?: string; uses?: { opId: string; module: string; changed: boolean }[]; focus?: boolean; onPath?: boolean; hasInternals: boolean; reach?: number;
     compact?: boolean; inImpact?: boolean; totalEffects: number; ops?: string[]; opIds?: string[];
     delta?: string; conditionBefore?: string; ghost?: boolean; hasDiff?: boolean; stub?: boolean; partial?: boolean; reachPartial?: boolean;
+    examples?: Example[];
   };
   const inside = d.containsChanges && !d.compact && !d.inImpact;
   const actions = useContext(ActionsContext);
@@ -170,6 +212,7 @@ export function ModuleNode({ data, selected }: NodeProps) {
         )}
         {d.partial && !d.compact && <span className="chip more" title="Some modules below this one are not analyzed yet. Drill in to analyze them.">+ ? below, not analyzed</span>}
       </div>
+      {!d.compact && !d.ghost && <ExampleLine examples={d.examples} />}
       <div className="node-actions">
         {d.hasInternals || d.change !== 'unchanged' || d.stub || d.partial ? (
           <button className="link nodrag" onClick={(e) => { e.stopPropagation(); actions.drill(d.opId); }}>{d.stub ? 'analyze ⤵' : 'drill in ⤵'}</button>
@@ -210,8 +253,9 @@ export function EntryNode({ data, selected }: NodeProps) {
     params?: Param[]; via?: string; entryId?: string; paramsDelta?: unknown; compact?: boolean;
     examples?: Example[]; exampleParams?: string[]; analysis?: string;
   };
-  const { index } = useContext(ExampleContext);
-  const example = d.examples?.length ? d.examples[index % d.examples.length] : undefined;
+  const { caseId, cases } = useContext(ExampleContext);
+  const example = exampleFor(d.examples, caseId) ?? d.examples?.[0];
+  const request = caseName(cases, caseId);
   const meta = KIND_META[d.kind] ?? KIND_META.input;
   const actions = useContext(ActionsContext);
   const writes = (d.effectsAdded ?? []).filter((e) => e.kind !== 'db.read' && e.kind !== 'http');
@@ -229,7 +273,8 @@ export function EntryNode({ data, selected }: NodeProps) {
       {d.compact && d.analysis === 'reached' && <div className="via" title="Known to reach the change; its flow is analyzed when you open it">flow not analyzed yet · double-click to open</div>}
       {example && (
         <div className="example">
-          <div className="example-head"><span>example call {d.examples!.length > 1 ? (index % d.examples!.length) + 1 : ''} · input</span><ExampleTabs examples={d.examples!} /></div>
+          <div className="example-head"><span>example · input</span><ExampleTabs examples={d.examples!} /></div>
+          {request && <div className="example-request" title={`Every module in every view shows what it got in this request`}>{request}</div>}
           <ObjectTree value={Object.fromEntries(d.exampleParams!.map((p) => [p, example.input[p]]))} flat />
         </div>
       )}
@@ -246,8 +291,8 @@ export function EntryNode({ data, selected }: NodeProps) {
 
 export function ExitNode({ data }: NodeProps) {
   const d = data as { label: string; type: string; fields: (Param & { delta?: string })[]; examples?: Example[] };
-  const { index } = useContext(ExampleContext);
-  const example = d.examples?.length ? d.examples[index % d.examples.length] : undefined;
+  const { caseId } = useContext(ExampleContext);
+  const example = exampleFor(d.examples, caseId) ?? d.examples?.[0];
   const added = new Set(d.fields.filter((f) => f.delta === '+').map((f) => f.name));
   return (
     <div className="node exit">
@@ -255,7 +300,7 @@ export function ExitNode({ data }: NodeProps) {
       <div className="entry-kind">⇥ {d.label}</div>
       {example && (
         <div className="example">
-          <div className="example-head"><span>example call {d.examples!.length > 1 ? (index % d.examples!.length) + 1 : ''} · output</span><ExampleTabs examples={d.examples!} /></div>
+          <div className="example-head"><span>example · output</span></div>
           {example.error
             ? <div className="example-line"><span className="v">throws {compact(example.error)}</span></div>
             : <ObjectTree value={example.output} added={added} flat />}

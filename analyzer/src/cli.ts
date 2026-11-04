@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import type { Example, Finding, ModuleGraph, Source } from '../../schema/modulegraph.ts';
+import type { Example, ExampleCase, Finding, ModuleGraph, Source } from '../../schema/modulegraph.ts';
 import { pickAnalyzer } from './analyzers/index.ts';
 import type { OperationTarget, RevisionAnalysis } from './analyzers/types.ts';
 import { compare } from './compare.ts';
@@ -339,7 +339,7 @@ if (args.serve && session) {
     const base = !next.baseSha || !baseProject ? undefined : next.baseSha === revisions.baseSha ? { analysis: baseProject, changedFiles: [] as string[] } : reopen(baseProject, filesOf(next.baseSha, revisions.baseSha));
     const files = [...new Set([...(head.changedFiles ?? ['(all files)']), ...(base?.changedFiles ?? [])])].map((f) => relative(repo, f).replace(/\\/g, '/'));
     // The analysis fills in each file's modules, so compare what was read from git, not the filled-in copy.
-    const meta = (x: Source) => JSON.stringify({ ...x, files: undefined });
+    const meta = (x: Source) => JSON.stringify({ ...x, files: undefined, examples: undefined });
     const same = next.diff?.patch === diff?.patch && meta(next.source) === meta(source);
     stateKey = key;
     const served = () => {
@@ -349,6 +349,7 @@ if (args.serve && session) {
     };
     if (!files.length && same) return { changed: false, files: [], ms: Math.round(performance.now() - t), graph: served() };
     revisions = next;
+    next.source.examples = source.examples;
     source = next.source;
     intent = next.intent;
     headSha = next.headSha;
@@ -409,10 +410,18 @@ function recordExamples(scenarioRel: string, targets: OperationTarget[]): Record
     const projectRoot = join(codeRoot, projectRel).replace(/\\/g, '/');
     const out = join(tmp, 'examples.json');
     const spec = join(tmp, 'examples-spec.json');
-    writeFileSync(spec, JSON.stringify({ scenario, projectRoot, out, targets: targets.map((t) => ({ ...t, file: join(codeRoot, t.file) })) }));
-    execFileSync(process.execPath, ['--import', 'tsx', join(here, 'examples-runner.ts'), spec], { cwd: resolve(here, '..'), stdio: 'inherit' });
-    const recorded = JSON.parse(readFileSync(out, 'utf8')) as Record<string, Example[]>;
-    source.examples = { scenario: relative(resolve(here, '../..'), scenario).replace(/\\/g, '/'), operationsCovered: Object.keys(recorded).length };
+    writeFileSync(spec, JSON.stringify({ scenario, projectRoot, out, tsconfig: join(projectRoot, config.tsconfig), targets: targets.map((t) => ({ ...t, file: join(codeRoot, t.file) })) }));
+    // Compile the service with its own compiler options (decorators, for NestJS), not the analyzer's.
+    const tsconfig = join(projectRoot, config.tsconfig);
+    const env = existsSync(tsconfig) ? { ...process.env, TSX_TSCONFIG_PATH: tsconfig } : process.env;
+    try {
+      execFileSync(process.execPath, ['--import', 'tsx', join(here, 'examples-runner.ts'), spec], { cwd: resolve(here, '..'), stdio: 'inherit', env });
+    } catch {
+      console.warn(`examples: the scenario ${scenarioRel} failed (output above); continuing without example data`);
+      return {};
+    }
+    const { examples: recorded, cases } = JSON.parse(readFileSync(out, 'utf8')) as { examples: Record<string, Example[]>; cases: ExampleCase[] };
+    source.examples = { scenario: relative(resolve(here, '../..'), scenario).replace(/\\/g, '/'), operationsCovered: Object.keys(recorded).length, cases };
     rmSync(out, { force: true });
     rmSync(spec, { force: true });
     return recorded;

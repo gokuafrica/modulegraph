@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T11:17:03.931Z",
+  "generatedAt": "2026-11-04T12:50:55.884Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -80,7 +80,145 @@
     "intentSource": "flag",
     "examples": {
       "scenario": "configs/identity-profile-service/scenario.ts",
-      "operationsCovered": 28
+      "operationsCovered": 28,
+      "cases": [
+        {
+          "id": "c1",
+          "label": "GET /v1/users/u-1/profile"
+        },
+        {
+          "id": "c2",
+          "label": "GET /v1/users/u-1/birth-info"
+        },
+        {
+          "id": "c3",
+          "label": "GET /v1/users/u-1/profile/summary"
+        },
+        {
+          "id": "c4",
+          "label": "GET /v1/users/u-1/nationality"
+        },
+        {
+          "id": "c5",
+          "label": "POST /v1/kyc/u-1/check"
+        },
+        {
+          "id": "c6",
+          "label": "GET /v1/kyc/u-1/status"
+        },
+        {
+          "id": "c7",
+          "label": "GET /v1/tax/u-1/residency"
+        },
+        {
+          "id": "c8",
+          "label": "GET /v1/travel/u-1/visa-eligibility?destination=USA"
+        },
+        {
+          "id": "c9",
+          "label": "POST /v1/travel/u-1/passport-prefill"
+        },
+        {
+          "id": "c10",
+          "label": "GET /admin/v1/users/u-1/identity-review"
+        },
+        {
+          "id": "c11",
+          "label": "GET /v1/users/u-2/profile"
+        },
+        {
+          "id": "c12",
+          "label": "GET /v1/users/u-2/birth-info"
+        },
+        {
+          "id": "c13",
+          "label": "GET /v1/users/u-2/profile/summary"
+        },
+        {
+          "id": "c14",
+          "label": "GET /v1/users/u-2/nationality"
+        },
+        {
+          "id": "c15",
+          "label": "POST /v1/kyc/u-2/check"
+        },
+        {
+          "id": "c16",
+          "label": "GET /v1/kyc/u-2/status"
+        },
+        {
+          "id": "c17",
+          "label": "GET /v1/tax/u-2/residency"
+        },
+        {
+          "id": "c18",
+          "label": "GET /v1/travel/u-2/visa-eligibility?destination=USA"
+        },
+        {
+          "id": "c19",
+          "label": "POST /v1/travel/u-2/passport-prefill"
+        },
+        {
+          "id": "c20",
+          "label": "GET /admin/v1/users/u-2/identity-review"
+        },
+        {
+          "id": "c21",
+          "label": "POST /v1/onboarding/u-1/complete"
+        },
+        {
+          "id": "c22",
+          "label": "POST /v1/tax/u-2/declarations"
+        },
+        {
+          "id": "c23",
+          "label": "POST /v1/users/u-1/export"
+        },
+        {
+          "id": "c24",
+          "label": "POST /admin/v1/users/u-2/kyc-override"
+        },
+        {
+          "id": "c25",
+          "label": "gRPC identity.v1.ProfileService/GetProfile u-1"
+        },
+        {
+          "id": "c26",
+          "label": "gRPC identity.v1.ProfileService/GetBirthInfo u-1"
+        },
+        {
+          "id": "c27",
+          "label": "gRPC kyc.v1.KycService/RunCheck u-1"
+        },
+        {
+          "id": "c28",
+          "label": "gRPC travel.v1.TravelService/CheckVisa u-2"
+        },
+        {
+          "id": "c29",
+          "label": "topic user.profile.changed u-2"
+        },
+        {
+          "id": "c30",
+          "label": "topic travel.booking.created u-1"
+        },
+        {
+          "id": "c31",
+          "label": "cron kyc-nightly-rescreen"
+        },
+        {
+          "id": "c32",
+          "label": "cron tax-weekly-sweep"
+        },
+        {
+          "id": "c33",
+          "label": "cron compliance-monthly-report"
+        },
+        {
+          "id": "c34",
+          "label": "PUT /v1/users/u-1/birth-info/consent"
+        }
+      ]
     }
   },
   "modules": {
@@ -416,7 +554,10 @@
             "userId": "u-1",
             "countryOfBirth": "PRT",
             "cityOfBirth": "Lisbon"
-          }
+          },
+          "cases": [
+            "c34"
+          ]
         }
       ],
       "lazy": {
@@ -540,7 +681,10 @@
             "userId": "u-1",
             "countryOfBirth": "PRT",
             "cityOfBirth": "Lisbon"
-          }
+          },
+          "cases": [
+            "c34"
+          ]
         }
       ],
       "lazy": {
@@ -676,7 +820,24 @@
         {
           "input": {
             "userId": "u-1"
-          }
+          },
+          "cases": [
+            "c1",
+            "c2",
+            "c5",
+            "c7",
+            "c8",
+            "c9",
+            "c10",
+            "c21",
+            "c23",
+            "c25",
+            "c26",
+            "c27",
+            "c30",
+            "c32",
+            "c33"
+          ]
         },
         {
           "input": {
@@ -688,7 +849,19 @@
             "cityOfBirth": "Mumbai",
             "consentedAt": "2026-10-20",
             "revokedAt": null
-          }
+          },
+          "cases": [
+            "c11",
+            "c12",
+            "c15",
+            "c17",
+            "c18",
+            "c19",
+            "c20",
+            "c22",
+            "c28",
+            "c29"
+          ]
         }
       ],
       "lazy": {
@@ -931,14 +1104,31 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T11:17:03.775Z"
+              "extractedAt": "2026-11-04T12:50:55.748Z"
             }
           },
           "output": {
             "countryOfBirth": "PRT",
             "cityOfBirth": "Porto",
             "source": "document"
-          }
+          },
+          "cases": [
+            "c1",
+            "c2",
+            "c5",
+            "c7",
+            "c8",
+            "c9",
+            "c10",
+            "c21",
+            "c23",
+            "c25",
+            "c26",
+            "c27",
+            "c30",
+            "c32",
+            "c33"
+          ]
         },
         {
           "input": {
@@ -952,14 +1142,26 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T11:17:03.778Z"
+              "extractedAt": "2026-11-04T12:50:55.750Z"
             }
           },
           "output": {
             "countryOfBirth": "IND",
             "cityOfBirth": "Mumbai",
             "source": "consent"
-          }
+          },
+          "cases": [
+            "c11",
+            "c12",
+            "c15",
+            "c17",
+            "c18",
+            "c19",
+            "c20",
+            "c22",
+            "c28",
+            "c29"
+          ]
         }
       ],
       "lazy": {
@@ -1109,14 +1311,31 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T11:17:03.775Z"
+              "extractedAt": "2026-11-04T12:50:55.748Z"
             }
           },
           "output": {
             "countryOfBirth": "PRT",
             "cityOfBirth": "Porto",
             "source": "document"
-          }
+          },
+          "cases": [
+            "c1",
+            "c2",
+            "c5",
+            "c7",
+            "c8",
+            "c9",
+            "c10",
+            "c21",
+            "c23",
+            "c25",
+            "c26",
+            "c27",
+            "c30",
+            "c32",
+            "c33"
+          ]
         }
       ],
       "lazy": {
@@ -1246,7 +1465,12 @@
               "PRT"
             ],
             "usPerson": false
-          }
+          },
+          "cases": [
+            "c7",
+            "c32",
+            "c33"
+          ]
         },
         {
           "input": {
@@ -1258,7 +1482,10 @@
               "IND"
             ],
             "usPerson": false
-          }
+          },
+          "cases": [
+            "c17"
+          ]
         },
         {
           "input": {
@@ -1271,7 +1498,10 @@
               "GBR"
             ],
             "usPerson": false
-          }
+          },
+          "cases": [
+            "c22"
+          ]
         }
       ],
       "lazy": {
@@ -1405,7 +1635,10 @@
               "GBR"
             ],
             "usPerson": false
-          }
+          },
+          "cases": [
+            "c22"
+          ]
         }
       ],
       "lazy": {
@@ -1505,7 +1738,10 @@
       },
       "examples": [
         {
-          "input": {}
+          "input": {},
+          "cases": [
+            "c32"
+          ]
         }
       ],
       "lazy": {
@@ -1627,7 +1863,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T11:17:03.778Z"
+              "extractedAt": "2026-11-04T12:50:55.750Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -1635,7 +1871,10 @@
               "source": "document"
             },
             "notes": []
-          }
+          },
+          "cases": [
+            "c10"
+          ]
         },
         {
           "input": {
@@ -1652,7 +1891,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T11:17:03.778Z"
+              "extractedAt": "2026-11-04T12:50:55.752Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -1660,7 +1899,10 @@
               "source": "consent"
             },
             "notes": []
-          }
+          },
+          "cases": [
+            "c20"
+          ]
         }
       ],
       "lazy": {
@@ -1788,8 +2030,13 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-04T11:17:03.777Z"
-          }
+            "checkedAt": "2026-11-04T12:50:55.749Z"
+          },
+          "cases": [
+            "c5",
+            "c21",
+            "c27"
+          ]
         },
         {
           "input": {
@@ -1798,8 +2045,11 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-04T11:17:03.778Z"
-          }
+            "checkedAt": "2026-11-04T12:50:55.751Z"
+          },
+          "cases": [
+            "c15"
+          ]
         }
       ],
       "lazy": {
@@ -1900,7 +2150,10 @@
       "examples": [
         {
           "input": {},
-          "output": 0
+          "output": 0,
+          "cases": [
+            "c31"
+          ]
         }
       ],
       "lazy": {
@@ -2021,7 +2274,12 @@
               "cityOfBirth": "Porto",
               "source": "document"
             }
-          }
+          },
+          "cases": [
+            "c1",
+            "c23",
+            "c25"
+          ]
         },
         {
           "input": {
@@ -2044,7 +2302,11 @@
               "cityOfBirth": "Mumbai",
               "source": "consent"
             }
-          }
+          },
+          "cases": [
+            "c11",
+            "c29"
+          ]
         }
       ],
       "lazy": {
@@ -2160,7 +2422,10 @@
           },
           "output": {
             "status": "queued"
-          }
+          },
+          "cases": [
+            "c23"
+          ]
         }
       ],
       "lazy": {
@@ -2294,7 +2559,11 @@
             "countryOfBirth": "PRT",
             "cityOfBirth": "Porto",
             "source": "document"
-          }
+          },
+          "cases": [
+            "c2",
+            "c26"
+          ]
         },
         {
           "input": {
@@ -2304,7 +2573,10 @@
             "countryOfBirth": "IND",
             "cityOfBirth": "Mumbai",
             "source": "consent"
-          }
+          },
+          "cases": [
+            "c12"
+          ]
         }
       ],
       "lazy": {
@@ -2420,7 +2692,10 @@
           "output": {
             "destination": "USA",
             "visaRequired": false
-          }
+          },
+          "cases": [
+            "c8"
+          ]
         },
         {
           "input": {
@@ -2430,7 +2705,10 @@
           "output": {
             "destination": "USA",
             "visaRequired": false
-          }
+          },
+          "cases": [
+            "c18"
+          ]
         },
         {
           "input": {
@@ -2440,7 +2718,23 @@
           "output": {
             "destination": "JPN",
             "visaRequired": false
-          }
+          },
+          "cases": [
+            "c28"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-1",
+            "destination": "CAN"
+          },
+          "output": {
+            "destination": "CAN",
+            "visaRequired": false
+          },
+          "cases": [
+            "c30"
+          ]
         }
       ],
       "lazy": {
@@ -2654,7 +2948,10 @@
             "cityOfBirth": "Porto",
             "source": "document",
             "nationality": "PRT"
-          }
+          },
+          "cases": [
+            "c9"
+          ]
         },
         {
           "input": {
@@ -2669,7 +2966,10 @@
             "cityOfBirth": "Mumbai",
             "source": "consent",
             "nationality": "IND"
-          }
+          },
+          "cases": [
+            "c19"
+          ]
         }
       ],
       "lazy": {
@@ -2781,7 +3081,10 @@
       },
       "examples": [
         {
-          "input": {}
+          "input": {},
+          "cases": [
+            "c33"
+          ]
         }
       ],
       "lazy": {
@@ -2914,7 +3217,10 @@
           "output": {
             "userId": "u-1",
             "onboarded": true
-          }
+          },
+          "cases": [
+            "c21"
+          ]
         }
       ],
       "lazy": {
@@ -3009,8 +3315,27 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T11:17:03.775Z"
-          }
+            "extractedAt": "2026-11-04T12:50:55.748Z"
+          },
+          "cases": [
+            "c1",
+            "c2",
+            "c3",
+            "c4",
+            "c5",
+            "c7",
+            "c8",
+            "c9",
+            "c10",
+            "c21",
+            "c23",
+            "c25",
+            "c26",
+            "c27",
+            "c30",
+            "c32",
+            "c33"
+          ]
         },
         {
           "input": {
@@ -3026,8 +3351,22 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T11:17:03.778Z"
-          }
+            "extractedAt": "2026-11-04T12:50:55.750Z"
+          },
+          "cases": [
+            "c11",
+            "c12",
+            "c13",
+            "c14",
+            "c15",
+            "c17",
+            "c18",
+            "c19",
+            "c20",
+            "c22",
+            "c28",
+            "c29"
+          ]
         }
       ],
       "lazy": {
@@ -3084,6 +3423,25 @@
               "fileRef": "s3://docs/u-1.pdf",
               "uploadedAt": "2026-10-01"
             }
+          ],
+          "cases": [
+            "c1",
+            "c2",
+            "c3",
+            "c4",
+            "c5",
+            "c7",
+            "c8",
+            "c9",
+            "c10",
+            "c21",
+            "c23",
+            "c25",
+            "c26",
+            "c27",
+            "c30",
+            "c32",
+            "c33"
           ]
         },
         {
@@ -3098,6 +3456,20 @@
               "fileRef": "s3://docs/u-2.pdf",
               "uploadedAt": "2026-10-01"
             }
+          ],
+          "cases": [
+            "c11",
+            "c12",
+            "c13",
+            "c14",
+            "c15",
+            "c17",
+            "c18",
+            "c19",
+            "c20",
+            "c22",
+            "c28",
+            "c29"
           ]
         }
       ],
@@ -3183,7 +3555,26 @@
             "nationality": "PRT",
             "countryOfBirth": "PRT",
             "cityOfBirth": "Porto"
-          }
+          },
+          "cases": [
+            "c1",
+            "c2",
+            "c3",
+            "c4",
+            "c5",
+            "c7",
+            "c8",
+            "c9",
+            "c10",
+            "c21",
+            "c23",
+            "c25",
+            "c26",
+            "c27",
+            "c30",
+            "c32",
+            "c33"
+          ]
         },
         {
           "input": {
@@ -3203,7 +3594,21 @@
             "nationality": "IND",
             "countryOfBirth": "IND",
             "cityOfBirth": "Bombay"
-          }
+          },
+          "cases": [
+            "c11",
+            "c12",
+            "c13",
+            "c14",
+            "c15",
+            "c17",
+            "c18",
+            "c19",
+            "c20",
+            "c22",
+            "c28",
+            "c29"
+          ]
         }
       ],
       "lazy": {
@@ -7376,8 +7781,7 @@
       "entryPointsReached": 18,
       "operationsKnown": 29,
       "operationsAnalyzed": 21,
-      "ms": 2804
-    },
-    "api": "/api"
+      "ms": 2442
+    }
   }
 }

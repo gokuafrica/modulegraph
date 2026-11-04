@@ -37,6 +37,9 @@ for (const [projectRel, profile, branch, intent, fix] of [
   ['sample-nest-service', 'order-service', 'feature/order-fraud-hold', 'Orders: hold high-risk orders for fraud review; release endpoint; fraud desk decisions; loyalty discounts; carrier status from events.',
     // a changed guard: held orders never reserved stock
     ['sample-nest-service/src/orders/orders.service.ts', '    await this.inventory.release(order.lines);', "    if (order.status !== 'held') await this.inventory.release(order.lines);"]],
+  ['sample-birth-service', 'birth-info-service', 'feature/enforce-document-birth-info', 'BirthInfo: enforce document birth info on KYC submissions.',
+    // a new event after a verified submission
+    ['sample-birth-service/src/birth-info/birth-info.service.ts', '    await this.kyc.save(userId, submitted);', "    await this.kyc.save(userId, submitted);\n    this.events.emit('kyc.birth_info.verified', { userId, enforced: check.enforced });"]],
 ] as const satisfies readonly (readonly [string, string, string, string, Fix])[]) {
   console.log(`\n${projectRel} ${branch}`);
   const projectDir = join(repo, projectRel).replace(/\\/g, '/');
@@ -87,7 +90,9 @@ for (const [projectRel, profile, branch, intent, fix] of [
   console.log(`  full: ${Object.keys(full.scopes).length} scopes in ${Math.round(fullMs)} ms`);
   console.log(`  lazy: ${Object.keys(lazy.scopes).length} scopes in ${Math.round(lazyMs)} ms · flows analyzed ${st.entryPointsAnalyzed}/${st.entryPointsKnown}, reached ${st.entryPointsReached}, ops ${st.operationsAnalyzed}/${st.operationsKnown}`);
   for (const s of lazy.lazy!.seeds) console.log(`  seed ${s.id} (${s.reason})`);
-  if (lazy.lazy!.seeds.length !== 2) fail('expected 2 seeds');
+  // Two seeds, or every entry point that reaches the change when fewer do.
+  const reaching = Object.values(full.entryPoints).filter((e) => e.containsChanges || e.change !== 'unchanged').length;
+  if (lazy.lazy!.seeds.length !== Math.min(2, reaching)) fail(`expected ${Math.min(2, reaching)} seeds, got ${lazy.lazy!.seeds.length}`);
   if (st.entryPointsAnalyzed >= st.entryPointsKnown) fail('lazy analyzed every flow');
   check(lazy, 'initial');
 

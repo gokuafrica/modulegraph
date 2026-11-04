@@ -87,7 +87,12 @@ export interface Source {
   /** Which backend produced the graph and which framework adapters it used. */
   analyzer?: { id: string; language: string; frameworks: { id: string; name: string; reason: string }[] };
   /** Scenario that was run against the head revision to capture example inputs/outputs. */
-  examples?: { scenario: string; operationsCovered: number };
+  examples?: {
+    scenario: string;
+    operationsCovered: number;
+    /** The scenario's requests whose calls are shown. Every example names its case, so one request can be followed through every module. */
+    cases?: ExampleCase[];
+  };
   files: FileChange[];
 }
 
@@ -140,14 +145,25 @@ export interface Operation {
   diff?: DiffLine[];
   /** Every changed function behind this operation: its own method plus inlined helpers, possibly in other files. */
   changes?: CodeChange[];
-  /** Real calls recorded while running the scenario on the head revision (up to 3 distinct). */
+  /** Real calls recorded while running the scenario on the head revision: one per distinct input/output. */
   examples?: Example[];
   source: string;
   /** Lazy analyses only: whether callers (up) and callees (down) of this operation have been analyzed. */
   lazy?: { callersLoaded: boolean; calleesLoaded: boolean };
 }
 
+/** One request of the example scenario, e.g. `POST /users/u-2/kyc-birth-info`. */
+export interface ExampleCase {
+  id: string;
+  label: string;
+}
+
 export interface Example {
+  /**
+   * The cases (scenario requests, `ExampleCase.id`) in which this operation was called with exactly this input and
+   * output. Every module a case reached has an example listing it, so the UI can follow one request throughout.
+   */
+  cases?: string[];
   /** Argument values keyed by parameter name. */
   input: Record<string, unknown>;
   output?: unknown;

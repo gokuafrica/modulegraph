@@ -46,3 +46,8 @@ for (const [head, title, intent] of [
 // Its intent comes from the branch's commit message, the way an agent would run it.
 analyze(['--project', orders, '--head', 'feature/order-fraud-hold', '--base', 'main', '--name', 'demo-order-fraud-hold', '--title', 'Orders (NestJS): hold high-risk orders for fraud review']);
 analyze(['--project', orders, '--head', 'feature/order-fraud-hold', '--base', 'main', '--lazy', '--name', 'live-order-fraud-hold', '--title', 'Live (lazy, NestJS): hold high-risk orders for fraud review']);
+
+// NestJS with recorded examples: the profile (found by package name) brings its own scenario.ts.
+const birth = resolve(here, '../../sample-birth-service');
+analyze(['--project', birth, '--head', 'feature/enforce-document-birth-info', '--base', 'main', '--name', 'demo-enforce-document-birth-info', '--title', 'BirthInfo (NestJS): KYC birth info must match the identity document']);
+analyze(['--project', birth, '--head', 'feature/enforce-document-birth-info', '--base', 'main', '--lazy', '--name', 'live-enforce-document-birth-info', '--title', 'Live (lazy, NestJS): KYC birth info must match the identity document']);

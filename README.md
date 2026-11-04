@@ -20,14 +20,21 @@ data) or a language.
   modules it *uses* and every side effect below it), never the internals of one module. Data edges show what is
   passed (`identity` fetched once, then shared by Nationality, PersonalDetails and BirthInfo).
 - **Drill in** on any module: its own entry, submodules and exit, recursively. A leaf shows its code diff.
-- **Zoom out** from a changed module: callers level by level up to every entry point that reaches it,
-  grouped when there are many (the 50-APIs case).
+- **Impact view** (*zoom out* from a module): the module and its callers, level by level, up to every entry point
+  that reaches it, grouped when there are many (the 50-APIs case).
+- **Never lost**: the *Changes* bar above the graph lists every changed module, riskiest first; a click opens its
+  impact view. Below it, the *path* shows how you got from that change to the current view
+  (`impact BirthInfo.resolve → flow GET /v1/tax/… → flow TaxResidency.assess`); every step is one click back, and
+  revisiting a step cuts the path there, so it never grows into a tree.
 - **Changed modules highlighted**: modified / added / *changes inside*. Side-effect chips show
   `+outbox …` and `+db.read …` contract deltas on every node.
 - **Review queue and checks**: contract changes sorted by risk, plus machine-checked rules (new side effects,
   table ownership, read endpoints that write, CI weakening, side effects the PR description doesn't mention).
-- **Example data**: real inputs and outputs recorded by running a scenario against the code under review,
-  shown as expandable object trees (like the browser devtools). Input and output ends of a flow show the same call.
+- **Example data, one request throughout**: real inputs and outputs recorded by running a scenario against the
+  code under review. Each scenario request is a case, and every module call it made is recorded as part of it, so
+  the flow's input, each module (one `in` / `out` line, or *not called in this request*) and the response all show
+  the same request, and drilling in or going up keeps it: a module three levels down shows the call its caller made
+  with the same user and data. Shown as expandable object trees (like the browser devtools).
 - **Big changes, function by function**: a changed module lists every changed function (its own method and inlined
   helpers, across files) before any code. The diff folds unchanged lines and marks the edited words. In the flow,
   new calls are outlined, removed calls stay as red ghosts, and changed guards are labelled.
@@ -128,8 +135,8 @@ On a large service, analyzing every flow up front wastes time and buries the cha
    to the JSON file, so the file always holds what has been explored.
 
 ```bash
-npm run live            # live lazy analysis of all three live demos (BirthInfo, KYC, NestJS); open http://localhost:5173
-npm run live -- orders  # just one of them: birthinfo | kyc | orders
+npm run live            # live lazy analysis of all demos (BirthInfo, KYC, NestJS orders, NestJS birth info); open http://localhost:5173
+npm run live -- birth   # just one of them: birthinfo | kyc | orders | birth
 npm run review -- --project <dir> --head <branch>   # = analyze --lazy --serve
 npm run lazy-check --workspace analyzer   # proves lazy == full on everything lazy analyzed
 ```
@@ -160,7 +167,8 @@ Things to try:
    *now writes*. Drill into BirthInfo: `BirthConsentStore` (added) → `if (consented)` outbox write /
    `unless (consented)` document fallback. Drill into `DocumentBirthExtractor` to see the line diff.
 2. **BirthInfo used by many APIs**: click *BirthInfo.resolve* in the review queue. You start at the module;
-   *zoom out +* adds one caller level at a time; *all entry points* shows all 21, grouped.
+   *zoom out +* adds one caller level at a time; *all entry points* shows all 21, grouped. Wherever you go from
+   there, the *BirthInfo.resolve* chip in the Changes bar brings you back.
 3. **Checks**: BirthInfo now performs an outbox write that runs on 8 read-only endpoints, and the PR
    description never mentions it.
 4. **A NestJS service** (`sample-nest-service`, "Orders (NestJS): hold high-risk orders for fraud review"): 13
@@ -171,7 +179,14 @@ Things to try:
    `orders.created`), a release endpoint and a fraud-desk consumer, a loyalty discount, tracking from carrier events
    instead of the carrier API, and two writes nobody mentioned (`order_views` on `GET /api/orders/:id`,
    `fraud_checks` on the read-only quote preview). Code map: [sample-nest-service/README.md](sample-nest-service/README.md).
-5. **A change spread over several files** (`feature/kyc-risk-tiers`, "KYC: risk tiers … (multi-file)"):
+5. **Enforcing document data, with examples** (`sample-birth-service`, `npm run live -- birth`): a NestJS
+   service with document birth info (extracted, parts may be missing) and KYC birth info (what the user said).
+   The change makes `POST /api/users/:userId/birth-info` reject a submission that contradicts the document.
+   Drill into *BirthInfo.updateKycBirthInfo* and pick request 2 on the input: *u-1 submits ESP/Madrid*. The
+   document read returns PRT/Porto, `BirthInfoVerifier.verify` returns `ok: false`, the save and the event say
+   *not called in this request*, and the response throws the 422. Requests 3–7 cover a country-only document,
+   no document data, and a place-only document. Code map: [sample-birth-service/README.md](sample-birth-service/README.md).
+6. **A change spread over several files** (`feature/kyc-risk-tiers`, "KYC: risk tiers … (multi-file)"):
    - KycCheck.runCheck now uses a new helper file (`riskTier.ts`) and a new private `persist`, and gets a
      manual-review branch.
    - SanctionsScreening gains a retry and a score.
@@ -195,7 +210,9 @@ Things to try:
 
      Defaults are in [analyzer/src/config.ts](analyzer/src/config.ts).
    - `scenario.ts` (optional): drives the service, from whichever revision is under review, so real example
-     calls get recorded.
+     calls get recorded. Wrap each request in `step('GET /users/u-1/birth-info', () => …)` so its module calls
+     are recorded as one case. Services that need decorator metadata (NestJS, TypeORM) are compiled with
+     TypeScript for this; see [configs/birth-info-service/scenario.ts](configs/birth-info-service/scenario.ts).
 3. **An agent writes the profile**: the Claude Code skill [.claude/skills/module-review](.claude/skills/module-review/SKILL.md)
    reads the code and writes it. For languages without a backend it writes `modulegraph/v1` JSON directly
    ([schema](schema/modulegraph.schema.json), validated by `npm run validate --workspace analyzer -- <file>`).
@@ -225,6 +242,7 @@ base + head sources        steps, data edges, side effects      modulegraph/v1  
 | `ui/` | Vite + React + `@xyflow/react` + `elkjs` |
 | `sample-service/` | demo microservice, an ordinary codebase with no modulegraph markers. Branches `feature/birthinfo-consent` and `feature/kyc-risk-tiers` hold the demo changes |
 | `sample-nest-service/` | NestJS demo (order-service): REST, Kafka events, gRPC, BullMQ, cron, TypeORM. Branch `feature/order-fraud-hold` |
+| `sample-birth-service/` | NestJS demo (birth-info-service): document vs KYC birth info, with a scenario. Branch `feature/enforce-document-birth-info` |
 | `fixtures/frameworks/` | small Express + Prisma + KafkaJS + node-cron and Fastify + Mongoose + BullMQ services for `framework-check` |
 | `configs/` | per-service profiles (config + scenario), kept outside the analyzed code |
 | `docs/` | feasibility, research summary, review conventions |

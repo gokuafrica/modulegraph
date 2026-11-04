@@ -184,14 +184,14 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
   const exampleParams = contractOp && examples?.length ? contractOp.params.map((p) => p.name) : [];
   if (rootEntry) {
     const node = entryNode(g, rootEntry, '__entry', { via: via.join(' › ') || undefined, examples, exampleParams });
-    node.height += exampleParams.length ? 22 + exampleParams.length * 16 : 0;
+    node.height += exampleParams.length ? 38 + exampleParams.length * 16 : 0;
     nodes.push(node);
   } else {
     nodes.push({
       id: '__entry',
       type: 'entry',
       width: 260,
-      height: 50 + scope.params.length * 18 + (exampleParams.length ? 22 + exampleParams.length * 16 : 0),
+      height: 50 + scope.params.length * 18 + (exampleParams.length ? 38 + exampleParams.length * 16 : 0),
       data: { kind: 'input', label: `${opTitle(g, chain.at(-1)!)}(…)`, params: scope.params, change: 'unchanged', paramsDelta: innerOp?.delta?.params, examples, exampleParams },
     });
   }
@@ -316,7 +316,13 @@ function stepNode(g: ModuleGraph, step: Step, focusOp?: string, focusPath?: Set<
   const onPath = !focus && !!step.target && !!focusPath?.has(step.target);
   const through = (step as Step & { through?: string }).through;
   const extra = { condition: step.condition, loop: step.loop, via: step.via, through, line: step.line, file: step.file, focus, onPath, delta: step.delta, conditionBefore: step.conditionBefore, ghost };
-  if (step.kind === 'call') return moduleNode(g, step.id, step.target!, extra);
+  if (step.kind === 'call') {
+    // What the module got and returned in the request being followed: one extra line pair on the node.
+    const examples = ghost ? undefined : g.operations[step.target!]?.examples;
+    const node = moduleNode(g, step.id, step.target!, { ...extra, examples });
+    if (examples?.length) node.height += 40;
+    return node;
+  }
   const deltaLine = step.delta || step.conditionBefore !== undefined ? 18 : 0;
   return { id: step.id, type: 'effect', width: 230, height: 50 + (step.condition ? 18 : 0) + deltaLine, data: { ...extra, effect: step.effect } };
 }

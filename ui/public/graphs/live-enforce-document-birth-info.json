@@ -1,0 +1,2118 @@
+{
+  "schema": "modulegraph/v1",
+  "service": "birth-info-service",
+  "generatedAt": "2026-11-04T12:51:34.983Z",
+  "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
+  "source": {
+    "mode": "branch",
+    "repo": ".",
+    "project": "sample-birth-service",
+    "base": "main",
+    "head": "feature/enforce-document-birth-info",
+    "title": "Live (lazy, NestJS): KYC birth info must match the identity document",
+    "files": [
+      {
+        "path": "sample-birth-service/README.md",
+        "status": "modified",
+        "added": 1,
+        "removed": 1,
+        "modules": []
+      },
+      {
+        "path": "sample-birth-service/src/app.module.ts",
+        "status": "modified",
+        "added": 2,
+        "removed": 1,
+        "modules": []
+      },
+      {
+        "path": "sample-birth-service/src/birth-info/birth-info-verifier.ts",
+        "status": "added",
+        "added": 40,
+        "removed": 0,
+        "modules": [
+          "BirthInfoVerifier"
+        ]
+      },
+      {
+        "path": "sample-birth-service/src/birth-info/birth-info.service.ts",
+        "status": "modified",
+        "added": 14,
+        "removed": 3,
+        "modules": [
+          "BirthInfoService"
+        ]
+      }
+    ],
+    "analyzer": {
+      "id": "typescript",
+      "language": "TypeScript",
+      "frameworks": [
+        {
+          "id": "nestjs",
+          "name": "NestJS",
+          "reason": "package.json depends on @nestjs/core"
+        },
+        {
+          "id": "typeorm",
+          "name": "TypeORM",
+          "reason": "package.json depends on typeorm"
+        }
+      ]
+    },
+    "intent": "BirthInfo: enforce document birth info on KYC submissions\nPOST /users/:userId/birth-info now rejects (422) a submission that contradicts\nthe user's identity document. Each part the document has (country of birth,\nplace of birth) must match; a part extraction couldn't read is not enforced,\nand with no document data at all the user's answer is saved as before. The\nsubmission still overwrites the previous KYC birth info.",
+    "intentSource": "commits",
+    "examples": {
+      "scenario": "configs/birth-info-service/scenario.ts",
+      "operationsCovered": 8,
+      "cases": [
+        {
+          "id": "c1",
+          "label": "GET /users/u-1/birth-info"
+        },
+        {
+          "id": "c2",
+          "label": "GET /users/u-1/eligibility"
+        },
+        {
+          "id": "c3",
+          "label": "GET /users/u-2/birth-info"
+        },
+        {
+          "id": "c4",
+          "label": "GET /users/u-2/eligibility"
+        },
+        {
+          "id": "c5",
+          "label": "GET /users/u-3/birth-info"
+        },
+        {
+          "id": "c6",
+          "label": "GET /users/u-3/eligibility"
+        },
+        {
+          "id": "c7",
+          "label": "GET /users/u-4/birth-info"
+        },
+        {
+          "id": "c8",
+          "label": "GET /users/u-4/eligibility"
+        },
+        {
+          "id": "c9",
+          "label": "POST /users/u-1/birth-info PRT/Porto (matches document)"
+        },
+        {
+          "id": "c10",
+          "label": "POST /users/u-1/birth-info ESP/Madrid (contradicts document)"
+        },
+        {
+          "id": "c11",
+          "label": "POST /users/u-2/birth-info IND/Mumbai (country matches, document has no place)"
+        },
+        {
+          "id": "c12",
+          "label": "POST /users/u-2/birth-info PAK/Lahore (country contradicts document)"
+        },
+        {
+          "id": "c13",
+          "label": "POST /users/u-3/birth-info DEU/Berlin (no document data)"
+        },
+        {
+          "id": "c14",
+          "label": "POST /users/u-4/birth-info nga/lagos (place matches, document has no country)"
+        },
+        {
+          "id": "c15",
+          "label": "POST /users/u-4/birth-info NGA/Abuja (place contradicts document)"
+        },
+        {
+          "id": "c16",
+          "label": "GET /users/u-1/eligibility"
+        },
+        {
+          "id": "c17",
+          "label": "GET /users/u-2/eligibility"
+        },
+        {
+          "id": "c18",
+          "label": "GET /users/u-3/eligibility"
+        },
+        {
+          "id": "c19",
+          "label": "GET /users/u-4/eligibility"
+        }
+      ]
+    }
+  },
+  "modules": {
+    "BirthInfoVerifier": {
+      "id": "BirthInfoVerifier",
+      "name": "BirthInfoVerifier",
+      "className": "BirthInfoVerifier",
+      "file": "sample-birth-service/src/birth-info/birth-info-verifier.ts",
+      "line": 30,
+      "summary": "Holds what a user submits in KYC to their identity document: every part the document has must match. A part the document is missing (extraction couldn't read it) is not enforced, and with no document data at all the user's answer stands, as it always did.",
+      "owner": "team-kyc",
+      "declaredEffects": [],
+      "operations": [
+        "BirthInfoVerifier.verify"
+      ],
+      "change": "added"
+    },
+    "BirthInfoService": {
+      "id": "BirthInfoService",
+      "name": "BirthInfo",
+      "className": "BirthInfoService",
+      "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+      "line": 9,
+      "summary": "A user's birth info: what their identity document says and what they told us in KYC.",
+      "owner": "team-kyc",
+      "declaredEffects": [],
+      "operations": [
+        "BirthInfoService.updateKycBirthInfo",
+        "BirthInfoService.get"
+      ],
+      "change": "modified"
+    },
+    "KycBirthInfoStore": {
+      "id": "KycBirthInfoStore",
+      "name": "KycBirthInfoStore",
+      "className": "KycBirthInfoStore",
+      "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
+      "line": 23,
+      "summary": "The user-provided (KYC) birth info. A submission overwrites the previous one.",
+      "owner": "team-kyc",
+      "declaredEffects": [],
+      "operations": [
+        "KycBirthInfoStore.save",
+        "KycBirthInfoStore.find"
+      ],
+      "change": "unchanged"
+    },
+    "DocumentBirthInfoService": {
+      "id": "DocumentBirthInfoService",
+      "name": "DocumentBirthInfo",
+      "className": "DocumentBirthInfoService",
+      "file": "sample-birth-service/src/documents/document-birth-info.service.ts",
+      "line": 26,
+      "summary": "Birth data the document pipeline extracted from the identity document. Parts may be missing.",
+      "owner": "team-documents",
+      "declaredEffects": [],
+      "operations": [
+        "DocumentBirthInfoService.forUser"
+      ],
+      "change": "unchanged"
+    },
+    "CountryPolicy": {
+      "id": "CountryPolicy",
+      "name": "CountryPolicy",
+      "className": "CountryPolicy",
+      "file": "sample-birth-service/src/eligibility/country-policy.service.ts",
+      "line": 7,
+      "summary": "Which countries of birth the product is available for.",
+      "owner": "team-onboarding",
+      "declaredEffects": [],
+      "operations": [],
+      "change": "unchanged"
+    },
+    "EligibilityService": {
+      "id": "EligibilityService",
+      "name": "Eligibility",
+      "className": "EligibilityService",
+      "file": "sample-birth-service/src/eligibility/eligibility.service.ts",
+      "line": 16,
+      "summary": "Decides whether a user is eligible, given what we know about their birth.",
+      "owner": "team-onboarding",
+      "declaredEffects": [],
+      "operations": [],
+      "change": "unchanged"
+    }
+  },
+  "operations": {
+    "BirthInfoVerifier.verify": {
+      "id": "BirthInfoVerifier.verify",
+      "moduleId": "BirthInfoVerifier",
+      "name": "verify",
+      "file": "sample-birth-service/src/birth-info/birth-info-verifier.ts",
+      "line": 32,
+      "endLine": 39,
+      "params": [
+        {
+          "name": "submitted",
+          "type": "KycBirthInfoDto"
+        },
+        {
+          "name": "document",
+          "type": "BirthPlace | null"
+        }
+      ],
+      "returns": {
+        "type": "BirthInfoVerification",
+        "fields": [
+          {
+            "name": "ok",
+            "type": "boolean [false | true]"
+          },
+          {
+            "name": "enforced",
+            "type": "Field[]"
+          },
+          {
+            "name": "mismatches",
+            "type": "BirthInfoMismatch[]"
+          }
+        ]
+      },
+      "directEffects": [],
+      "effects": [],
+      "calls": [],
+      "change": "added",
+      "containsChanges": true,
+      "source": "verify(submitted: KycBirthInfoDto, document: BirthPlace | null): BirthInfoVerification {\n  if (!document) return { ok: true, enforced: [], mismatches: [] };\n  const enforced = FIELDS.filter((f) => document[f]);\n  const mismatches = enforced\n    .filter((f) => normalize(submitted[f]) !== normalize(document[f]!))\n    .map((f) => ({ field: f, submitted: submitted[f], document: document[f]! }));\n  return { ok: mismatches.length === 0, enforced, mismatches };\n}",
+      "diff": [
+        {
+          "t": "+",
+          "text": "verify(submitted: KycBirthInfoDto, document: BirthPlace | null): BirthInfoVerification {"
+        },
+        {
+          "t": "+",
+          "text": "  if (!document) return { ok: true, enforced: [], mismatches: [] };"
+        },
+        {
+          "t": "+",
+          "text": "  const enforced = FIELDS.filter((f) => document[f]);"
+        },
+        {
+          "t": "+",
+          "text": "  const mismatches = enforced"
+        },
+        {
+          "t": "+",
+          "text": "    .filter((f) => normalize(submitted[f]) !== normalize(document[f]!))"
+        },
+        {
+          "t": "+",
+          "text": "    .map((f) => ({ field: f, submitted: submitted[f], document: document[f]! }));"
+        },
+        {
+          "t": "+",
+          "text": "  return { ok: mismatches.length === 0, enforced, mismatches };"
+        },
+        {
+          "t": "+",
+          "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "verify",
+          "role": "operation",
+          "file": "sample-birth-service/src/birth-info/birth-info-verifier.ts",
+          "line": 32,
+          "status": "added",
+          "added": 8,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "verify(submitted: KycBirthInfoDto, document: BirthPlace | null): BirthInfoVerification {",
+              "b": 32
+            },
+            {
+              "t": "+",
+              "text": "  if (!document) return { ok: true, enforced: [], mismatches: [] };",
+              "b": 33
+            },
+            {
+              "t": "+",
+              "text": "  const enforced = FIELDS.filter((f) => document[f]);",
+              "b": 34
+            },
+            {
+              "t": "+",
+              "text": "  const mismatches = enforced",
+              "b": 35
+            },
+            {
+              "t": "+",
+              "text": "    .filter((f) => normalize(submitted[f]) !== normalize(document[f]!))",
+              "b": 36
+            },
+            {
+              "t": "+",
+              "text": "    .map((f) => ({ field: f, submitted: submitted[f], document: document[f]! }));",
+              "b": 37
+            },
+            {
+              "t": "+",
+              "text": "  return { ok: mismatches.length === 0, enforced, mismatches };",
+              "b": 38
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 39
+            }
+          ]
+        },
+        {
+          "name": "normalize",
+          "role": "helper",
+          "file": "sample-birth-service/src/birth-info/birth-info-verifier.ts",
+          "line": 21,
+          "status": "added",
+          "added": 3,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "function normalize(value: string): string {",
+              "b": 21
+            },
+            {
+              "t": "+",
+              "text": "  return value.trim().toLowerCase();",
+              "b": 22
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 23
+            }
+          ]
+        }
+      ],
+      "delta": {
+        "risk": "high",
+        "effectsAdded": [],
+        "effectsRemoved": [],
+        "callsAdded": [],
+        "callsRemoved": [],
+        "implementationOnly": false
+      },
+      "examples": [
+        {
+          "input": {
+            "submitted": {
+              "countryOfBirth": "PRT",
+              "placeOfBirth": "Porto"
+            },
+            "document": {
+              "countryOfBirth": "PRT",
+              "placeOfBirth": "Porto"
+            }
+          },
+          "output": {
+            "ok": true,
+            "enforced": [
+              "countryOfBirth",
+              "placeOfBirth"
+            ],
+            "mismatches": []
+          },
+          "cases": [
+            "c9"
+          ]
+        },
+        {
+          "input": {
+            "submitted": {
+              "countryOfBirth": "ESP",
+              "placeOfBirth": "Madrid"
+            },
+            "document": {
+              "countryOfBirth": "PRT",
+              "placeOfBirth": "Porto"
+            }
+          },
+          "output": {
+            "ok": false,
+            "enforced": [
+              "countryOfBirth",
+              "placeOfBirth"
+            ],
+            "mismatches": [
+              {
+                "field": "countryOfBirth",
+                "submitted": "ESP",
+                "document": "PRT"
+              },
+              {
+                "field": "placeOfBirth",
+                "submitted": "Madrid",
+                "document": "Porto"
+              }
+            ]
+          },
+          "cases": [
+            "c10"
+          ]
+        },
+        {
+          "input": {
+            "submitted": {
+              "countryOfBirth": "IND",
+              "placeOfBirth": "Mumbai"
+            },
+            "document": {
+              "countryOfBirth": "IND"
+            }
+          },
+          "output": {
+            "ok": true,
+            "enforced": [
+              "countryOfBirth"
+            ],
+            "mismatches": []
+          },
+          "cases": [
+            "c11"
+          ]
+        },
+        {
+          "input": {
+            "submitted": {
+              "countryOfBirth": "PAK",
+              "placeOfBirth": "Lahore"
+            },
+            "document": {
+              "countryOfBirth": "IND"
+            }
+          },
+          "output": {
+            "ok": false,
+            "enforced": [
+              "countryOfBirth"
+            ],
+            "mismatches": [
+              {
+                "field": "countryOfBirth",
+                "submitted": "PAK",
+                "document": "IND"
+              }
+            ]
+          },
+          "cases": [
+            "c12"
+          ]
+        },
+        {
+          "input": {
+            "submitted": {
+              "countryOfBirth": "DEU",
+              "placeOfBirth": "Berlin"
+            },
+            "document": null
+          },
+          "output": {
+            "ok": true,
+            "enforced": [],
+            "mismatches": []
+          },
+          "cases": [
+            "c13"
+          ]
+        },
+        {
+          "input": {
+            "submitted": {
+              "countryOfBirth": "NGA",
+              "placeOfBirth": "lagos"
+            },
+            "document": {
+              "placeOfBirth": "Lagos"
+            }
+          },
+          "output": {
+            "ok": true,
+            "enforced": [
+              "placeOfBirth"
+            ],
+            "mismatches": []
+          },
+          "cases": [
+            "c14"
+          ]
+        },
+        {
+          "input": {
+            "submitted": {
+              "countryOfBirth": "NGA",
+              "placeOfBirth": "Abuja"
+            },
+            "document": {
+              "placeOfBirth": "Lagos"
+            }
+          },
+          "output": {
+            "ok": false,
+            "enforced": [
+              "placeOfBirth"
+            ],
+            "mismatches": [
+              {
+                "field": "placeOfBirth",
+                "submitted": "Abuja",
+                "document": "Lagos"
+              }
+            ]
+          },
+          "cases": [
+            "c15"
+          ]
+        }
+      ],
+      "lazy": {
+        "callersLoaded": true,
+        "calleesLoaded": true
+      }
+    },
+    "BirthInfoService.updateKycBirthInfo": {
+      "id": "BirthInfoService.updateKycBirthInfo",
+      "moduleId": "BirthInfoService",
+      "name": "updateKycBirthInfo",
+      "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+      "line": 31,
+      "endLine": 41,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "dto",
+          "type": "KycBirthInfoDto"
+        }
+      ],
+      "returns": {
+        "type": "BirthInfoView",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "document",
+            "type": "BirthPlace | null"
+          },
+          {
+            "name": "kyc",
+            "type": "(KycBirthInfoDto & { updatedAt: string; }) | null"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "event",
+          "target": "kyc.birth_info.updated",
+          "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+          "line": 39
+        }
+      ],
+      "effects": [
+        {
+          "kind": "event",
+          "target": "kyc.birth_info.updated",
+          "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+          "line": 39
+        },
+        {
+          "kind": "db.read",
+          "target": "document_birth_info",
+          "file": "sample-birth-service/src/documents/document-birth-info.service.ts",
+          "line": 32
+        },
+        {
+          "kind": "db.write",
+          "target": "kyc_birth_info",
+          "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
+          "line": 33
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_birth_info",
+          "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
+          "line": 28
+        }
+      ],
+      "calls": [
+        "DocumentBirthInfoService.forUser",
+        "BirthInfoVerifier.verify",
+        "KycBirthInfoStore.save",
+        "BirthInfoService.get"
+      ],
+      "change": "modified",
+      "containsChanges": true,
+      "source": "async updateKycBirthInfo(userId: string, dto: KycBirthInfoDto): Promise<BirthInfoView> {\n  const submitted = { countryOfBirth: dto.countryOfBirth.trim().toUpperCase(), placeOfBirth: dto.placeOfBirth.trim() };\n  const document = await this.documents.forUser(userId);\n  const check = this.verifier.verify(submitted, document);\n  if (!check.ok) {\n    throw new UnprocessableEntityException({ message: 'Birth info does not match the identity document', mismatches: check.mismatches });\n  }\n  await this.kyc.save(userId, submitted);\n  this.events.emit('kyc.birth_info.updated', { userId });\n  return this.get(userId);\n}",
+      "diff": [
+        {
+          "t": " ",
+          "text": "async updateKycBirthInfo(userId: string, dto: KycBirthInfoDto): Promise<BirthInfoView> {"
+        },
+        {
+          "t": "-",
+          "text": "  await this.kyc.save(userId, { countryOfBirth: dto.countryOfBirth.trim().toUpperCase(), placeOfBirth: dto.placeOfBirth.trim() });"
+        },
+        {
+          "t": "+",
+          "text": "  const submitted = { countryOfBirth: dto.countryOfBirth.trim().toUpperCase(), placeOfBirth: dto.placeOfBirth.trim() };"
+        },
+        {
+          "t": "+",
+          "text": "  const document = await this.documents.forUser(userId);"
+        },
+        {
+          "t": "+",
+          "text": "  const check = this.verifier.verify(submitted, document);"
+        },
+        {
+          "t": "+",
+          "text": "  if (!check.ok) {"
+        },
+        {
+          "t": "+",
+          "text": "    throw new UnprocessableEntityException({ message: 'Birth info does not match the identity document', mismatches: check.mismatches });"
+        },
+        {
+          "t": "+",
+          "text": "  }"
+        },
+        {
+          "t": "+",
+          "text": "  await this.kyc.save(userId, submitted);"
+        },
+        {
+          "t": " ",
+          "text": "  this.events.emit('kyc.birth_info.updated', { userId });"
+        },
+        {
+          "t": " ",
+          "text": "  return this.get(userId);"
+        },
+        {
+          "t": " ",
+          "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "updateKycBirthInfo",
+          "role": "operation",
+          "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+          "line": 31,
+          "status": "modified",
+          "added": 7,
+          "removed": 1,
+          "diff": [
+            {
+              "t": " ",
+              "text": "async updateKycBirthInfo(userId: string, dto: KycBirthInfoDto): Promise<BirthInfoView> {",
+              "a": 26,
+              "b": 31
+            },
+            {
+              "t": "-",
+              "text": "  await this.kyc.save(userId, { countryOfBirth: dto.countryOfBirth.trim().toUpperCase(), placeOfBirth: dto.placeOfBirth.trim() });",
+              "a": 27
+            },
+            {
+              "t": "+",
+              "text": "  const submitted = { countryOfBirth: dto.countryOfBirth.trim().toUpperCase(), placeOfBirth: dto.placeOfBirth.trim() };",
+              "b": 32
+            },
+            {
+              "t": "+",
+              "text": "  const document = await this.documents.forUser(userId);",
+              "b": 33
+            },
+            {
+              "t": "+",
+              "text": "  const check = this.verifier.verify(submitted, document);",
+              "b": 34
+            },
+            {
+              "t": "+",
+              "text": "  if (!check.ok) {",
+              "b": 35
+            },
+            {
+              "t": "+",
+              "text": "    throw new UnprocessableEntityException({ message: 'Birth info does not match the identity document', mismatches: check.mismatches });",
+              "b": 36
+            },
+            {
+              "t": "+",
+              "text": "  }",
+              "b": 37
+            },
+            {
+              "t": "+",
+              "text": "  await this.kyc.save(userId, submitted);",
+              "b": 38
+            },
+            {
+              "t": " ",
+              "text": "  this.events.emit('kyc.birth_info.updated', { userId });",
+              "a": 28,
+              "b": 39
+            },
+            {
+              "t": " ",
+              "text": "  return this.get(userId);",
+              "a": 29,
+              "b": 40
+            },
+            {
+              "t": " ",
+              "text": "}",
+              "a": 30,
+              "b": 41
+            }
+          ]
+        }
+      ],
+      "delta": {
+        "risk": "medium",
+        "effectsAdded": [],
+        "effectsRemoved": [],
+        "callsAdded": [
+          "DocumentBirthInfoService.forUser",
+          "BirthInfoVerifier.verify"
+        ],
+        "callsRemoved": [],
+        "implementationOnly": false
+      },
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1",
+            "dto": {
+              "countryOfBirth": "PRT",
+              "placeOfBirth": "Porto"
+            }
+          },
+          "output": {
+            "userId": "u-1",
+            "document": {
+              "countryOfBirth": "PRT",
+              "placeOfBirth": "Porto"
+            },
+            "kyc": {
+              "countryOfBirth": "PRT",
+              "placeOfBirth": "Porto",
+              "updatedAt": "2026-11-04T12:51:34.832Z"
+            }
+          },
+          "cases": [
+            "c9"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-1",
+            "dto": {
+              "countryOfBirth": "ESP",
+              "placeOfBirth": "Madrid"
+            }
+          },
+          "error": "UnprocessableEntityException: Birth info does not match the identity document",
+          "cases": [
+            "c10"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2",
+            "dto": {
+              "countryOfBirth": "IND",
+              "placeOfBirth": "Mumbai"
+            }
+          },
+          "output": {
+            "userId": "u-2",
+            "document": {
+              "countryOfBirth": "IND"
+            },
+            "kyc": {
+              "countryOfBirth": "IND",
+              "placeOfBirth": "Mumbai",
+              "updatedAt": "2026-11-04T12:51:34.832Z"
+            }
+          },
+          "cases": [
+            "c11"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2",
+            "dto": {
+              "countryOfBirth": "PAK",
+              "placeOfBirth": "Lahore"
+            }
+          },
+          "error": "UnprocessableEntityException: Birth info does not match the identity document",
+          "cases": [
+            "c12"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-3",
+            "dto": {
+              "countryOfBirth": "DEU",
+              "placeOfBirth": "Berlin"
+            }
+          },
+          "output": {
+            "userId": "u-3",
+            "document": null,
+            "kyc": {
+              "countryOfBirth": "DEU",
+              "placeOfBirth": "Berlin",
+              "updatedAt": "2026-11-04T12:51:34.832Z"
+            }
+          },
+          "cases": [
+            "c13"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-4",
+            "dto": {
+              "countryOfBirth": "nga",
+              "placeOfBirth": "lagos"
+            }
+          },
+          "output": {
+            "userId": "u-4",
+            "document": {
+              "placeOfBirth": "Lagos"
+            },
+            "kyc": {
+              "countryOfBirth": "NGA",
+              "placeOfBirth": "lagos",
+              "updatedAt": "2026-11-04T12:51:34.832Z"
+            }
+          },
+          "cases": [
+            "c14"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-4",
+            "dto": {
+              "countryOfBirth": "NGA",
+              "placeOfBirth": "Abuja"
+            }
+          },
+          "error": "UnprocessableEntityException: Birth info does not match the identity document",
+          "cases": [
+            "c15"
+          ]
+        }
+      ],
+      "lazy": {
+        "callersLoaded": true,
+        "calleesLoaded": true
+      }
+    },
+    "DocumentBirthInfoService.forUser": {
+      "id": "DocumentBirthInfoService.forUser",
+      "moduleId": "DocumentBirthInfoService",
+      "name": "forUser",
+      "file": "sample-birth-service/src/documents/document-birth-info.service.ts",
+      "line": 31,
+      "endLine": 38,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "BirthPlace | null",
+        "fields": [
+          {
+            "name": "countryOfBirth",
+            "type": "string | undefined"
+          },
+          {
+            "name": "placeOfBirth",
+            "type": "string | undefined"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "document_birth_info",
+          "file": "sample-birth-service/src/documents/document-birth-info.service.ts",
+          "line": 32
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "document_birth_info",
+          "file": "sample-birth-service/src/documents/document-birth-info.service.ts",
+          "line": 32
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async forUser(userId: string): Promise<BirthPlace | null> {\n  const row = await this.extracted.findOneBy({ userId });\n  if (!row || (!row.countryOfBirth && !row.placeOfBirth)) return null;\n  return {\n    ...(row.countryOfBirth ? { countryOfBirth: row.countryOfBirth } : {}),\n    ...(row.placeOfBirth ? { placeOfBirth: row.placeOfBirth } : {}),\n  };\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "countryOfBirth": "PRT",
+            "placeOfBirth": "Porto"
+          },
+          "cases": [
+            "c1",
+            "c2",
+            "c9",
+            "c10",
+            "c16"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "countryOfBirth": "IND"
+          },
+          "cases": [
+            "c3",
+            "c4",
+            "c11",
+            "c12",
+            "c17"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-3"
+          },
+          "output": null,
+          "cases": [
+            "c5",
+            "c6",
+            "c13",
+            "c18"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-4"
+          },
+          "output": {
+            "placeOfBirth": "Lagos"
+          },
+          "cases": [
+            "c7",
+            "c8",
+            "c14",
+            "c15",
+            "c19"
+          ]
+        }
+      ],
+      "lazy": {
+        "callersLoaded": false,
+        "calleesLoaded": true
+      }
+    },
+    "KycBirthInfoStore.save": {
+      "id": "KycBirthInfoStore.save",
+      "moduleId": "KycBirthInfoStore",
+      "name": "save",
+      "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
+      "line": 32,
+      "endLine": 34,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "info",
+          "type": "KycBirthInfoDto"
+        }
+      ],
+      "returns": {
+        "type": "KycBirthInfo",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "placeOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "updatedAt",
+            "type": "string"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.write",
+          "target": "kyc_birth_info",
+          "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
+          "line": 33
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "kyc_birth_info",
+          "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
+          "line": 33
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async save(userId: string, info: KycBirthInfoDto): Promise<KycBirthInfo> {\n  return this.rows.save({ userId, countryOfBirth: info.countryOfBirth, placeOfBirth: info.placeOfBirth, updatedAt: new Date().toISOString() });\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1",
+            "info": {
+              "countryOfBirth": "PRT",
+              "placeOfBirth": "Porto"
+            }
+          },
+          "output": {
+            "userId": "u-1",
+            "countryOfBirth": "PRT",
+            "placeOfBirth": "Porto",
+            "updatedAt": "2026-11-04T12:51:34.832Z"
+          },
+          "cases": [
+            "c9"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2",
+            "info": {
+              "countryOfBirth": "IND",
+              "placeOfBirth": "Mumbai"
+            }
+          },
+          "output": {
+            "userId": "u-2",
+            "countryOfBirth": "IND",
+            "placeOfBirth": "Mumbai",
+            "updatedAt": "2026-11-04T12:51:34.832Z"
+          },
+          "cases": [
+            "c11"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-3",
+            "info": {
+              "countryOfBirth": "DEU",
+              "placeOfBirth": "Berlin"
+            }
+          },
+          "output": {
+            "userId": "u-3",
+            "countryOfBirth": "DEU",
+            "placeOfBirth": "Berlin",
+            "updatedAt": "2026-11-04T12:51:34.832Z"
+          },
+          "cases": [
+            "c13"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-4",
+            "info": {
+              "countryOfBirth": "NGA",
+              "placeOfBirth": "lagos"
+            }
+          },
+          "output": {
+            "userId": "u-4",
+            "countryOfBirth": "NGA",
+            "placeOfBirth": "lagos",
+            "updatedAt": "2026-11-04T12:51:34.832Z"
+          },
+          "cases": [
+            "c14"
+          ]
+        }
+      ],
+      "lazy": {
+        "callersLoaded": false,
+        "calleesLoaded": true
+      }
+    },
+    "BirthInfoService.get": {
+      "id": "BirthInfoService.get",
+      "moduleId": "BirthInfoService",
+      "name": "get",
+      "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+      "line": 18,
+      "endLine": 25,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "BirthInfoView",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "document",
+            "type": "BirthPlace | null"
+          },
+          {
+            "name": "kyc",
+            "type": "(KycBirthInfoDto & { updatedAt: string; }) | null"
+          }
+        ]
+      },
+      "directEffects": [],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "document_birth_info",
+          "file": "sample-birth-service/src/documents/document-birth-info.service.ts",
+          "line": 32
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_birth_info",
+          "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
+          "line": 28
+        }
+      ],
+      "calls": [
+        "DocumentBirthInfoService.forUser",
+        "KycBirthInfoStore.find"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async get(userId: string): Promise<BirthInfoView> {\n  const [document, kyc] = await Promise.all([this.documents.forUser(userId), this.kyc.find(userId)]);\n  return {\n    userId,\n    document,\n    kyc: kyc ? { countryOfBirth: kyc.countryOfBirth, placeOfBirth: kyc.placeOfBirth, updatedAt: kyc.updatedAt } : null,\n  };\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "document": {
+              "countryOfBirth": "PRT",
+              "placeOfBirth": "Porto"
+            },
+            "kyc": {
+              "countryOfBirth": "PRT",
+              "placeOfBirth": "Porto",
+              "updatedAt": "2026-10-01T09:00:00.000Z"
+            }
+          },
+          "cases": [
+            "c1",
+            "c2",
+            "c9",
+            "c16"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "document": {
+              "countryOfBirth": "IND"
+            },
+            "kyc": null
+          },
+          "cases": [
+            "c3",
+            "c4"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-3"
+          },
+          "output": {
+            "userId": "u-3",
+            "document": null,
+            "kyc": null
+          },
+          "cases": [
+            "c5",
+            "c6"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-4"
+          },
+          "output": {
+            "userId": "u-4",
+            "document": {
+              "placeOfBirth": "Lagos"
+            },
+            "kyc": null
+          },
+          "cases": [
+            "c7",
+            "c8"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "document": {
+              "countryOfBirth": "IND"
+            },
+            "kyc": {
+              "countryOfBirth": "IND",
+              "placeOfBirth": "Mumbai",
+              "updatedAt": "2026-11-04T12:51:34.832Z"
+            }
+          },
+          "cases": [
+            "c11",
+            "c17"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-3"
+          },
+          "output": {
+            "userId": "u-3",
+            "document": null,
+            "kyc": {
+              "countryOfBirth": "DEU",
+              "placeOfBirth": "Berlin",
+              "updatedAt": "2026-11-04T12:51:34.832Z"
+            }
+          },
+          "cases": [
+            "c13",
+            "c18"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-4"
+          },
+          "output": {
+            "userId": "u-4",
+            "document": {
+              "placeOfBirth": "Lagos"
+            },
+            "kyc": {
+              "countryOfBirth": "NGA",
+              "placeOfBirth": "lagos",
+              "updatedAt": "2026-11-04T12:51:34.832Z"
+            }
+          },
+          "cases": [
+            "c14",
+            "c19"
+          ]
+        }
+      ],
+      "lazy": {
+        "callersLoaded": false,
+        "calleesLoaded": true
+      }
+    },
+    "KycBirthInfoStore.find": {
+      "id": "KycBirthInfoStore.find",
+      "moduleId": "KycBirthInfoStore",
+      "name": "find",
+      "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
+      "line": 27,
+      "endLine": 29,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "KycBirthInfo | null",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "placeOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "updatedAt",
+            "type": "string"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_birth_info",
+          "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
+          "line": 28
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "kyc_birth_info",
+          "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
+          "line": 28
+        }
+      ],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async find(userId: string): Promise<KycBirthInfo | null> {\n  return this.rows.findOneBy({ userId });\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "countryOfBirth": "PRT",
+            "placeOfBirth": "Porto",
+            "updatedAt": "2026-10-01T09:00:00.000Z"
+          },
+          "cases": [
+            "c1",
+            "c2",
+            "c9",
+            "c16"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": null,
+          "cases": [
+            "c3",
+            "c4"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-3"
+          },
+          "output": null,
+          "cases": [
+            "c5",
+            "c6"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-4"
+          },
+          "output": null,
+          "cases": [
+            "c7",
+            "c8"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "countryOfBirth": "IND",
+            "placeOfBirth": "Mumbai",
+            "updatedAt": "2026-11-04T12:51:34.832Z"
+          },
+          "cases": [
+            "c11",
+            "c17"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-3"
+          },
+          "output": {
+            "userId": "u-3",
+            "countryOfBirth": "DEU",
+            "placeOfBirth": "Berlin",
+            "updatedAt": "2026-11-04T12:51:34.832Z"
+          },
+          "cases": [
+            "c13",
+            "c18"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-4"
+          },
+          "output": {
+            "userId": "u-4",
+            "countryOfBirth": "NGA",
+            "placeOfBirth": "lagos",
+            "updatedAt": "2026-11-04T12:51:34.832Z"
+          },
+          "cases": [
+            "c14",
+            "c19"
+          ]
+        }
+      ],
+      "lazy": {
+        "callersLoaded": false,
+        "calleesLoaded": true
+      }
+    }
+  },
+  "entryPoints": {
+    "api:GET /api/users/:userId/birth-info": {
+      "id": "api:GET /api/users/:userId/birth-info",
+      "kind": "api",
+      "label": "GET /api/users/:userId/birth-info",
+      "readOnly": true,
+      "file": "sample-birth-service/src/birth-info/birth-info.controller.ts",
+      "line": 9,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:POST /api/users/:userId/birth-info": {
+      "id": "api:POST /api/users/:userId/birth-info",
+      "kind": "api",
+      "label": "POST /api/users/:userId/birth-info",
+      "readOnly": false,
+      "file": "sample-birth-service/src/birth-info/birth-info.controller.ts",
+      "line": 15,
+      "effects": [
+        {
+          "kind": "event",
+          "target": "kyc.birth_info.updated",
+          "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+          "line": 39
+        },
+        {
+          "kind": "db.read",
+          "target": "document_birth_info",
+          "file": "sample-birth-service/src/documents/document-birth-info.service.ts",
+          "line": 32
+        },
+        {
+          "kind": "db.write",
+          "target": "kyc_birth_info",
+          "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
+          "line": 33
+        },
+        {
+          "kind": "db.read",
+          "target": "kyc_birth_info",
+          "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
+          "line": 28
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "full"
+    },
+    "api:GET /api/users/:userId/eligibility": {
+      "id": "api:GET /api/users/:userId/eligibility",
+      "kind": "api",
+      "label": "GET /api/users/:userId/eligibility",
+      "readOnly": true,
+      "file": "sample-birth-service/src/eligibility/eligibility.controller.ts",
+      "line": 8,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    }
+  },
+  "scopes": {
+    "BirthInfoVerifier.verify": {
+      "id": "BirthInfoVerifier.verify",
+      "params": [
+        {
+          "name": "submitted",
+          "type": "KycBirthInfoDto"
+        },
+        {
+          "name": "document",
+          "type": "BirthPlace | null"
+        }
+      ],
+      "returns": {
+        "type": "BirthInfoVerification",
+        "fields": [
+          {
+            "name": "ok",
+            "type": "boolean [false | true]"
+          },
+          {
+            "name": "enforced",
+            "type": "Field[]"
+          },
+          {
+            "name": "mismatches",
+            "type": "BirthInfoMismatch[]"
+          }
+        ]
+      },
+      "steps": [],
+      "edges": []
+    },
+    "BirthInfoService.updateKycBirthInfo": {
+      "id": "BirthInfoService.updateKycBirthInfo",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "dto",
+          "type": "KycBirthInfoDto"
+        }
+      ],
+      "returns": {
+        "type": "BirthInfoView",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "document",
+            "type": "BirthPlace | null"
+          },
+          {
+            "name": "kyc",
+            "type": "(KycBirthInfoDto & { updatedAt: string; }) | null"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "DocumentBirthInfoService.forUser",
+          "line": 33,
+          "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+          "delta": "added"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "BirthInfoVerifier.verify",
+          "line": 34,
+          "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+          "delta": "added"
+        },
+        {
+          "id": "s3",
+          "kind": "call",
+          "target": "KycBirthInfoStore.save",
+          "line": 38,
+          "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+          "condition": "if (check.ok)",
+          "conditionBefore": ""
+        },
+        {
+          "id": "s4",
+          "kind": "effect",
+          "effect": {
+            "kind": "event",
+            "target": "kyc.birth_info.updated",
+            "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+            "line": 39
+          },
+          "line": 39,
+          "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+          "condition": "if (check.ok)",
+          "conditionBefore": ""
+        },
+        {
+          "id": "s5",
+          "kind": "call",
+          "target": "BirthInfoService.get",
+          "line": 40,
+          "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+          "condition": "if (check.ok)",
+          "conditionBefore": ""
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "submitted"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "document"
+        },
+        {
+          "from": "entry",
+          "to": "s3",
+          "kind": "data",
+          "label": "userId, submitted"
+        },
+        {
+          "from": "s2",
+          "to": "s3",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "entry",
+          "to": "s4",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s2",
+          "to": "s4",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "entry",
+          "to": "s5",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s2",
+          "to": "s5",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "s5",
+          "to": "exit",
+          "kind": "data"
+        },
+        {
+          "from": "s3",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s4",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "DocumentBirthInfoService.forUser": {
+      "id": "DocumentBirthInfoService.forUser",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "BirthPlace | null",
+        "fields": [
+          {
+            "name": "countryOfBirth",
+            "type": "string | undefined"
+          },
+          {
+            "name": "placeOfBirth",
+            "type": "string | undefined"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "document_birth_info",
+            "file": "sample-birth-service/src/documents/document-birth-info.service.ts",
+            "line": 32
+          },
+          "line": 32,
+          "file": "sample-birth-service/src/documents/document-birth-info.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "row"
+        }
+      ]
+    },
+    "KycBirthInfoStore.save": {
+      "id": "KycBirthInfoStore.save",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "info",
+          "type": "KycBirthInfoDto"
+        }
+      ],
+      "returns": {
+        "type": "KycBirthInfo",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "placeOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "updatedAt",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "kyc_birth_info",
+            "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
+            "line": 33
+          },
+          "line": 33,
+          "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId, info.countryOfBirth, info.placeOfBirth"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "BirthInfoService.get": {
+      "id": "BirthInfoService.get",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "BirthInfoView",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "document",
+            "type": "BirthPlace | null"
+          },
+          {
+            "name": "kyc",
+            "type": "(KycBirthInfoDto & { updatedAt: string; }) | null"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "DocumentBirthInfoService.forUser",
+          "line": 19,
+          "file": "sample-birth-service/src/birth-info/birth-info.service.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "KycBirthInfoStore.find",
+          "line": 19,
+          "file": "sample-birth-service/src/birth-info/birth-info.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "document"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "data",
+          "label": "kyc"
+        }
+      ]
+    },
+    "KycBirthInfoStore.find": {
+      "id": "KycBirthInfoStore.find",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "KycBirthInfo | null",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "countryOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "placeOfBirth",
+            "type": "string"
+          },
+          {
+            "name": "updatedAt",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "kyc_birth_info",
+            "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
+            "line": 28
+          },
+          "line": 28,
+          "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:POST /api/users/:userId/birth-info": {
+      "id": "api:POST /api/users/:userId/birth-info",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "dto",
+          "type": "KycBirthInfoDto"
+        }
+      ],
+      "returns": {
+        "type": "BirthInfoView",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "document",
+            "type": "BirthPlace | null"
+          },
+          {
+            "name": "kyc",
+            "type": "(KycBirthInfoDto & { updatedAt: string; }) | null"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "BirthInfoService.updateKycBirthInfo",
+          "line": 17,
+          "file": "sample-birth-service/src/birth-info/birth-info.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId, dto"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    }
+  },
+  "findings": [
+    {
+      "rule": "unattributed-change",
+      "severity": "info",
+      "message": "1 changed file outside any module: src/app.module.ts",
+      "related": [
+        {
+          "type": "file",
+          "id": "sample-birth-service/src/app.module.ts"
+        }
+      ],
+      "isNew": true,
+      "hint": "Wiring, shared types and dev tooling. Contract effects of shared types already show up as output-shape changes on the modules."
+    }
+  ],
+  "review": {
+    "changedModules": [
+      "BirthInfoVerifier",
+      "BirthInfoService"
+    ],
+    "changedOperations": [
+      "BirthInfoVerifier.verify",
+      "BirthInfoService.updateKycBirthInfo"
+    ],
+    "queue": [
+      {
+        "operation": "BirthInfoVerifier.verify",
+        "risk": "high",
+        "reason": "new operation",
+        "reach": 1
+      },
+      {
+        "operation": "BirthInfoService.updateKycBirthInfo",
+        "risk": "medium",
+        "reason": "now calls DocumentBirthInfo.forUser, BirthInfoVerifier.verify; 3 guards changed inside",
+        "reach": 1
+      }
+    ],
+    "reviewers": [
+      "team-kyc"
+    ],
+    "stats": {
+      "files": 4,
+      "linesAdded": 57,
+      "linesRemoved": 5,
+      "contractChanges": 2,
+      "entryPointsAffected": 1
+    }
+  },
+  "lazy": {
+    "seeds": [
+      {
+        "id": "api:POST /api/users/:userId/birth-info",
+        "reason": "matches the PR: post, userid, birth, info; reaches 2 changed operations; calls the changed code directly"
+      }
+    ],
+    "stats": {
+      "entryPointsKnown": 3,
+      "entryPointsAnalyzed": 1,
+      "entryPointsReached": 0,
+      "operationsKnown": 8,
+      "operationsAnalyzed": 6,
+      "ms": 4041
+    }
+  }
+}

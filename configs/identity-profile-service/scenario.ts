@@ -6,14 +6,18 @@ import { pathToFileURL } from 'node:url';
  * Lives outside the service repo: it loads the service from `projectRoot`, which is the revision under review
  * (a temporary worktree for branches/PRs).
  * u-1 has only identity documents; u-2 has documents and (from the consent feature on) consented birth data.
+ * Each request runs in its own `step`: every module call it makes is recorded as part of that case, so the UI
+ * shows the same request (same user, same data) in every module it passes through.
  */
-export default async function scenario(projectRoot: string): Promise<void> {
+type Step = <T>(label: string, fn: () => Promise<T> | T) => Promise<T | undefined>;
+
+export default async function scenario(projectRoot: string, { step }: { step: Step }): Promise<void> {
   const load = (path: string) => import(pathToFileURL(join(projectRoot, path)).href);
   const { buildApp } = await load('src/app.ts');
   const { seed } = await load('src/dev/seed.ts');
   const app = buildApp();
   await seed(app);
-  const call = (method: string, url: string, body?: unknown) => app.router.dispatch(method, url, body);
+  const call = (method: string, url: string, body?: unknown) => step(`${method} ${url}`, () => app.router.dispatch(method, url, body));
 
   for (const user of ['u-1', 'u-2']) {
     await call('GET', `/v1/users/${user}/profile`);
@@ -33,12 +37,12 @@ export default async function scenario(projectRoot: string): Promise<void> {
   await call('POST', '/admin/v1/users/u-2/kyc-override', { status: 'passed', reviewer: 'ops-17' });
 
   for (const [method, request] of app.grpc.methods as Map<string, (req: unknown) => Promise<unknown>>) {
-    if (method.endsWith('CheckVisa')) await request({ userId: 'u-2', destination: 'JPN' });
-    else await request({ userId: 'u-1' });
+    if (method.endsWith('CheckVisa')) await step(`gRPC ${method} u-2`, () => request({ userId: 'u-2', destination: 'JPN' }));
+    else await step(`gRPC ${method} u-1`, () => request({ userId: 'u-1' }));
   }
-  await app.kafka.produce('user.profile.changed', { userId: 'u-2' });
-  await app.kafka.produce('travel.booking.created', { userId: 'u-1', destination: 'CAN' });
-  for (const { job } of app.scheduler.jobs as { job: () => Promise<void> }[]) await job();
+  await step('topic user.profile.changed u-2', () => app.kafka.produce('user.profile.changed', { userId: 'u-2' }));
+  await step('topic travel.booking.created u-1', () => app.kafka.produce('travel.booking.created', { userId: 'u-1', destination: 'CAN' }));
+  for (const { name, job } of app.scheduler.jobs as { name?: string; job: () => Promise<void> }[]) await step(`cron ${name ?? 'job'}`, job);
 
   // Exists from the consent feature on (404 before it): u-1 consents last so earlier calls stay document-based.
   await call('PUT', '/v1/users/u-1/birth-info/consent', { countryOfBirth: 'PRT', cityOfBirth: 'Lisbon' });

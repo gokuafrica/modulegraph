@@ -1,10 +1,38 @@
 [
   {
+    "id": "live-enforce-document-birth-info",
+    "title": "Live (lazy, NestJS): KYC birth info must match the identity document",
+    "mode": "branch",
+    "lazy": true,
+    "generatedAt": "2026-11-04T12:51:34.983Z",
+    "stats": {
+      "files": 4,
+      "linesAdded": 57,
+      "linesRemoved": 5,
+      "contractChanges": 2,
+      "entryPointsAffected": 1
+    }
+  },
+  {
+    "id": "demo-enforce-document-birth-info",
+    "title": "BirthInfo (NestJS): KYC birth info must match the identity document",
+    "mode": "branch",
+    "lazy": false,
+    "generatedAt": "2026-11-04T12:51:25.301Z",
+    "stats": {
+      "files": 4,
+      "linesAdded": 57,
+      "linesRemoved": 5,
+      "contractChanges": 2,
+      "entryPointsAffected": 1
+    }
+  },
+  {
     "id": "live-order-fraud-hold",
     "title": "Live (lazy, NestJS): hold high-risk orders for fraud review",
     "mode": "branch",
     "lazy": true,
-    "generatedAt": "2026-11-04T11:17:18.812Z",
+    "generatedAt": "2026-11-04T12:51:16.456Z",
     "stats": {
       "files": 9,
       "linesAdded": 178,
@@ -14,11 +42,25 @@
     }
   },
   {
+    "id": "demo-order-fraud-hold",
+    "title": "Orders (NestJS): hold high-risk orders for fraud review",
+    "mode": "branch",
+    "lazy": false,
+    "generatedAt": "2026-11-04T12:51:09.155Z",
+    "stats": {
+      "files": 9,
+      "linesAdded": 178,
+      "linesRemoved": 24,
+      "contractChanges": 10,
+      "entryPointsAffected": 8
+    }
+  },
+  {
     "id": "live-kyc-risk-tiers",
     "title": "Live (lazy): KYC risk tiers, manual review, async rescreen",
     "mode": "branch",
     "lazy": true,
-    "generatedAt": "2026-11-04T11:17:10.881Z",
+    "generatedAt": "2026-11-04T12:51:02.791Z",
     "stats": {
       "files": 5,
       "linesAdded": 74,
@@ -32,7 +74,7 @@
     "title": "Live (lazy): BirthInfo consented data wins over documents",
     "mode": "branch",
     "lazy": true,
-    "generatedAt": "2026-11-04T11:17:03.931Z",
+    "generatedAt": "2026-11-04T12:50:55.884Z",
     "stats": {
       "files": 7,
       "linesAdded": 57,
@@ -42,25 +84,11 @@
     }
   },
   {
-    "id": "demo-order-fraud-hold",
-    "title": "Orders (NestJS): hold high-risk orders for fraud review",
-    "mode": "branch",
-    "lazy": false,
-    "generatedAt": "2026-11-04T11:16:16.550Z",
-    "stats": {
-      "files": 9,
-      "linesAdded": 178,
-      "linesRemoved": 24,
-      "contractChanges": 10,
-      "entryPointsAffected": 8
-    }
-  },
-  {
     "id": "demo-kyc-risk-tiers",
     "title": "KYC: risk tiers, manual review, async rescreen (multi-file)",
     "mode": "branch",
     "lazy": false,
-    "generatedAt": "2026-11-04T11:15:56.701Z",
+    "generatedAt": "2026-11-04T12:50:48.990Z",
     "stats": {
       "files": 5,
       "linesAdded": 74,
@@ -74,7 +102,7 @@
     "title": "BirthInfo: consented data wins over documents",
     "mode": "branch",
     "lazy": false,
-    "generatedAt": "2026-11-04T11:15:50.623Z",
+    "generatedAt": "2026-11-04T12:50:42.392Z",
     "stats": {
       "files": 7,
       "linesAdded": 57,
@@ -88,7 +116,7 @@
     "title": "Snapshot: identity-profile-service (main)",
     "mode": "snapshot",
     "lazy": false,
-    "generatedAt": "2026-11-04T11:15:44.641Z",
+    "generatedAt": "2026-11-04T12:50:36.007Z",
     "stats": {
       "files": 0,
       "linesAdded": 0,

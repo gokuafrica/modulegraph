@@ -5,15 +5,18 @@ How this project turns [research-summary.md](research-summary.md) into practice.
 
 ## The reviewer's loop
 
-1. **Start here** (left rail). Contract changes come first, sorted by risk, then by reach.
-   Implementation-only changes rank last. *(R2)*
-2. **Zoom out** from the top item: start at the changed module and go up level by level to every API,
+1. **Start here**: the *Changes* bar above the graph. Contract changes come first, sorted by risk, then by reach.
+   Implementation-only changes rank last. A chip is always one click back to its change, and the path under the
+   bar shows every view between it and where you are. *(R2)*
+2. **Impact view** (*zoom out*) from the top item: start at the changed module and go up level by level to every API,
    consumer and cron that reaches it. With many entry points they are grouped (`/v1/users/*`, `gRPC`, `cron`),
    and each group shows how many read-only endpoints now write. *(R5)*
 3. **Open one flow** that matters (double-click an entry). Check the data path: is shared data fetched once
    and passed down? Does the new side effect belong here?
-4. **Drill in** only where the graph says *changes inside*. Check the example call at both ends (input and
-   output are the same recorded call; expand nested values like in the devtools). Inside a changed flow, outlined
+4. **Drill in** only where the graph says *changes inside*. Follow one example request: the input, each module's
+   `in` / `out` line and the response all belong to the same recorded request, and it stays selected as you drill
+   in, so the data you saw at the API is the data you see three modules down (expand nested values like in the
+   devtools). Inside a changed flow, outlined
    steps are new calls, red ghosts are calls the change removed, and purple labels mark changed guards.
 5. **Read code last, function by function**. *code changes ±* lists every changed function behind the
    operation, including inlined helpers in other files, with +/− counts, before showing any code. Start with the

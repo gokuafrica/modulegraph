@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "order-service",
-  "generatedAt": "2026-11-04T11:17:18.812Z",
+  "generatedAt": "2026-11-04T12:51:16.456Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -7326,8 +7326,7 @@
       "entryPointsReached": 0,
       "operationsKnown": 33,
       "operationsAnalyzed": 23,
-      "ms": 5502
-    },
-    "api": "/api"
+      "ms": 5128
+    }
   }
 }

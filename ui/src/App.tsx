@@ -5,8 +5,8 @@ import { Inspector, type Selection } from './components/Inspector.tsx';
 import { expand, fetchLive, isStale, refresh, servedGraphs, type ExpandAction } from './api.ts';
 import { DiffPanel } from './components/DiffView.tsx';
 import { edgeTypes } from './components/Edges.tsx';
-import { ActionsContext, ExampleContext, nodeTypes, type Actions } from './components/Nodes.tsx';
-import { Sidebar } from './components/Sidebar.tsx';
+import { ActionsContext, casesOf, ExampleContext, exampleFor, nodeTypes, type Actions } from './components/Nodes.tsx';
+import { ReviewBar } from './components/ReviewBar.tsx';
 import { layout, type Theme } from './graph/layout.ts';
 import { buildIndex, flowModel, impactModel, opTitle } from './graph/model.ts';
 
@@ -27,6 +27,20 @@ function reviewTarget(g: ModuleGraph): string {
   if (s.mode === 'snapshot') return 'current code, no change';
   if (s.mode === 'uncommitted') return 'uncommitted edits vs HEAD';
   return `${s.head} vs ${s.base}${s.workingTree ? ' + uncommitted edits' : ''}`;
+}
+
+/** Same place in the graph (an impact view at any depth, a flow with any focus). */
+function viewKey(v: View): string {
+  return v.mode === 'impact' ? `impact|${v.op}` : `flow|${v.trail.join('>')}`;
+}
+
+/**
+ * The path from the change you started at to where you are. Going somewhere already on the path cuts it back
+ * there, so it never loops and every step stays one click away.
+ */
+function extendPath(path: View[], next: View): View[] {
+  const at = path.findIndex((v) => viewKey(v) === viewKey(next));
+  return at >= 0 ? [...path.slice(0, at), next] : [...path, next];
 }
 
 /** The view still makes sense after a refresh: drop what the new code no longer has. */
@@ -63,7 +77,7 @@ function readHash(): Record<string, string> {
 }
 
 /** Browser history entries this app owns. `guard` sits below the first view so one stray Back doesn't leave the page. */
-type HistState = { mg: 'view'; graphId: string; view: View; idx: number } | { mg: 'guard' };
+type HistState = { mg: 'view'; graphId: string; view: View; idx: number; path?: View[] } | { mg: 'guard' };
 
 function hashFor(graphId: string, view: View): string {
   const p = new URLSearchParams({ g: graphId });
@@ -98,10 +112,10 @@ export default function App() {
   const [canvas, setCanvas] = useState<{ nodes: Node[]; edges: Edge[]; key: string; meta?: { maxDepth: number; shown: number; total: number; frontier: string[] }; chain?: string[] }>();
   const [error, setError] = useState<string>();
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('modulegraph-theme') as Theme) ?? 'dark');
-  const [exampleIndex, setExampleIndex] = useState(0);
-  const exampleCtx = useMemo(() => ({ index: exampleIndex, setIndex: setExampleIndex }), [exampleIndex]);
-  const [railOpen, setRailOpen] = useState(() => localStorage.getItem('modulegraph-rail') !== 'closed');
-  useEffect(() => localStorage.setItem('modulegraph-rail', railOpen ? 'open' : 'closed'), [railOpen]);
+  /** The example request every node shows (one scenario request, followed through every module it reached). */
+  const [caseId, setCaseId] = useState<string>();
+  /** How you got here from the change you started at: every step is a view you can click back to. */
+  const [path, setPath] = useState<View[]>([]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -154,6 +168,8 @@ export default function App() {
   }, [graphId]);
 
   const index = useMemo(() => (g ? buildIndex(g) : undefined), [g]);
+  const caseLabels = useMemo(() => Object.fromEntries((g?.source.examples?.cases ?? []).map((c) => [c.id, c.label])), [g]);
+  const exampleCtx = useMemo(() => ({ caseId, setCase: setCaseId, cases: caseLabels }), [caseId, caseLabels]);
 
   const graphIdRef = useRef<string>(undefined);
   graphIdRef.current = graphId;
@@ -257,10 +273,19 @@ export default function App() {
   /** In-app navigation and the browser's Back/Forward share one history: every view change is a history entry. */
   const histIdx = useRef<number>((history.state as HistState | null)?.mg === 'view' ? (history.state as { idx: number }).idx : 0);
   const nextWrite = useRef<'push' | 'replace' | 'none'>('replace');
+  const pathRef = useRef<View[]>([]);
+  pathRef.current = path;
+  /** The next view starts a new path (a change chip was clicked). */
+  const newPath = useRef(false);
   const navigate = useCallback((next: View) => {
     nextWrite.current = 'push';
     setView(next);
   }, []);
+  /** Back to a change: its impact view, and the path starts again from it. */
+  const goHome = useCallback((opId: string) => {
+    newPath.current = true;
+    navigate({ mode: 'impact', op: opId, depth: 1 });
+  }, [navigate]);
 
   useEffect(() => {
     const graphId = graphIdRef.current;
@@ -268,18 +293,24 @@ export default function App() {
     const mode = nextWrite.current;
     nextWrite.current = 'replace';
     if (mode === 'none') return;
+    const prev = pathRef.current;
+    const nextPath = newPath.current || !prev.length ? [view]
+      : mode === 'replace' && viewKey(prev.at(-1)!) === viewKey(view) ? [...prev.slice(0, -1), view]
+      : extendPath(prev, view);
+    newPath.current = false;
+    setPath(nextPath);
     const url = hashFor(graphId, view);
     const st = history.state as HistState | null;
     if (mode === 'replace' && st?.mg !== 'view') {
       // First view of this tab: put a guard entry underneath it.
       history.replaceState({ mg: 'guard' } satisfies HistState, '', url);
       histIdx.current = 0;
-      history.pushState({ mg: 'view', graphId, view, idx: 0 } satisfies HistState, '', url);
+      history.pushState({ mg: 'view', graphId, view, idx: 0, path: nextPath } satisfies HistState, '', url);
     } else if (mode === 'push') {
       histIdx.current += 1;
-      history.pushState({ mg: 'view', graphId, view, idx: histIdx.current } satisfies HistState, '', url);
+      history.pushState({ mg: 'view', graphId, view, idx: histIdx.current, path: nextPath } satisfies HistState, '', url);
     } else {
-      history.replaceState({ mg: 'view', graphId, view, idx: histIdx.current } satisfies HistState, '', url);
+      history.replaceState({ mg: 'view', graphId, view, idx: histIdx.current, path: nextPath } satisfies HistState, '', url);
     }
     setCanGoBack(histIdx.current > 0);
   }, [view]);
@@ -313,6 +344,7 @@ export default function App() {
       histIdx.current = st.idx;
       setCanGoBack(st.idx > 0);
       nextWrite.current = 'none';
+      setPath(st.path ?? [st.view]);
       if (st.graphId !== graphIdRef.current) setGraphId(st.graphId);
       else setView(st.view);
     };
@@ -333,12 +365,14 @@ export default function App() {
 
   useEffect(() => {
     if (!g || !index || !view || !graphId) return;
-    setExampleIndex(0);
     let cancelled = false;
     if (view.mode === 'flow') {
       const scopeId = view.trail.at(-1)!;
       const model = flowModel(g, scopeId, { collapsePassthrough, showResources, focusOp: view.focus, focusPath: view.focus ? ancestors(index, view.focus) : undefined });
       for (const n of model.nodes) if (n.type === 'module') n.data.reach = index.reach.get(n.data.opId as string)?.size ?? 0;
+      // Keep following the same request when this flow was part of it (drilling in from a caller); else its first.
+      const shown = model.nodes.find((n) => n.id === '__entry')?.data.examples as Parameters<typeof exampleFor>[0];
+      if (shown?.length) setCaseId((cur) => (exampleFor(shown, cur) ? cur : casesOf(shown[0], 0)[0]));
       layout(model, theme).then((res) => !cancelled && setCanvas({ ...res, key: `${graphId}|${view.trail.join('>')}|${collapsePassthrough}|${showResources}|${theme}|${Object.keys(g.scopes).length}`, chain: model.chain }));
     } else {
       const model = impactModel(g, index, view.op, { depth: view.depth, groupThreshold: 12, expandedGroups });
@@ -416,12 +450,12 @@ export default function App() {
   return (
     <ActionsContext.Provider value={actions}>
      <ExampleContext.Provider value={exampleCtx}>
-      <div className={`app ${railOpen ? '' : 'no-left'} ${selection ? '' : 'no-right'}`}>
+      <div className={`app no-left ${selection ? '' : 'no-right'}`}>
         <header className="topbar">
           <div className="brand">◇ modulegraph <span className="muted">module-level review</span></div>
-          <div className="review-title" title={g.source.title}>
+          <div className="review-title" title={[g.source.title, g.source.analyzer && `Analyzed as ${g.source.analyzer.language}: ${g.source.analyzer.frameworks.map((f) => `${f.name} (${f.reason})`).join(', ')}`, g.review.reviewers.length ? `Owners: ${g.review.reviewers.join(', ')}` : ''].filter(Boolean).join('\n')}>
             <div className="review-name">{g.source.title ?? reviewTarget(g)}</div>
-            <div className="muted small">{reviewTarget(g)} · {g.service} · {Object.keys(g.modules).length} modules · {Object.keys(g.entryPoints).length} entry points</div>
+            <div className="muted small">{reviewTarget(g)} · {g.service}{g.source.analyzer?.frameworks.length ? ` (${g.source.analyzer.frameworks.map((f) => f.name).join(', ')})` : ''} · {Object.keys(g.modules).length} modules · {Object.keys(g.entryPoints).length} entry points{g.review.reviewers.length ? ` · owners ${g.review.reviewers.join(', ')}` : ''}</div>
           </div>
           {g.lazy && live && (
             <button className={`refresh ${stale ? 'stale' : ''}`} disabled={!!busy} onClick={() => void runRefresh()}
@@ -438,20 +472,27 @@ export default function App() {
             </span>
           )}
           <div className="spacer" />
-          <button className={`panel-toggle ${railOpen ? 'on' : ''}`} onClick={() => setRailOpen(!railOpen)} title="Show or hide the review rail">◧ review</button>
           <label className="small"><input type="checkbox" checked={collapsePassthrough} onChange={(e) => setCollapse(e.target.checked)} /> skip pass-through wrappers</label>
           <label className="small"><input type="checkbox" checked={showResources} onChange={(e) => setShowResources(e.target.checked)} /> show data sources &amp; sinks</label>
           <button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} title="Toggle dark mode">
             {theme === 'dark' ? '☀ light' : '☾ dark'}
           </button>
         </header>
-        {railOpen && <Sidebar g={g} />}
         <main className="canvas">
+          <ReviewBar g={g} home={path[0]?.mode === 'impact' ? path[0].op : undefined} onHome={goHome} />
           <div className="crumbs">
             <button disabled={!canGoBack} onClick={() => history.back()} title="Same as the browser's Back button">← back</button>
+            {path.slice(0, -1).map((v, i) => (
+              <span key={viewKey(v)} className="path-step">
+                <button className="path-chip" onClick={() => navigate(v)} title={v.mode === 'impact' ? `Impact view: everything that calls ${opTitle(g, v.op)}` : `Flow view: ${v.trail.map(label).join(' › ')}`}>
+                  <span className={`mini-tag ${v.mode}`}>{v.mode}</span>{v.mode === 'impact' ? opTitle(g, v.op) : label(v.trail.at(-1)!)}
+                </button>
+                <span className="sep">→</span>
+              </span>
+            ))}
             {view.mode === 'flow' ? (
               <>
-                <span className="mode-tag">flow</span>
+                <span className="mode-tag" title="Flow view: one entry point or operation, step by step, module by module">flow</span>
                 {view.trail.map((id, i) => (
                   <span key={id + i} className="crumb">
                     {i > 0 && <span className="sep">›</span>}
@@ -478,7 +519,7 @@ export default function App() {
               </>
             ) : (
               <>
-                <span className="mode-tag impact">zoom out</span>
+                <span className="mode-tag impact" title="Impact view: this module and everything that calls it, up to the entry points">impact</span>
                 <b>{opTitle(g, view.op)}</b>
                 <span className="muted small">
                   {' '}{canvas?.meta?.shown ?? 0} of {canvas?.meta?.total ?? 0} entry points shown · {view.depth} level{view.depth > 1 ? 's' : ''} up

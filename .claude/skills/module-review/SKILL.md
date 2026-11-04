@@ -99,9 +99,12 @@ analyzer finds it. Templates: `configs/order-service/` (NestJS: no platform rule
    `owners` path globs, relative to the repo root (CODEOWNERS is read automatically if the repo has one).
 5. **Rules**: `rules.tableOwners` (table → owning module), `rules.fetchOnce` (expensive fetches that must be
    shared, not repeated). Only add what you saw in the code.
-6. **Scenario (optional, for example data)**: `scenario.ts` exports `default async (projectRoot) => …`, loads the
-   service from `projectRoot` (dynamic import), and drives realistic calls through its entry points with dev
-   data. Prefer reusing the service's own seed or fixtures over inventing data.
+6. **Scenario (optional, for example data)**: `scenario.ts` exports `default async (projectRoot, { step }) => …`,
+   loads the service from `projectRoot` (dynamic import), and drives realistic calls through its entry points with
+   dev data. Wrap each request in `step('<METHOD> <url or what it is>', () => …)`: every module call it makes is
+   recorded as one case, which the UI follows through every module. Prefer reusing the service's own seed or
+   fixtures over inventing data. NestJS without a container: construct the providers by hand with in-memory
+   repositories (see `configs/birth-info-service/scenario.ts`).
 
 Declared contracts (`modules.overrides.<Class>.effects`) are optional. Without them, the base revision is the
 contract and `new-side-effect` reports what a change adds.

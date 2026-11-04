@@ -338,6 +338,13 @@
             },
             "operationsCovered": {
               "type": "number"
+            },
+            "cases": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ExampleCase"
+              },
+              "description": "The scenario's requests whose calls are shown. Every example names its case, so one request can be followed through every module."
             }
           },
           "required": [
@@ -543,7 +550,7 @@
           "items": {
             "$ref": "#/definitions/Example"
           },
-          "description": "Real calls recorded while running the scenario on the head revision (up to 3 distinct)."
+          "description": "Real calls recorded while running the scenario on the head revision: one per distinct input/output."
         },
         "source": {
           "type": "string"
@@ -584,9 +591,32 @@
       ],
       "additionalProperties": false
     },
+    "ExampleCase": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "additionalProperties": false
+    },
     "Example": {
       "type": "object",
       "properties": {
+        "cases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The cases (scenario requests, `ExampleCase.id`) in which this operation was called with exactly this input and\noutput. Every module a case reached has an example listing it, so the UI can follow one request throughout."
+        },
         "input": {
           "type": "object",
           "additionalProperties": {},

@@ -1,7 +1,7 @@
 import { useContext, useState } from 'react';
 import type { Effect, Finding, ModuleGraph, Operation } from '../../../schema/modulegraph.ts';
 import { chipsFor, effectKey, opTitle } from '../graph/model.ts';
-import { ActionsContext, EffectChip, EFFECT_META } from './Nodes.tsx';
+import { ActionsContext, casesOf, EffectChip, EFFECT_META, ExampleContext } from './Nodes.tsx';
 import { exampleLabels, ObjectTree } from './ObjectTree.tsx';
 
 export type Selection =
@@ -48,6 +48,7 @@ function OpCard({ g, op }: { g: ModuleGraph; op: Operation }) {
   const declared = new Set(mod.declaredEffects.map(effectKey));
   const before = op.delta?.returns?.before.fields ?? [];
   const labels = exampleLabels((op.examples ?? []).map((e) => e.input));
+  const { caseId, setCase, cases } = useContext(ExampleContext);
   const addedFields = new Set(op.delta?.returns ? (op.returns.fields ?? []).filter((f) => !before.some((b) => b.name === f.name)).map((f) => f.name) : []);
   return (
     <div key={op.id}>
@@ -81,16 +82,24 @@ function OpCard({ g, op }: { g: ModuleGraph; op: Operation }) {
 
       {op.examples?.length ? (
         <section>
-          <h4>Example calls <span className="muted small">recorded by running {g.source.examples?.scenario ?? 'a scenario'} on the head revision</span></h4>
-          {op.examples.map((e, i) => (
-            <div key={i} className="example-block blackbox">
-              <div className="bb-head">call {i + 1}{labels[i] && <span className="muted"> · {labels[i]}</span>}</div>
+          <h4>Example calls <span className="muted small">recorded by running {g.source.examples?.scenario ?? 'a scenario'} on the head revision; click one to follow its request everywhere</span></h4>
+          {op.examples.map((e, i) => {
+            const ids = casesOf(e, i);
+            const names = ids.map((id) => cases[id]).filter(Boolean);
+            const on = !!caseId && ids.includes(caseId);
+            return (
+            <div key={i} className={`example-block blackbox ${on ? 'on' : ''}`} onClick={() => setCase(on ? caseId! : ids[0])} title={names.join('\n')}>
+              <div className="bb-head">
+                call {i + 1}{labels[i] && <span className="muted"> · {labels[i]}</span>}
+                {names.length > 0 && <div className="bb-requests">{on && caseId ? cases[caseId] : names[0]}{names.length > 1 ? <span className="muted"> and {names.length - 1} more request{names.length > 2 ? 's' : ''}</span> : null}</div>}
+              </div>
               <div className="bb-side"><span className="bb-tag">in</span><ObjectTree value={e.input} flat /></div>
               <div className="bb-side"><span className={`bb-tag ${e.error ? 'err' : ''}`}>{e.error ? 'throws' : 'out'}</span>
                 {e.error ? <span className="err">{e.error}</span> : <ObjectTree value={e.output} flat added={addedFields} />}
               </div>
             </div>
-          ))}
+            );
+          })}
         </section>
       ) : null}
 
