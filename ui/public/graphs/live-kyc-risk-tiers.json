@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-05T12:34:01.960Z",
+  "generatedAt": "2026-11-05T12:47:34.006Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -958,7 +958,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-05T12:34:01.831Z"
+            "checkedAt": "2026-11-05T12:47:33.873Z"
           },
           "cases": [
             "c5",
@@ -974,7 +974,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-05T12:34:01.832Z"
+            "checkedAt": "2026-11-05T12:47:33.875Z"
           },
           "cases": [
             "c15"
@@ -1073,7 +1073,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-05T12:34:01.829Z"
+            "extractedAt": "2026-11-05T12:47:33.872Z"
           },
           "cases": [
             "c1",
@@ -1109,7 +1109,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-05T12:34:01.832Z"
+            "extractedAt": "2026-11-05T12:47:33.874Z"
           },
           "cases": [
             "c11",
@@ -1421,7 +1421,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T12:34:01.829Z"
+              "extractedAt": "2026-11-05T12:47:33.872Z"
             }
           },
           "output": {
@@ -1458,7 +1458,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T12:34:01.832Z"
+              "extractedAt": "2026-11-05T12:47:33.874Z"
             }
           },
           "output": {
@@ -1529,7 +1529,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T12:34:01.829Z"
+              "extractedAt": "2026-11-05T12:47:33.872Z"
             }
           },
           "output": {
@@ -1566,7 +1566,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T12:34:01.832Z"
+              "extractedAt": "2026-11-05T12:47:33.874Z"
             }
           },
           "output": {
@@ -1655,7 +1655,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T12:34:01.829Z"
+              "extractedAt": "2026-11-05T12:47:33.872Z"
             }
           },
           "output": {
@@ -1691,7 +1691,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T12:34:01.832Z"
+              "extractedAt": "2026-11-05T12:47:33.874Z"
             }
           },
           "output": {
@@ -2120,7 +2120,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-05T12:34:01.831Z"
+            "checkedAt": "2026-11-05T12:47:33.873Z"
           },
           "cases": [
             "c6",
@@ -2144,7 +2144,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-05T12:34:01.832Z"
+            "checkedAt": "2026-11-05T12:47:33.875Z"
           },
           "cases": [
             "c16"
@@ -5157,7 +5157,7 @@
       "entryPointsReached": 5,
       "operationsKnown": 26,
       "operationsAnalyzed": 12,
-      "ms": 2494
+      "ms": 2429
     }
   }
 }

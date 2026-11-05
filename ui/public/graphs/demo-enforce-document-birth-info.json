@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "birth-info-service",
-  "generatedAt": "2026-11-05T12:34:25.759Z",
+  "generatedAt": "2026-11-05T12:47:57.998Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
@@ -37,8 +37,8 @@
       {
         "path": "sample-birth-service/src/birth-info/birth-info.service.ts",
         "status": "modified",
-        "added": 20,
-        "removed": 4,
+        "added": 34,
+        "removed": 12,
         "modules": [
           "BirthInfoService"
         ]
@@ -69,7 +69,7 @@
         }
       ]
     },
-    "intent": "BirthInfo: enforce document birth info on KYC submissions\nPOST /users/:userId/birth-info now rejects (422) a submission that contradicts\nthe user's identity document. Each part the document has (country of birth,\nplace of birth) must match; a part extraction couldn't read is not enforced,\nand with no document data at all the user's answer is saved as before. The\nsubmission still overwrites the previous KYC birth info.\n\nSave the KYC birth info and its event in one transaction",
+    "intent": "BirthInfo: enforce document birth info on KYC submissions\nPOST /users/:userId/birth-info now rejects (422) a submission that contradicts\nthe user's identity document. Each part the document has (country of birth,\nplace of birth) must match; a part extraction couldn't read is not enforced,\nand with no document data at all the user's answer is saved as before. The\nsubmission still overwrites the previous KYC birth info.\n\nSave the KYC birth info and its event in one transaction\n\nAnswer a KYC submission from what was already read and saved\nupdateKycBirthInfo read the identity document to verify the submission, then\ncalled get(), which read it again. Build the answer from that document and the\nsaved row instead; get() and the update share the view mapping.",
     "intentSource": "commits",
     "examples": {
       "scenario": "configs/birth-info-service/scenario.ts",
@@ -175,7 +175,7 @@
       "name": "BirthInfo",
       "className": "BirthInfoService",
       "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
-      "line": 10,
+      "line": 18,
       "summary": "A user's birth info: what their identity document says and what they told us in KYC.",
       "summarySource": "profile",
       "owner": "team-kyc",
@@ -590,8 +590,8 @@
       "moduleId": "BirthInfoService",
       "name": "get",
       "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
-      "line": 20,
-      "endLine": 27,
+      "line": 28,
+      "endLine": 31,
       "params": [
         {
           "name": "userId",
@@ -634,9 +634,162 @@
         "DocumentBirthInfoService.forUser",
         "KycBirthInfoStore.find"
       ],
-      "change": "unchanged",
-      "containsChanges": false,
-      "source": "async get(userId: string): Promise<BirthInfoView> {\n  const [document, kyc] = await Promise.all([this.documents.forUser(userId), this.kyc.find(userId)]);\n  return {\n    userId,\n    document,\n    kyc: kyc ? { countryOfBirth: kyc.countryOfBirth, placeOfBirth: kyc.placeOfBirth, updatedAt: kyc.updatedAt } : null,\n  };\n}",
+      "change": "modified",
+      "containsChanges": true,
+      "source": "async get(userId: string): Promise<BirthInfoView> {\n  const [document, kyc] = await Promise.all([this.documents.forUser(userId), this.kyc.find(userId)]);\n  return view(userId, document, kyc);\n}",
+      "diff": [
+        {
+          "t": " ",
+          "text": "async get(userId: string): Promise<BirthInfoView> {"
+        },
+        {
+          "t": " ",
+          "text": "  const [document, kyc] = await Promise.all([this.documents.forUser(userId), this.kyc.find(userId)]);"
+        },
+        {
+          "t": "-",
+          "text": "  return {"
+        },
+        {
+          "t": "-",
+          "text": "    userId,"
+        },
+        {
+          "t": "-",
+          "text": "    document,"
+        },
+        {
+          "t": "-",
+          "text": "    kyc: kyc ? { countryOfBirth: kyc.countryOfBirth, placeOfBirth: kyc.placeOfBirth, updatedAt: kyc.updatedAt } : null,"
+        },
+        {
+          "t": "-",
+          "text": "  };"
+        },
+        {
+          "t": "+",
+          "text": "  return view(userId, document, kyc);"
+        },
+        {
+          "t": " ",
+          "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "get",
+          "role": "operation",
+          "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+          "line": 28,
+          "status": "modified",
+          "added": 1,
+          "removed": 5,
+          "diff": [
+            {
+              "t": " ",
+              "text": "async get(userId: string): Promise<BirthInfoView> {",
+              "a": 16,
+              "b": 28
+            },
+            {
+              "t": " ",
+              "text": "  const [document, kyc] = await Promise.all([this.documents.forUser(userId), this.kyc.find(userId)]);",
+              "a": 17,
+              "b": 29
+            },
+            {
+              "t": "-",
+              "text": "  return {",
+              "a": 18
+            },
+            {
+              "t": "-",
+              "text": "    userId,",
+              "a": 19
+            },
+            {
+              "t": "-",
+              "text": "    document,",
+              "a": 20
+            },
+            {
+              "t": "-",
+              "text": "    kyc: kyc ? { countryOfBirth: kyc.countryOfBirth, placeOfBirth: kyc.placeOfBirth, updatedAt: kyc.updatedAt } : null,",
+              "a": 21
+            },
+            {
+              "t": "-",
+              "text": "  };",
+              "a": 22
+            },
+            {
+              "t": "+",
+              "text": "  return view(userId, document, kyc);",
+              "b": 30
+            },
+            {
+              "t": " ",
+              "text": "}",
+              "a": 23,
+              "b": 31
+            }
+          ]
+        },
+        {
+          "name": "view",
+          "role": "helper",
+          "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+          "line": 9,
+          "status": "added",
+          "added": 7,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "function view(userId: string, document: BirthPlace | null, kyc: KycBirthInfo | null): BirthInfoView {",
+              "b": 9
+            },
+            {
+              "t": "+",
+              "text": "  return {",
+              "b": 10
+            },
+            {
+              "t": "+",
+              "text": "    userId,",
+              "b": 11
+            },
+            {
+              "t": "+",
+              "text": "    document,",
+              "b": 12
+            },
+            {
+              "t": "+",
+              "text": "    kyc: kyc ? { countryOfBirth: kyc.countryOfBirth, placeOfBirth: kyc.placeOfBirth, updatedAt: kyc.updatedAt } : null,",
+              "b": 13
+            },
+            {
+              "t": "+",
+              "text": "  };",
+              "b": 14
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 15
+            }
+          ]
+        }
+      ],
+      "delta": {
+        "risk": "low",
+        "effectsAdded": [],
+        "effectsRemoved": [],
+        "callsAdded": [],
+        "callsRemoved": [],
+        "implementationOnly": true
+      },
       "examples": [
         {
           "input": {
@@ -657,7 +810,6 @@
           "cases": [
             "c1",
             "c2",
-            "c9",
             "c16"
           ]
         },
@@ -719,11 +871,10 @@
             "kyc": {
               "countryOfBirth": "IND",
               "placeOfBirth": "Mumbai",
-              "updatedAt": "2026-11-05T12:34:25.611Z"
+              "updatedAt": "2026-11-05T12:47:57.851Z"
             }
           },
           "cases": [
-            "c11",
             "c17"
           ]
         },
@@ -737,11 +888,10 @@
             "kyc": {
               "countryOfBirth": "DEU",
               "placeOfBirth": "Berlin",
-              "updatedAt": "2026-11-05T12:34:25.611Z"
+              "updatedAt": "2026-11-05T12:47:57.851Z"
             }
           },
           "cases": [
-            "c13",
             "c18"
           ]
         },
@@ -757,11 +907,10 @@
             "kyc": {
               "countryOfBirth": "NGA",
               "placeOfBirth": "lagos",
-              "updatedAt": "2026-11-05T12:34:25.611Z"
+              "updatedAt": "2026-11-05T12:47:57.851Z"
             }
           },
           "cases": [
-            "c14",
             "c19"
           ]
         }
@@ -774,8 +923,8 @@
       "moduleId": "BirthInfoService",
       "name": "updateKycBirthInfo",
       "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
-      "line": 33,
-      "endLine": 46,
+      "line": 37,
+      "endLine": 52,
       "summary": "Saves what the user submitted as their KYC birth info, replacing what they submitted before. It must agree with their identity document: each part the document has is enforced, a missing part isn't.",
       "summarySource": "code",
       "params": [
@@ -810,7 +959,7 @@
           "kind": "event",
           "target": "kyc.birth_info.updated",
           "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
-          "line": 43
+          "line": 47
         }
       ],
       "effects": [
@@ -818,7 +967,7 @@
           "kind": "event",
           "target": "kyc.birth_info.updated",
           "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
-          "line": 43
+          "line": 47
         },
         {
           "kind": "db.read",
@@ -831,23 +980,16 @@
           "target": "kyc_birth_info",
           "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
           "line": 34
-        },
-        {
-          "kind": "db.read",
-          "target": "kyc_birth_info",
-          "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
-          "line": 28
         }
       ],
       "calls": [
         "DocumentBirthInfoService.forUser",
         "BirthInfoVerifier.verify",
-        "KycBirthInfoStore.save",
-        "BirthInfoService.get"
+        "KycBirthInfoStore.save"
       ],
       "change": "modified",
       "containsChanges": true,
-      "source": "async updateKycBirthInfo(userId: string, dto: KycBirthInfoDto): Promise<BirthInfoView> {\n  const submitted = { countryOfBirth: dto.countryOfBirth.trim().toUpperCase(), placeOfBirth: dto.placeOfBirth.trim() };\n  const document = await this.documents.forUser(userId);\n  const check = this.verifier.verify(submitted, document);\n  if (!check.ok) {\n    throw new UnprocessableEntityException({ message: 'Birth info does not match the identity document', mismatches: check.mismatches });\n  }\n  // The new answer and its event go together: if either fails, neither happens.\n  await this.dataSource.transaction(async (manager) => {\n    await this.kyc.save(userId, submitted, manager);\n    this.events.emit('kyc.birth_info.updated', { userId });\n  });\n  return this.get(userId);\n}",
+      "source": "async updateKycBirthInfo(userId: string, dto: KycBirthInfoDto): Promise<BirthInfoView> {\n  const submitted = { countryOfBirth: dto.countryOfBirth.trim().toUpperCase(), placeOfBirth: dto.placeOfBirth.trim() };\n  const document = await this.documents.forUser(userId);\n  const check = this.verifier.verify(submitted, document);\n  if (!check.ok) {\n    throw new UnprocessableEntityException({ message: 'Birth info does not match the identity document', mismatches: check.mismatches });\n  }\n  // The new answer and its event go together: if either fails, neither happens.\n  const saved = await this.dataSource.transaction(async (manager) => {\n    const row = await this.kyc.save(userId, submitted, manager);\n    this.events.emit('kyc.birth_info.updated', { userId });\n    return row;\n  });\n  // The answer is the document already read and the row just saved: no need to read either again.\n  return view(userId, document, saved);\n}",
       "diff": [
         {
           "t": " ",
@@ -860,6 +1002,10 @@
         {
           "t": "-",
           "text": "  this.events.emit('kyc.birth_info.updated', { userId });"
+        },
+        {
+          "t": "-",
+          "text": "  return this.get(userId);"
         },
         {
           "t": "+",
@@ -891,11 +1037,11 @@
         },
         {
           "t": "+",
-          "text": "  await this.dataSource.transaction(async (manager) => {"
+          "text": "  const saved = await this.dataSource.transaction(async (manager) => {"
         },
         {
           "t": "+",
-          "text": "    await this.kyc.save(userId, submitted, manager);"
+          "text": "    const row = await this.kyc.save(userId, submitted, manager);"
         },
         {
           "t": "+",
@@ -903,11 +1049,19 @@
         },
         {
           "t": "+",
+          "text": "    return row;"
+        },
+        {
+          "t": "+",
           "text": "  });"
         },
         {
-          "t": " ",
-          "text": "  return this.get(userId);"
+          "t": "+",
+          "text": "  // The answer is the document already read and the row just saved: no need to read either again."
+        },
+        {
+          "t": "+",
+          "text": "  return view(userId, document, saved);"
         },
         {
           "t": " ",
@@ -919,16 +1073,16 @@
           "name": "updateKycBirthInfo",
           "role": "operation",
           "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
-          "line": 33,
+          "line": 37,
           "status": "modified",
-          "added": 11,
-          "removed": 2,
+          "added": 14,
+          "removed": 3,
           "diff": [
             {
               "t": " ",
               "text": "async updateKycBirthInfo(userId: string, dto: KycBirthInfoDto): Promise<BirthInfoView> {",
               "a": 26,
-              "b": 33
+              "b": 37
             },
             {
               "t": "-",
@@ -941,71 +1095,131 @@
               "a": 28
             },
             {
+              "t": "-",
+              "text": "  return this.get(userId);",
+              "a": 29
+            },
+            {
               "t": "+",
               "text": "  const submitted = { countryOfBirth: dto.countryOfBirth.trim().toUpperCase(), placeOfBirth: dto.placeOfBirth.trim() };",
-              "b": 34
-            },
-            {
-              "t": "+",
-              "text": "  const document = await this.documents.forUser(userId);",
-              "b": 35
-            },
-            {
-              "t": "+",
-              "text": "  const check = this.verifier.verify(submitted, document);",
-              "b": 36
-            },
-            {
-              "t": "+",
-              "text": "  if (!check.ok) {",
-              "b": 37
-            },
-            {
-              "t": "+",
-              "text": "    throw new UnprocessableEntityException({ message: 'Birth info does not match the identity document', mismatches: check.mismatches });",
               "b": 38
             },
             {
               "t": "+",
-              "text": "  }",
+              "text": "  const document = await this.documents.forUser(userId);",
               "b": 39
             },
             {
               "t": "+",
-              "text": "  // The new answer and its event go together: if either fails, neither happens.",
+              "text": "  const check = this.verifier.verify(submitted, document);",
               "b": 40
             },
             {
               "t": "+",
-              "text": "  await this.dataSource.transaction(async (manager) => {",
+              "text": "  if (!check.ok) {",
               "b": 41
             },
             {
               "t": "+",
-              "text": "    await this.kyc.save(userId, submitted, manager);",
+              "text": "    throw new UnprocessableEntityException({ message: 'Birth info does not match the identity document', mismatches: check.mismatches });",
               "b": 42
             },
             {
               "t": "+",
-              "text": "    this.events.emit('kyc.birth_info.updated', { userId });",
+              "text": "  }",
               "b": 43
             },
             {
               "t": "+",
-              "text": "  });",
+              "text": "  // The new answer and its event go together: if either fails, neither happens.",
               "b": 44
             },
             {
-              "t": " ",
-              "text": "  return this.get(userId);",
-              "a": 29,
+              "t": "+",
+              "text": "  const saved = await this.dataSource.transaction(async (manager) => {",
               "b": 45
+            },
+            {
+              "t": "+",
+              "text": "    const row = await this.kyc.save(userId, submitted, manager);",
+              "b": 46
+            },
+            {
+              "t": "+",
+              "text": "    this.events.emit('kyc.birth_info.updated', { userId });",
+              "b": 47
+            },
+            {
+              "t": "+",
+              "text": "    return row;",
+              "b": 48
+            },
+            {
+              "t": "+",
+              "text": "  });",
+              "b": 49
+            },
+            {
+              "t": "+",
+              "text": "  // The answer is the document already read and the row just saved: no need to read either again.",
+              "b": 50
+            },
+            {
+              "t": "+",
+              "text": "  return view(userId, document, saved);",
+              "b": 51
             },
             {
               "t": " ",
               "text": "}",
               "a": 30,
-              "b": 46
+              "b": 52
+            }
+          ]
+        },
+        {
+          "name": "view",
+          "role": "helper",
+          "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+          "line": 9,
+          "status": "added",
+          "added": 7,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "function view(userId: string, document: BirthPlace | null, kyc: KycBirthInfo | null): BirthInfoView {",
+              "b": 9
+            },
+            {
+              "t": "+",
+              "text": "  return {",
+              "b": 10
+            },
+            {
+              "t": "+",
+              "text": "    userId,",
+              "b": 11
+            },
+            {
+              "t": "+",
+              "text": "    document,",
+              "b": 12
+            },
+            {
+              "t": "+",
+              "text": "    kyc: kyc ? { countryOfBirth: kyc.countryOfBirth, placeOfBirth: kyc.placeOfBirth, updatedAt: kyc.updatedAt } : null,",
+              "b": 13
+            },
+            {
+              "t": "+",
+              "text": "  };",
+              "b": 14
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 15
             }
           ]
         }
@@ -1013,12 +1227,21 @@
       "delta": {
         "risk": "medium",
         "effectsAdded": [],
-        "effectsRemoved": [],
+        "effectsRemoved": [
+          {
+            "kind": "db.read",
+            "target": "kyc_birth_info",
+            "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
+            "line": 28
+          }
+        ],
         "callsAdded": [
           "DocumentBirthInfoService.forUser",
           "BirthInfoVerifier.verify"
         ],
-        "callsRemoved": [],
+        "callsRemoved": [
+          "BirthInfoService.get"
+        ],
         "implementationOnly": false
       },
       "examples": [
@@ -1039,7 +1262,7 @@
             "kyc": {
               "countryOfBirth": "PRT",
               "placeOfBirth": "Porto",
-              "updatedAt": "2026-11-05T12:34:25.610Z"
+              "updatedAt": "2026-11-05T12:47:57.851Z"
             }
           },
           "cases": [
@@ -1076,7 +1299,7 @@
             "kyc": {
               "countryOfBirth": "IND",
               "placeOfBirth": "Mumbai",
-              "updatedAt": "2026-11-05T12:34:25.611Z"
+              "updatedAt": "2026-11-05T12:47:57.851Z"
             }
           },
           "cases": [
@@ -1111,7 +1334,7 @@
             "kyc": {
               "countryOfBirth": "DEU",
               "placeOfBirth": "Berlin",
-              "updatedAt": "2026-11-05T12:34:25.611Z"
+              "updatedAt": "2026-11-05T12:47:57.851Z"
             }
           },
           "cases": [
@@ -1134,7 +1357,7 @@
             "kyc": {
               "countryOfBirth": "NGA",
               "placeOfBirth": "lagos",
-              "updatedAt": "2026-11-05T12:34:25.611Z"
+              "updatedAt": "2026-11-05T12:47:57.851Z"
             }
           },
           "cases": [
@@ -1225,7 +1448,6 @@
           "cases": [
             "c1",
             "c2",
-            "c9",
             "c16"
           ]
         },
@@ -1267,10 +1489,9 @@
             "userId": "u-2",
             "countryOfBirth": "IND",
             "placeOfBirth": "Mumbai",
-            "updatedAt": "2026-11-05T12:34:25.611Z"
+            "updatedAt": "2026-11-05T12:47:57.851Z"
           },
           "cases": [
-            "c11",
             "c17"
           ]
         },
@@ -1282,10 +1503,9 @@
             "userId": "u-3",
             "countryOfBirth": "DEU",
             "placeOfBirth": "Berlin",
-            "updatedAt": "2026-11-05T12:34:25.611Z"
+            "updatedAt": "2026-11-05T12:47:57.851Z"
           },
           "cases": [
-            "c13",
             "c18"
           ]
         },
@@ -1297,10 +1517,9 @@
             "userId": "u-4",
             "countryOfBirth": "NGA",
             "placeOfBirth": "lagos",
-            "updatedAt": "2026-11-05T12:34:25.611Z"
+            "updatedAt": "2026-11-05T12:47:57.851Z"
           },
           "cases": [
-            "c14",
             "c19"
           ]
         }
@@ -1488,7 +1707,7 @@
             "userId": "u-1",
             "countryOfBirth": "PRT",
             "placeOfBirth": "Porto",
-            "updatedAt": "2026-11-05T12:34:25.610Z"
+            "updatedAt": "2026-11-05T12:47:57.851Z"
           },
           "cases": [
             "c9"
@@ -1507,7 +1726,7 @@
             "userId": "u-2",
             "countryOfBirth": "IND",
             "placeOfBirth": "Mumbai",
-            "updatedAt": "2026-11-05T12:34:25.611Z"
+            "updatedAt": "2026-11-05T12:47:57.851Z"
           },
           "cases": [
             "c11"
@@ -1526,7 +1745,7 @@
             "userId": "u-3",
             "countryOfBirth": "DEU",
             "placeOfBirth": "Berlin",
-            "updatedAt": "2026-11-05T12:34:25.611Z"
+            "updatedAt": "2026-11-05T12:47:57.851Z"
           },
           "cases": [
             "c13"
@@ -1545,7 +1764,7 @@
             "userId": "u-4",
             "countryOfBirth": "NGA",
             "placeOfBirth": "lagos",
-            "updatedAt": "2026-11-05T12:34:25.611Z"
+            "updatedAt": "2026-11-05T12:47:57.851Z"
           },
           "cases": [
             "c14"
@@ -1779,7 +1998,7 @@
         "CountryPolicy.isRestricted"
       ],
       "change": "unchanged",
-      "containsChanges": false,
+      "containsChanges": true,
       "source": "async check(userId: string): Promise<Eligibility> {\n  const info = await this.birthInfo.get(userId);\n  // The user's own (KYC) answer is the one we hold them to; the document is the fallback.\n  const basedOn = info.kyc\n    ? { source: 'kyc' as const, countryOfBirth: info.kyc.countryOfBirth, placeOfBirth: info.kyc.placeOfBirth }\n    : info.document\n      ? { source: 'document' as const, ...info.document }\n      : { source: 'none' as const };\n  const reasons: string[] = [];\n  if (!basedOn.countryOfBirth) reasons.push('country of birth unknown');\n  else if (this.policy.isRestricted(basedOn.countryOfBirth)) reasons.push(`country of birth ${basedOn.countryOfBirth} is restricted`);\n  if (!basedOn.placeOfBirth) reasons.push('place of birth unknown');\n  return { userId, eligible: reasons.length === 0, reasons, basedOn };\n}",
       "examples": [
         {
@@ -1938,7 +2157,7 @@
         }
       ],
       "change": "unchanged",
-      "containsChanges": false,
+      "containsChanges": true,
       "effectsAdded": [],
       "effectsRemoved": []
     },
@@ -1954,7 +2173,7 @@
           "kind": "event",
           "target": "kyc.birth_info.updated",
           "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
-          "line": 43
+          "line": 47
         },
         {
           "kind": "db.read",
@@ -1967,18 +2186,19 @@
           "target": "kyc_birth_info",
           "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
           "line": 34
-        },
+        }
+      ],
+      "change": "unchanged",
+      "containsChanges": true,
+      "effectsAdded": [],
+      "effectsRemoved": [
         {
           "kind": "db.read",
           "target": "kyc_birth_info",
           "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
           "line": 28
         }
-      ],
-      "change": "unchanged",
-      "containsChanges": true,
-      "effectsAdded": [],
-      "effectsRemoved": []
+      ]
     },
     "api:GET /api/users/:userId/eligibility": {
       "id": "api:GET /api/users/:userId/eligibility",
@@ -2002,7 +2222,7 @@
         }
       ],
       "change": "unchanged",
-      "containsChanges": false,
+      "containsChanges": true,
       "effectsAdded": [],
       "effectsRemoved": []
     }
@@ -2070,14 +2290,14 @@
           "id": "s1",
           "kind": "call",
           "target": "DocumentBirthInfoService.forUser",
-          "line": 21,
+          "line": 29,
           "file": "sample-birth-service/src/birth-info/birth-info.service.ts"
         },
         {
           "id": "s2",
           "kind": "call",
           "target": "KycBirthInfoStore.find",
-          "line": 21,
+          "line": 29,
           "file": "sample-birth-service/src/birth-info/birth-info.service.ts"
         }
       ],
@@ -2142,7 +2362,7 @@
           "id": "s1",
           "kind": "call",
           "target": "DocumentBirthInfoService.forUser",
-          "line": 35,
+          "line": 39,
           "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
           "delta": "added"
         },
@@ -2150,7 +2370,7 @@
           "id": "s2",
           "kind": "call",
           "target": "BirthInfoVerifier.verify",
-          "line": 36,
+          "line": 40,
           "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
           "delta": "added"
         },
@@ -2158,7 +2378,7 @@
           "id": "s3",
           "kind": "call",
           "target": "KycBirthInfoStore.save",
-          "line": 42,
+          "line": 46,
           "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
           "condition": "if (check.ok)",
           "transaction": "dataSource.transaction",
@@ -2171,21 +2391,12 @@
             "kind": "event",
             "target": "kyc.birth_info.updated",
             "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
-            "line": 43
+            "line": 47
           },
-          "line": 43,
+          "line": 47,
           "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
           "condition": "if (check.ok)",
           "transaction": "dataSource.transaction",
-          "conditionBefore": ""
-        },
-        {
-          "id": "s5",
-          "kind": "call",
-          "target": "BirthInfoService.get",
-          "line": 45,
-          "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
-          "condition": "if (check.ok)",
           "conditionBefore": ""
         }
       ],
@@ -2233,38 +2444,29 @@
           "label": "guards"
         },
         {
-          "from": "entry",
-          "to": "s5",
-          "kind": "data",
-          "label": "userId"
-        },
-        {
-          "from": "s2",
-          "to": "s5",
-          "kind": "control",
-          "label": "guards"
-        },
-        {
-          "from": "s5",
+          "from": "s1",
           "to": "exit",
-          "kind": "data"
+          "kind": "data",
+          "label": "document"
         },
         {
           "from": "s3",
           "to": "exit",
-          "kind": "control"
+          "kind": "data",
+          "label": "saved"
         },
         {
           "from": "s4",
           "to": "exit",
-          "kind": "control"
+          "kind": "data",
+          "label": "saved"
         }
       ],
       "exits": [
         {
           "guard": "if (check.ok)",
           "kind": "throw",
-          "line": 38,
+          "line": 42,
           "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
           "what": "UnprocessableEntityException",
           "message": "Birth info does not match the identity document",
@@ -2293,11 +2495,12 @@
             "file": "sample-birth-service/src/birth-info/birth-info.service.ts"
           },
           {
-            "id": "s5",
+            "id": "rm:s3",
             "kind": "call",
             "target": "BirthInfoService.get",
             "line": 29,
-            "file": "sample-birth-service/src/birth-info/birth-info.service.ts"
+            "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+            "delta": "removed"
           }
         ],
         "edges": [
@@ -2315,12 +2518,12 @@
           },
           {
             "from": "entry",
-            "to": "s5",
+            "to": "rm:s3",
             "kind": "data",
             "label": "userId"
           },
           {
-            "from": "s5",
+            "from": "rm:s3",
             "to": "exit",
             "kind": "data"
           },
@@ -2352,7 +2555,30 @@
             }
           ]
         }
-      }
+      },
+      "removedSteps": [
+        {
+          "id": "rm:s3",
+          "kind": "call",
+          "target": "BirthInfoService.get",
+          "line": 29,
+          "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+          "delta": "removed"
+        }
+      ],
+      "removedEdges": [
+        {
+          "from": "entry",
+          "to": "rm:s3",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "rm:s3",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
     },
     "KycBirthInfoStore.find": {
       "id": "KycBirthInfoStore.find",
@@ -2767,17 +2993,6 @@
   },
   "findings": [
     {
-      "rule": "repeat-read",
-      "severity": "warning",
-      "message": "BirthInfo.updateKycBirthInfo reads document_birth_info 2× in one call: DocumentBirthInfo.forUser, then BirthInfo.get",
-      "subject": {
-        "type": "operation",
-        "id": "BirthInfoService.updateKycBirthInfo"
-      },
-      "isNew": true,
-      "hint": "Pass down the value already read, or say why it must be read again."
-    },
-    {
       "rule": "unattributed-change",
       "severity": "info",
       "message": "1 changed file outside any module: src/app.module.ts",
@@ -2799,6 +3014,7 @@
     ],
     "changedOperations": [
       "BirthInfoVerifier.verify",
+      "BirthInfoService.get",
       "BirthInfoService.updateKycBirthInfo",
       "KycBirthInfoStore.save"
     ],
@@ -2818,8 +3034,14 @@
       {
         "operation": "BirthInfoService.updateKycBirthInfo",
         "risk": "medium",
-        "reason": "now calls DocumentBirthInfo.forUser, BirthInfoVerifier.verify; 3 guards changed inside",
+        "reason": "−db.read kyc_birth_info; now calls DocumentBirthInfo.forUser, BirthInfoVerifier.verify; 2 guards changed inside",
         "reach": 1
+      },
+      {
+        "operation": "BirthInfoService.get",
+        "risk": "low",
+        "reason": "implementation only",
+        "reach": 2
       }
     ],
     "reviewers": [
@@ -2827,10 +3049,10 @@
     ],
     "stats": {
       "files": 5,
-      "linesAdded": 68,
-      "linesRemoved": 10,
+      "linesAdded": 82,
+      "linesRemoved": 18,
       "contractChanges": 3,
-      "entryPointsAffected": 1
+      "entryPointsAffected": 3
     }
   }
 }

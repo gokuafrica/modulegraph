@@ -4,13 +4,13 @@
     "title": "Live (lazy, NestJS): KYC birth info must match the identity document",
     "mode": "branch",
     "lazy": true,
-    "generatedAt": "2026-11-05T12:34:35.828Z",
+    "generatedAt": "2026-11-05T12:48:07.989Z",
     "stats": {
       "files": 5,
-      "linesAdded": 68,
-      "linesRemoved": 10,
+      "linesAdded": 82,
+      "linesRemoved": 18,
       "contractChanges": 3,
-      "entryPointsAffected": 1
+      "entryPointsAffected": 2
     }
   },
   {
@@ -18,13 +18,13 @@
     "title": "BirthInfo (NestJS): KYC birth info must match the identity document",
     "mode": "branch",
     "lazy": false,
-    "generatedAt": "2026-11-05T12:34:25.759Z",
+    "generatedAt": "2026-11-05T12:47:57.998Z",
     "stats": {
       "files": 5,
-      "linesAdded": 68,
-      "linesRemoved": 10,
+      "linesAdded": 82,
+      "linesRemoved": 18,
       "contractChanges": 3,
-      "entryPointsAffected": 1
+      "entryPointsAffected": 3
     }
   },
   {
@@ -32,7 +32,7 @@
     "title": "Live (lazy, NestJS): hold high-risk orders for fraud review",
     "mode": "branch",
     "lazy": true,
-    "generatedAt": "2026-11-05T12:34:16.568Z",
+    "generatedAt": "2026-11-05T12:47:48.850Z",
     "stats": {
       "files": 9,
       "linesAdded": 178,
@@ -46,7 +46,7 @@
     "title": "Orders (NestJS): hold high-risk orders for fraud review",
     "mode": "branch",
     "lazy": false,
-    "generatedAt": "2026-11-05T12:34:08.849Z",
+    "generatedAt": "2026-11-05T12:47:40.877Z",
     "stats": {
       "files": 9,
       "linesAdded": 178,
@@ -60,7 +60,7 @@
     "title": "Live (lazy): KYC risk tiers, manual review, async rescreen",
     "mode": "branch",
     "lazy": true,
-    "generatedAt": "2026-11-05T12:34:01.960Z",
+    "generatedAt": "2026-11-05T12:47:34.006Z",
     "stats": {
       "files": 5,
       "linesAdded": 74,
@@ -74,7 +74,7 @@
     "title": "Live (lazy): BirthInfo consented data wins over documents",
     "mode": "branch",
     "lazy": true,
-    "generatedAt": "2026-11-05T12:33:55.443Z",
+    "generatedAt": "2026-11-05T12:47:27.572Z",
     "stats": {
       "files": 7,
       "linesAdded": 57,
@@ -88,7 +88,7 @@
     "title": "KYC: risk tiers, manual review, async rescreen (multi-file)",
     "mode": "branch",
     "lazy": false,
-    "generatedAt": "2026-11-05T12:33:48.671Z",
+    "generatedAt": "2026-11-05T12:47:21.018Z",
     "stats": {
       "files": 5,
       "linesAdded": 74,
@@ -102,7 +102,7 @@
     "title": "BirthInfo: consented data wins over documents",
     "mode": "branch",
     "lazy": false,
-    "generatedAt": "2026-11-05T12:33:42.405Z",
+    "generatedAt": "2026-11-05T12:47:14.668Z",
     "stats": {
       "files": 7,
       "linesAdded": 57,
@@ -116,7 +116,7 @@
     "title": "Snapshot: identity-profile-service (main)",
     "mode": "snapshot",
     "lazy": false,
-    "generatedAt": "2026-11-05T12:33:36.374Z",
+    "generatedAt": "2026-11-05T12:47:08.101Z",
     "stats": {
       "files": 0,
       "linesAdded": 0,
