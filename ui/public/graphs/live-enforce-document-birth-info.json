@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "birth-info-service",
-  "generatedAt": "2026-11-05T13:27:51.676Z",
+  "generatedAt": "2026-11-05T14:06:36.314Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -162,6 +162,7 @@
       "file": "sample-birth-service/src/birth-info/birth-info-verifier.ts",
       "line": 30,
       "summary": "Holds what a user submits in KYC to their identity document: every part the document has must match. A part the document is missing (extraction couldn't read it) is not enforced, and with no document data at all the user's answer stands, as it always did.",
+      "summarySource": "code",
       "owner": "team-kyc",
       "declaredEffects": [],
       "operations": [
@@ -176,6 +177,7 @@
       "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
       "line": 10,
       "summary": "A user's birth info: what their identity document says and what they told us in KYC.",
+      "summarySource": "profile",
       "owner": "team-kyc",
       "declaredEffects": [],
       "operations": [
@@ -191,6 +193,7 @@
       "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
       "line": 23,
       "summary": "The user-provided (KYC) birth info. A submission overwrites the previous one.",
+      "summarySource": "profile",
       "owner": "team-kyc",
       "declaredEffects": [],
       "operations": [
@@ -206,6 +209,7 @@
       "file": "sample-birth-service/src/documents/document-birth-info.service.ts",
       "line": 26,
       "summary": "Birth data the document pipeline extracted from the identity document. Parts may be missing.",
+      "summarySource": "profile",
       "owner": "team-documents",
       "declaredEffects": [],
       "operations": [
@@ -220,6 +224,7 @@
       "file": "sample-birth-service/src/eligibility/country-policy.service.ts",
       "line": 7,
       "summary": "Which countries of birth the product is available for.",
+      "summarySource": "code",
       "owner": "team-onboarding",
       "declaredEffects": [],
       "operations": [],
@@ -232,6 +237,7 @@
       "file": "sample-birth-service/src/eligibility/eligibility.service.ts",
       "line": 16,
       "summary": "Decides whether a user is eligible, given what we know about their birth.",
+      "summarySource": "code",
       "owner": "team-onboarding",
       "declaredEffects": [],
       "operations": [],
@@ -400,6 +406,8 @@
         "callsRemoved": [],
         "implementationOnly": false
       },
+      "summary": "Checks a KYC submission against the identity document: ok only if every part the document has (country, place) matches, ignoring case and surrounding spaces. A part the document lacks isn't checked; with no document at all, anything passes. Returns the mismatches for the error message.",
+      "summarySource": "profile",
       "examples": [
         {
           "input": {
@@ -584,6 +592,8 @@
       "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
       "line": 33,
       "endLine": 46,
+      "summary": "Saves what the user submitted as their KYC birth info, replacing what they submitted before. It must agree with their identity document: each part the document has is enforced, a missing part isn't.",
+      "summarySource": "code",
       "params": [
         {
           "name": "userId",
@@ -845,7 +855,7 @@
             "kyc": {
               "countryOfBirth": "PRT",
               "placeOfBirth": "Porto",
-              "updatedAt": "2026-11-05T13:27:51.528Z"
+              "updatedAt": "2026-11-05T14:06:36.155Z"
             }
           },
           "cases": [
@@ -882,7 +892,7 @@
             "kyc": {
               "countryOfBirth": "IND",
               "placeOfBirth": "Mumbai",
-              "updatedAt": "2026-11-05T13:27:51.528Z"
+              "updatedAt": "2026-11-05T14:06:36.155Z"
             }
           },
           "cases": [
@@ -917,7 +927,7 @@
             "kyc": {
               "countryOfBirth": "DEU",
               "placeOfBirth": "Berlin",
-              "updatedAt": "2026-11-05T13:27:51.528Z"
+              "updatedAt": "2026-11-05T14:06:36.156Z"
             }
           },
           "cases": [
@@ -940,7 +950,7 @@
             "kyc": {
               "countryOfBirth": "NGA",
               "placeOfBirth": "lagos",
-              "updatedAt": "2026-11-05T13:27:51.528Z"
+              "updatedAt": "2026-11-05T14:06:36.156Z"
             }
           },
           "cases": [
@@ -974,6 +984,8 @@
       "file": "sample-birth-service/src/documents/document-birth-info.service.ts",
       "line": 31,
       "endLine": 38,
+      "summary": "The document's birth place, with only the parts extraction could read. Null when it read nothing.",
+      "summarySource": "code",
       "params": [
         {
           "name": "userId",
@@ -1085,6 +1097,8 @@
       "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
       "line": 32,
       "endLine": 35,
+      "summary": "Overwrites whatever the user submitted before. Pass the transaction's manager to write inside it.",
+      "summarySource": "code",
       "params": [
         {
           "name": "userId",
@@ -1258,7 +1272,7 @@
             "userId": "u-1",
             "countryOfBirth": "PRT",
             "placeOfBirth": "Porto",
-            "updatedAt": "2026-11-05T13:27:51.528Z"
+            "updatedAt": "2026-11-05T14:06:36.155Z"
           },
           "cases": [
             "c9"
@@ -1277,7 +1291,7 @@
             "userId": "u-2",
             "countryOfBirth": "IND",
             "placeOfBirth": "Mumbai",
-            "updatedAt": "2026-11-05T13:27:51.528Z"
+            "updatedAt": "2026-11-05T14:06:36.155Z"
           },
           "cases": [
             "c11"
@@ -1296,7 +1310,7 @@
             "userId": "u-3",
             "countryOfBirth": "DEU",
             "placeOfBirth": "Berlin",
-            "updatedAt": "2026-11-05T13:27:51.528Z"
+            "updatedAt": "2026-11-05T14:06:36.156Z"
           },
           "cases": [
             "c13"
@@ -1315,7 +1329,7 @@
             "userId": "u-4",
             "countryOfBirth": "NGA",
             "placeOfBirth": "lagos",
-            "updatedAt": "2026-11-05T13:27:51.528Z"
+            "updatedAt": "2026-11-05T14:06:36.156Z"
           },
           "cases": [
             "c14"
@@ -1379,6 +1393,8 @@
       "change": "unchanged",
       "containsChanges": false,
       "source": "async get(userId: string): Promise<BirthInfoView> {\n  const [document, kyc] = await Promise.all([this.documents.forUser(userId), this.kyc.find(userId)]);\n  return {\n    userId,\n    document,\n    kyc: kyc ? { countryOfBirth: kyc.countryOfBirth, placeOfBirth: kyc.placeOfBirth, updatedAt: kyc.updatedAt } : null,\n  };\n}",
+      "summary": "The user's birth info as one answer: what the identity document says and what they last submitted in KYC (with when), either of which may be missing. Reads both tables.",
+      "summarySource": "profile",
       "examples": [
         {
           "input": {
@@ -1461,7 +1477,7 @@
             "kyc": {
               "countryOfBirth": "IND",
               "placeOfBirth": "Mumbai",
-              "updatedAt": "2026-11-05T13:27:51.528Z"
+              "updatedAt": "2026-11-05T14:06:36.155Z"
             }
           },
           "cases": [
@@ -1479,7 +1495,7 @@
             "kyc": {
               "countryOfBirth": "DEU",
               "placeOfBirth": "Berlin",
-              "updatedAt": "2026-11-05T13:27:51.528Z"
+              "updatedAt": "2026-11-05T14:06:36.156Z"
             }
           },
           "cases": [
@@ -1499,7 +1515,7 @@
             "kyc": {
               "countryOfBirth": "NGA",
               "placeOfBirth": "lagos",
-              "updatedAt": "2026-11-05T13:27:51.528Z"
+              "updatedAt": "2026-11-05T14:06:36.156Z"
             }
           },
           "cases": [
@@ -1623,7 +1639,7 @@
             "userId": "u-2",
             "countryOfBirth": "IND",
             "placeOfBirth": "Mumbai",
-            "updatedAt": "2026-11-05T13:27:51.528Z"
+            "updatedAt": "2026-11-05T14:06:36.155Z"
           },
           "cases": [
             "c11",
@@ -1638,7 +1654,7 @@
             "userId": "u-3",
             "countryOfBirth": "DEU",
             "placeOfBirth": "Berlin",
-            "updatedAt": "2026-11-05T13:27:51.528Z"
+            "updatedAt": "2026-11-05T14:06:36.156Z"
           },
           "cases": [
             "c13",
@@ -1653,7 +1669,7 @@
             "userId": "u-4",
             "countryOfBirth": "NGA",
             "placeOfBirth": "lagos",
-            "updatedAt": "2026-11-05T13:27:51.528Z"
+            "updatedAt": "2026-11-05T14:06:36.156Z"
           },
           "cases": [
             "c14",
@@ -2378,8 +2394,7 @@
       "entryPointsReached": 0,
       "operationsKnown": 8,
       "operationsAnalyzed": 6,
-      "ms": 4789
-    },
-    "api": "/api"
+      "ms": 4708
+    }
   }
 }

@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-05T11:59:32.239Z",
+  "generatedAt": "2026-11-05T14:05:48.798Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
@@ -207,6 +207,7 @@
       "file": "sample-service/src/modules/admin/IdentityReviewModule.ts",
       "line": 8,
       "summary": "Back-office view of a user's identity evidence for manual review.",
+      "summarySource": "code",
       "owner": "team-backoffice",
       "declaredEffects": [],
       "operations": [
@@ -221,6 +222,7 @@
       "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
       "line": 8,
       "summary": "The user's country and city of birth.",
+      "summarySource": "code",
       "owner": "team-identity",
       "declaredEffects": [],
       "operations": [
@@ -235,6 +237,7 @@
       "file": "sample-service/src/modules/birth-info/DocumentBirthExtractor.ts",
       "line": 7,
       "summary": "Reads country and city of birth out of already-fetched identity data. Pure: no I/O.",
+      "summarySource": "code",
       "owner": "team-identity",
       "declaredEffects": [],
       "operations": [
@@ -249,6 +252,7 @@
       "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
       "line": 8,
       "summary": "Monthly regulator report of KYC outcomes and tax residencies.",
+      "summarySource": "code",
       "owner": "team-compliance",
       "declaredEffects": [],
       "operations": [
@@ -263,6 +267,7 @@
       "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
       "line": 7,
       "summary": "Extracts structured fields from document scans via the document-AI service.",
+      "summarySource": "code",
       "owner": "team-identity",
       "declaredEffects": [],
       "operations": [
@@ -277,6 +282,7 @@
       "file": "sample-service/src/modules/identity/DocumentStore.ts",
       "line": 7,
       "summary": "Reads the user's uploaded identity documents.",
+      "summarySource": "code",
       "owner": "team-identity",
       "declaredEffects": [],
       "operations": [
@@ -291,6 +297,7 @@
       "file": "sample-service/src/modules/identity/IdentityModule.ts",
       "line": 9,
       "summary": "What the user's documents say about them (nationality, country and city of birth, ...). Expensive (DB + document-AI call), so orchestrators fetch it once and pass it down.",
+      "summarySource": "code",
       "owner": "team-identity",
       "declaredEffects": [],
       "operations": [
@@ -305,6 +312,7 @@
       "file": "sample-service/src/modules/kyc/KycModule.ts",
       "line": 21,
       "summary": "Know-your-customer verification. Identity, birth info and nationality feed sanctions screening and a risk tier.",
+      "summarySource": "code",
       "owner": "team-compliance",
       "declaredEffects": [],
       "operations": [
@@ -322,6 +330,7 @@
       "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
       "line": 13,
       "summary": "Screens a person against sanctions and PEP lists.",
+      "summarySource": "code",
       "owner": "team-compliance",
       "declaredEffects": [],
       "operations": [
@@ -336,6 +345,7 @@
       "file": "sample-service/src/modules/nationality/NationalityModule.ts",
       "line": 13,
       "summary": "Normalises the document nationality to an ISO country record.",
+      "summarySource": "code",
       "owner": "team-identity",
       "declaredEffects": [],
       "operations": [
@@ -350,6 +360,7 @@
       "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
       "line": 8,
       "summary": "Completes sign-up once KYC passes.",
+      "summarySource": "code",
       "owner": "team-onboarding",
       "declaredEffects": [],
       "operations": [
@@ -364,6 +375,7 @@
       "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
       "line": 13,
       "summary": "Legal name and date of birth from documents, preferred name from the user's profile.",
+      "summarySource": "code",
       "owner": "team-profile",
       "declaredEffects": [],
       "operations": [
@@ -378,6 +390,7 @@
       "file": "sample-service/src/modules/profile/ProfileService.ts",
       "line": 11,
       "summary": "Builds the user profile. Fetches Identity once and shares it with every sub-module.",
+      "summarySource": "profile",
       "owner": "team-profile",
       "declaredEffects": [],
       "operations": [
@@ -397,6 +410,7 @@
       "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
       "line": 15,
       "summary": "Works out tax residencies (incl. US-person status from place of birth).",
+      "summarySource": "code",
       "owner": "team-compliance",
       "declaredEffects": [],
       "operations": [
@@ -413,6 +427,7 @@
       "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
       "line": 11,
       "summary": "Visa eligibility checks and passport application prefill.",
+      "summarySource": "code",
       "owner": "team-travel",
       "declaredEffects": [],
       "operations": [
@@ -504,7 +519,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T11:59:32.108Z"
+              "extractedAt": "2026-11-05T14:05:48.670Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -531,7 +546,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T11:59:32.109Z"
+              "extractedAt": "2026-11-05T14:05:48.671Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -592,7 +607,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T11:59:32.106Z"
+              "extractedAt": "2026-11-05T14:05:48.667Z"
             }
           },
           "output": {
@@ -629,7 +644,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T11:59:32.109Z"
+              "extractedAt": "2026-11-05T14:05:48.670Z"
             }
           },
           "output": {
@@ -696,7 +711,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T11:59:32.106Z"
+              "extractedAt": "2026-11-05T14:05:48.667Z"
             }
           },
           "output": {
@@ -733,7 +748,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T11:59:32.109Z"
+              "extractedAt": "2026-11-05T14:05:48.670Z"
             }
           },
           "output": {
@@ -1160,7 +1175,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-05T11:59:32.106Z"
+            "extractedAt": "2026-11-05T14:05:48.667Z"
           },
           "cases": [
             "c1",
@@ -1196,7 +1211,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-05T11:59:32.109Z"
+            "extractedAt": "2026-11-05T14:05:48.670Z"
           },
           "cases": [
             "c11",
@@ -1755,7 +1770,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-05T11:59:32.108Z"
+            "checkedAt": "2026-11-05T14:05:48.669Z"
           },
           "cases": [
             "c5",
@@ -1771,7 +1786,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-05T11:59:32.109Z"
+            "checkedAt": "2026-11-05T14:05:48.670Z"
           },
           "cases": [
             "c15"
@@ -1898,7 +1913,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-05T11:59:32.108Z"
+            "checkedAt": "2026-11-05T14:05:48.669Z"
           },
           "cases": [
             "c6",
@@ -1922,7 +1937,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-05T11:59:32.109Z"
+            "checkedAt": "2026-11-05T14:05:48.670Z"
           },
           "cases": [
             "c16"
@@ -2086,6 +2101,8 @@
       "file": "sample-service/src/modules/kyc/KycModule.ts",
       "line": 65,
       "endLine": 69,
+      "summary": "Nightly: re-screen expired results asynchronously instead of inside the cron job.",
+      "summarySource": "code",
       "params": [],
       "returns": {
         "type": "number"
@@ -2602,7 +2619,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T11:59:32.106Z"
+              "extractedAt": "2026-11-05T14:05:48.667Z"
             }
           },
           "output": {
@@ -2638,7 +2655,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T11:59:32.109Z"
+              "extractedAt": "2026-11-05T14:05:48.670Z"
             }
           },
           "output": {
@@ -2872,7 +2889,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T11:59:32.106Z"
+              "extractedAt": "2026-11-05T14:05:48.667Z"
             }
           },
           "output": {
@@ -2901,7 +2918,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T11:59:32.109Z"
+              "extractedAt": "2026-11-05T14:05:48.670Z"
             }
           },
           "output": {

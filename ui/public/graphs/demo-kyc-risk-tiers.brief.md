@@ -70,6 +70,17 @@ Stated intent (flag): “KYC: add risk tiers from sanctions score, birth country
 
 3 pre-existing findings not caused by this change (not listed).
 
+## Needs a description
+
+No doc comment: read each and write one or two sentences (what it does, not how) into the profile, `configs/identity-profile-service/modulegraph.config.json` → `modules.overrides.<Class>.operations.<method>`. Then refresh.
+
+- `KycModule.runCheck` (sample-service/src/modules/kyc/KycModule.ts:31), modified
+- `IdentityModule.fetchIdentity` (sample-service/src/modules/identity/IdentityModule.ts:15)
+- `BirthInfoModule.resolve` (sample-service/src/modules/birth-info/BirthInfoModule.ts:11)
+- `NationalityModule.resolve` (sample-service/src/modules/nationality/NationalityModule.ts:16)
+- `SanctionsScreening.screen` (sample-service/src/modules/kyc/SanctionsScreening.ts:16), modified
+- `KycModule.getStatus` (sample-service/src/modules/kyc/KycModule.ts:53)
+
 ## Request review from
 
 team-compliance

@@ -381,6 +381,7 @@ export class Extractor implements RevisionAnalysis {
       file,
       line: cls.getStartLineNumber(),
       summary: (override.summary ?? (named ? named[2] : description)).replace(/\s+/g, ' '),
+      ...(override.summary ? { summarySource: 'profile' as const } : description ? { summarySource: 'code' as const } : {}),
       owner: override.owner ?? this.ownerOf(file) ?? tags.find((t) => t.getTagName() === 'owner')?.getCommentText()?.trim(),
       declaredEffects,
       ...(override.effects ? { contractSource: 'config' as const } : tagEffects.length ? { contractSource: 'tags' as const } : {}),
@@ -399,6 +400,7 @@ export class Extractor implements RevisionAnalysis {
     this.currentClass = undefined;
     const steps = scope.result.steps;
     if (!this.snapshot.modules[moduleId].operations.includes(id)) this.snapshot.modules[moduleId].operations.push(id);
+    const doc = method.getJsDocs().map((d) => d.getDescription().trim()).join(' ').replace(/\s+/g, ' ').trim();
     this.snapshot.operations[id] = {
       id,
       moduleId,
@@ -406,6 +408,7 @@ export class Extractor implements RevisionAnalysis {
       file: this.rel(method.getSourceFile().getFilePath()),
       line: method.getStartLineNumber(),
       endLine: method.getEndLineNumber(),
+      ...(doc ? { summary: doc, summarySource: 'code' as const } : {}),
       params: this.params(method),
       returns: this.shape(unwrapPromise(method.getReturnType()), method),
       directEffects: dedupeEffects(steps.filter((s) => s.effect).map((s) => s.effect!)),

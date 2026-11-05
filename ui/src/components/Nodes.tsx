@@ -149,24 +149,13 @@ export function EffectChip({ chip }: { chip: Chip }) {
 }
 
 /**
- * What the change did to this step of the flow: new call, removed call (ghost), or a changed guard. In the
- * "before" view the same marks read the other way: this step goes away, or its guard becomes something else.
+ * What the change did to this step of the flow: a new call, or a removed one (a ghost now; "removes it" in the
+ * before view). A changed condition isn't repeated here: the check node and its yes/no branches already show it.
  */
 function StepDelta({ delta, conditionBefore, ghost, beforeMark, conditionNow }: { delta?: string; conditionBefore?: string; ghost?: boolean; beforeMark?: string; conditionNow?: string }) {
   if (beforeMark === 'removed') return <div className="step-delta del">− this change removes it</div>;
-  if (beforeMark === 'guard') {
-    const now = conditionNow ? `only ${conditionNow.replace(/^if /, 'if ')}` : 'every time';
-    return <div className="step-delta cond" title={`Here it runs every time it is reached. After this change it runs ${now}.`}>this change: runs {now}</div>;
-  }
   if (ghost) return <div className="step-delta del">− removed by this change</div>;
   if (delta === 'added') return <div className="step-delta add">+ new call in this change</div>;
-  if (conditionBefore !== undefined) {
-    return (
-      <div className="step-delta cond" title={conditionBefore ? `Before this change it ran only ${conditionBefore}` : 'Before this change it ran every time; now only on this branch'}>
-        {conditionBefore ? `condition changed · before: only ${conditionBefore}` : 'now conditional · before: always ran'}
-      </div>
-    );
-  }
   return null;
 }
 
