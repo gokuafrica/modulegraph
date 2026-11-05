@@ -336,8 +336,22 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
   for (const id of decisions.values()) {
     if (!edges.some((e) => e.target === id)) edges.push({ id: `e:entry-${id}`, source: '__entry', target: id, kind: 'control' });
   }
-  for (const [stepId, { dec, branch }] of branchOf) {
-    edges.push({ id: `e:${dec}-${stepId}`, source: dec, target: stepId, kind: 'branch', label: branch });
+  // A branch's steps run one after another: one yes/no arrow into the first, then each step into the next, in code
+  // order, all in the branch's colour. One arrow per step read as alternatives, and hid which one runs first.
+  const branchSteps = new Map<string, { dec: string; branch: 'yes' | 'no'; ids: string[] }>();
+  for (const step of scope.steps) {
+    const b = branchOf.get(step.id);
+    if (!b) continue;
+    const key = `${b.dec}|${b.branch}`;
+    if (!branchSteps.has(key)) branchSteps.set(key, { ...b, ids: [] });
+    branchSteps.get(key)!.ids.push(step.id);
+  }
+  for (const { dec, branch, ids } of branchSteps.values()) {
+    edges.push({ id: `e:${dec}-${ids[0]}`, source: dec, target: ids[0], kind: 'branch', label: branch });
+    // Where a data arrow already joins two steps (the second uses the first's result), it shows the order itself.
+    ids.slice(1).forEach((id, i) => {
+      if (!edges.some((e) => e.source === ids[i] && e.target === id)) edges.push({ id: `e:then:${ids[i]}-${id}`, source: ids[i], target: id, kind: 'branch' });
+    });
   }
   for (const { id, dec, branch } of stops) edges.push({ id: `e:${dec}-${id}`, source: dec, target: id, kind: 'branch', label: branch });
 
