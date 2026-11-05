@@ -9,8 +9,12 @@ import { DocumentBirthInfo, DocumentBirthInfoService } from './documents/documen
 import { CountryPolicy } from './eligibility/country-policy.service.ts';
 import { EligibilityController } from './eligibility/eligibility.controller.ts';
 import { EligibilityService } from './eligibility/eligibility.service.ts';
+import { AddressCheckClient } from './residency/address-check.client.ts';
+import { ResidencyController } from './residency/residency.controller.ts';
+import { ResidencyService } from './residency/residency.service.ts';
+import { ResidencyDeclaration, ResidencyStore } from './residency/residency.store.ts';
 
-const entities = [DocumentBirthInfo, KycBirthInfo];
+const entities = [DocumentBirthInfo, KycBirthInfo, ResidencyDeclaration];
 
 @Module({
   imports: [
@@ -18,7 +22,8 @@ const entities = [DocumentBirthInfo, KycBirthInfo];
     TypeOrmModule.forFeature(entities),
     EventEmitterModule.forRoot(),
   ],
-  controllers: [BirthInfoController, EligibilityController],
-  providers: [BirthInfoService, BirthInfoVerifier, KycBirthInfoStore, DocumentBirthInfoService, EligibilityService, CountryPolicy],
+  controllers: [BirthInfoController, EligibilityController, ResidencyController],
+  providers: [BirthInfoService, BirthInfoVerifier, KycBirthInfoStore, DocumentBirthInfoService, EligibilityService, CountryPolicy,
+    ResidencyService, ResidencyStore, AddressCheckClient],
 })
 export class AppModule {}
