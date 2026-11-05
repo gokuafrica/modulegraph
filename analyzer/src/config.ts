@@ -71,6 +71,11 @@ export interface ModuleOverride {
   name?: string;
   owner?: string;
   summary?: string;
+  /**
+   * What each method does, by method name, for methods without a doc comment. The review agent writes these
+   * (the brief lists the ones a review needs); the code's own doc comment wins when there is one.
+   */
+  operations?: Record<string, string>;
   /** Declared direct side effects, e.g. "outbox birth_info.source_resolved". Enables the undeclared-effect rule. */
   effects?: string[];
 }

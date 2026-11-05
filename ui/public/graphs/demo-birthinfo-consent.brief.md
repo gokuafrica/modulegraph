@@ -102,6 +102,16 @@ Stated intent (flag): “BirthInfo: prefer user-consented birth data (birth_info
 
 3 pre-existing findings not caused by this change (not listed).
 
+## Needs a description
+
+No doc comment: read each and write one or two sentences (what it does, not how) into the profile, `configs/identity-profile-service/modulegraph.config.json` → `modules.overrides.<Class>.operations.<method>`. Then refresh.
+
+- `BirthConsentStore.findActiveConsent` (sample-service/src/modules/birth-info/BirthConsentStore.ts:10), added
+- `BirthInfoModule.resolve` (sample-service/src/modules/birth-info/BirthInfoModule.ts:17), modified
+- `DocumentBirthExtractor.fromIdentity` (sample-service/src/modules/birth-info/DocumentBirthExtractor.ts:8), modified
+- `BirthConsentStore.recordConsent` (sample-service/src/modules/birth-info/BirthConsentStore.ts:15), added
+- `BirthInfoModule.recordConsent` (sample-service/src/modules/birth-info/BirthInfoModule.ts:28), added
+
 ## Request review from
 
 team-identity

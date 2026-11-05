@@ -138,6 +138,25 @@ Lazy analysis: 4 of 18 flows analyzed (`GET /api/orders/quote`, `POST /api/order
 - **INFO unattributed-change** ×1 (Wiring, shared types and dev tooling. Contract effects of shared types already show up as output-shape changes on the modules.)
   - 1 changed file outside any module: src/app.module.ts
 
+## Needs a description
+
+No doc comment: read each and write one or two sentences (what it does, not how) into the profile, `configs/order-service/modulegraph.config.json` → `modules.overrides.<Class>.operations.<method>`. Then refresh.
+
+- `InventoryService.reserve` (sample-nest-service/src/inventory/inventory.service.ts:22)
+- `AuditService.record` (sample-nest-service/src/audit/audit.service.ts:28)
+- `CustomersService.profile` (sample-nest-service/src/customers/customers.service.ts:37)
+- `FraudService.assess` (sample-nest-service/src/fraud/fraud.service.ts:47), added
+- `PricingService.quote` (sample-nest-service/src/pricing/pricing.service.ts:54), modified
+- `ShippingService.rates` (sample-nest-service/src/shipping/shipping.service.ts:63)
+- `PromotionsService.activeFor` (sample-nest-service/src/pricing/promotions.service.ts:43)
+- `TaxClient.rateFor` (sample-nest-service/src/pricing/pricing.service.ts:39)
+- `ShippingService.updateStatus` (sample-nest-service/src/shipping/shipping.service.ts:72), added
+- `OrdersService.cancel` (sample-nest-service/src/orders/orders.service.ts:95)
+- `OrdersService.create` (sample-nest-service/src/orders/orders.service.ts:43), modified
+- `OrdersService.get` (sample-nest-service/src/orders/orders.service.ts:83), modified
+- `ShippingService.tracking` (sample-nest-service/src/shipping/shipping.service.ts:76), modified
+- `PaymentsService.handleWebhook` (sample-nest-service/src/payments/payments.service.ts:45), modified
+
 ## Request review from
 
 team-risk, team-checkout, team-fulfilment, team-payments

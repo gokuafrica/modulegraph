@@ -60,6 +60,20 @@ For each contract change, open the changed functions it lists (`file:line`) and 
 - every `gains "<value>"` on an output (a new status, type or state): find the code that branches on that
   field or acts on that entity (cancel, expire, refund, retry paths) and check each handles the new value
 
+### Fill in missing descriptions
+
+If the brief has a **Needs a description** section, the reviewer will meet those operations in the graph with
+no explanation. Read each one (and what it calls), then write one or two sentences into the service's profile,
+`configs/<service>/modulegraph.config.json`, never into the code:
+
+```json
+"modules": { "overrides": { "BirthInfoService": { "operations": { "get": "The user's birth info as the document has it and as they told us in KYC, side by side." } } } }
+```
+
+Say what it does and when it matters (inputs, outputs, effects, the rule it enforces), not how it does it. Don't
+repeat the method name. A doc comment in the code always wins; the UI labels yours "written by the review agent".
+Then refresh (or re-run the analyzer).
+
 ## 3. Write the brief (≤ 25 lines)
 
 ```

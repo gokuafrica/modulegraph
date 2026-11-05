@@ -105,9 +105,9 @@ function moduleNode(g: ModuleGraph, id: string, opId: string, extra: Record<stri
   // One effect per row with its full table / topic / event name; long names wrap onto a second line.
   const chipLines = chips.slice(0, 6).reduce((n, c) => n + Math.ceil((c.target.length + 10) / 34), 0);
   const opsLines = Array.isArray(extra.ops) ? Math.ceil((extra.ops as string[]).length / 2) : 0;
-  const deltaLine = extra.delta || extra.conditionBefore !== undefined || extra.beforeMark ? 18 : 0;
+  const deltaLine = extra.delta || extra.beforeMark === 'removed' ? 18 : 0;
   const uses = extra.compact ? [] : usesOf(g, opId);
-  const height = (extra.compact ? 56 : 62) + chipLines * 19 + shown * 5 + (chips.length > 6 ? 22 : 0) + (extra.condition ? 20 : 0) + (extra.via ? 16 : 0) + (extra.through ? 16 : 0) + (uses.length ? 18 : 0) + opsLines * 16 + deltaLine;
+  const height = (extra.compact ? 56 : 62) + chipLines * 19 + shown * 5 + (chips.length > 6 ? 22 : 0) + (extra.condition ? 20 : 0) + (extra.via ? 16 : 0) + (extra.through ? 16 : 0) + (extra.transaction ? 18 : 0) + (uses.length ? 18 : 0) + opsLines * 16 + deltaLine;
   return {
     id,
     type: 'module',
@@ -420,7 +420,7 @@ function stepNode(g: ModuleGraph, step: Step, focusOp?: string, focusPath?: Set<
   const onPath = !focus && !!step.target && !!focusPath?.has(step.target);
   const through = (step as Step & { through?: string }).through;
   const marks = step as Step & { beforeMark?: string; conditionNow?: string };
-  const extra = { condition: step.condition, loop: step.loop, via: step.via, through, line: step.line, file: step.file, focus, onPath, delta: step.delta, conditionBefore: step.conditionBefore, ghost, beforeMark: marks.beforeMark, conditionNow: marks.conditionNow };
+  const extra = { condition: step.condition, loop: step.loop, via: step.via, through, line: step.line, file: step.file, focus, onPath, delta: step.delta, conditionBefore: step.conditionBefore, ghost, beforeMark: marks.beforeMark, conditionNow: marks.conditionNow, transaction: step.transaction };
   if (step.kind === 'call') {
     // What the module got and returned in the request being followed: one extra line pair on the node.
     const op = g.operations[step.target!];
@@ -429,9 +429,9 @@ function stepNode(g: ModuleGraph, step: Step, focusOp?: string, focusPath?: Set<
     if (examples?.length) node.height += 40;
     return node;
   }
-  const deltaLine = step.delta || step.conditionBefore !== undefined || marks.beforeMark ? 18 : 0;
+  const deltaLine = step.delta || marks.beforeMark === 'removed' ? 18 : 0;
   const nameLines = Math.max(1, Math.ceil((step.effect?.target.length ?? 0) / 28));
-  return { id: step.id, type: 'effect', width: 250, height: 58 + (nameLines - 1) * 17 + (step.condition ? 18 : 0) + deltaLine, data: { ...extra, effect: step.effect } };
+  return { id: step.id, type: 'effect', width: 250, height: 58 + (nameLines - 1) * 17 + (step.condition ? 18 : 0) + (step.transaction ? 18 : 0) + deltaLine, data: { ...extra, effect: step.effect } };
 }
 
 /** Same code and nothing below it changed: what was recorded on the new code holds for the old one too. */

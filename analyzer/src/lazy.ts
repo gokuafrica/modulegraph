@@ -3,6 +3,7 @@ import type { Example, ModuleGraph, Source } from '../../schema/modulegraph.ts';
 import type { RevisionAnalysis } from './analyzers/types.ts';
 import { compare } from './compare.ts';
 import type { Config } from './config.ts';
+import { describe } from './describe.ts';
 import { hunks, type RawDiff } from './git.ts';
 import { architectureFindings, changeFindings, markNew, modulesOfFile, reviewSummary } from './rules.ts';
 
@@ -127,7 +128,7 @@ export class LazySession {
     for (const x of this.sides()) x.computeTransitiveEffects();
     const head = this.head.snapshot;
     const base = this.base?.snapshot;
-    const g = compare(head, base);
+    const g = describe(compare(head, base), this.config);
     for (const [opId, ex] of Object.entries(this.examples)) if (g.operations[opId]) g.operations[opId].examples = ex;
     // Complete downward = every operation below is analyzed; only then are its transitive effects final.
     const complete = new Map<string, boolean>();

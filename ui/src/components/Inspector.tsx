@@ -59,7 +59,9 @@ function OpCard({ g, op }: { g: ModuleGraph; op: Operation }) {
           {op.delta && op.change !== 'unchanged' && <span className={`badge risk-${op.delta.risk}`}>{op.delta.risk} risk</span>}
           {mod.owner && <span className="owner">{mod.owner}</span>}
         </div>
-        {mod.summary && <p className="summary">{mod.summary}</p>}
+        {op.summary && <p className="summary">{op.summary} <SummarySource source={op.summary && op.summarySource} /></p>}
+        {mod.summary && <p className="summary module-summary"><b>{mod.name}:</b> {mod.summary} <SummarySource source={mod.summarySource} /></p>}
+        {!op.summary && !mod.summary && <p className="summary muted">No description in the code or the profile yet: the review agent writes one (module-review skill).</p>}
         <div className="file" title="The diagram shows this revision of the code">{op.file}:{op.line} <span className="muted">· {revisionNote(g)}</span></div>
         <div className="insp-actions">
           <button onClick={() => actions.references(op.id)} title="Impact view: everything that calls this operation, up to the entry points (Shift+F12)">Show references ⤴</button>
@@ -210,4 +212,11 @@ function ResourceCard({ g, id }: { g: ModuleGraph; id: string }) {
       </section>
     </div>
   );
+}
+
+/** Who wrote a description: the code's authors, or the review agent (in the service profile). */
+function SummarySource({ source }: { source?: string }) {
+  if (source === 'profile') return <span className="summary-src agent" title="Not in the code: written in the service profile (configs/<service>/), usually by the review agent after reading the code">written by the review agent</span>;
+  if (source === 'code') return <span className="summary-src" title="The code's own doc comment">from the code</span>;
+  return null;
 }

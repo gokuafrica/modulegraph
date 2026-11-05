@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-05T11:59:25.879Z",
+  "generatedAt": "2026-11-05T12:33:42.405Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
@@ -229,6 +229,7 @@
       "file": "sample-service/src/modules/admin/IdentityReviewModule.ts",
       "line": 8,
       "summary": "Back-office view of a user's identity evidence for manual review.",
+      "summarySource": "code",
       "owner": "team-backoffice",
       "declaredEffects": [],
       "operations": [
@@ -243,6 +244,7 @@
       "file": "sample-service/src/modules/birth-info/BirthConsentStore.ts",
       "line": 7,
       "summary": "Stores birth data the user consented to share.",
+      "summarySource": "code",
       "owner": "team-identity",
       "declaredEffects": [],
       "operations": [
@@ -258,6 +260,7 @@
       "file": "sample-service/src/modules/birth-info/BirthInfoModule.ts",
       "line": 10,
       "summary": "The user's country and city of birth. Consented user data wins; documents are the fallback.",
+      "summarySource": "code",
       "owner": "team-identity",
       "declaredEffects": [],
       "operations": [
@@ -273,6 +276,7 @@
       "file": "sample-service/src/modules/birth-info/DocumentBirthExtractor.ts",
       "line": 7,
       "summary": "Reads country and city of birth out of already-fetched identity data. Pure: no I/O.",
+      "summarySource": "code",
       "owner": "team-identity",
       "declaredEffects": [],
       "operations": [
@@ -287,6 +291,7 @@
       "file": "sample-service/src/modules/compliance/ComplianceReportModule.ts",
       "line": 8,
       "summary": "Monthly regulator report of KYC outcomes and tax residencies.",
+      "summarySource": "code",
       "owner": "team-compliance",
       "declaredEffects": [],
       "operations": [
@@ -301,6 +306,7 @@
       "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
       "line": 7,
       "summary": "Extracts structured fields from document scans via the document-AI service.",
+      "summarySource": "code",
       "owner": "team-identity",
       "declaredEffects": [],
       "operations": [
@@ -315,6 +321,7 @@
       "file": "sample-service/src/modules/identity/DocumentStore.ts",
       "line": 7,
       "summary": "Reads the user's uploaded identity documents.",
+      "summarySource": "code",
       "owner": "team-identity",
       "declaredEffects": [],
       "operations": [
@@ -329,6 +336,7 @@
       "file": "sample-service/src/modules/identity/IdentityModule.ts",
       "line": 9,
       "summary": "What the user's documents say about them (nationality, country and city of birth, ...). Expensive (DB + document-AI call), so orchestrators fetch it once and pass it down.",
+      "summarySource": "code",
       "owner": "team-identity",
       "declaredEffects": [],
       "operations": [
@@ -343,6 +351,7 @@
       "file": "sample-service/src/modules/kyc/KycModule.ts",
       "line": 19,
       "summary": "Know-your-customer verification. Identity, birth info and nationality feed sanctions screening.",
+      "summarySource": "code",
       "owner": "team-compliance",
       "declaredEffects": [],
       "operations": [
@@ -360,6 +369,7 @@
       "file": "sample-service/src/modules/kyc/SanctionsScreening.ts",
       "line": 11,
       "summary": "Screens a person against sanctions and PEP lists.",
+      "summarySource": "code",
       "owner": "team-compliance",
       "declaredEffects": [],
       "operations": [
@@ -374,6 +384,7 @@
       "file": "sample-service/src/modules/nationality/NationalityModule.ts",
       "line": 13,
       "summary": "Normalises the document nationality to an ISO country record.",
+      "summarySource": "code",
       "owner": "team-identity",
       "declaredEffects": [],
       "operations": [
@@ -388,6 +399,7 @@
       "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
       "line": 8,
       "summary": "Completes sign-up once KYC passes.",
+      "summarySource": "code",
       "owner": "team-onboarding",
       "declaredEffects": [],
       "operations": [
@@ -402,6 +414,7 @@
       "file": "sample-service/src/modules/personal-details/PersonalDetailsModule.ts",
       "line": 13,
       "summary": "Legal name and date of birth from documents, preferred name from the user's profile.",
+      "summarySource": "code",
       "owner": "team-profile",
       "declaredEffects": [],
       "operations": [
@@ -416,6 +429,7 @@
       "file": "sample-service/src/modules/profile/ProfileService.ts",
       "line": 11,
       "summary": "Builds the user profile. Fetches Identity once and shares it with every sub-module.",
+      "summarySource": "profile",
       "owner": "team-profile",
       "declaredEffects": [],
       "operations": [
@@ -435,6 +449,7 @@
       "file": "sample-service/src/modules/tax/TaxResidencyModule.ts",
       "line": 15,
       "summary": "Works out tax residencies (incl. US-person status from place of birth).",
+      "summarySource": "code",
       "owner": "team-compliance",
       "declaredEffects": [],
       "operations": [
@@ -451,6 +466,7 @@
       "file": "sample-service/src/modules/travel/TravelEligibilityModule.ts",
       "line": 11,
       "summary": "Visa eligibility checks and passport application prefill.",
+      "summarySource": "code",
       "owner": "team-travel",
       "declaredEffects": [],
       "operations": [
@@ -575,7 +591,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T11:59:25.749Z"
+              "extractedAt": "2026-11-05T12:33:42.276Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -603,7 +619,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T11:59:25.751Z"
+              "extractedAt": "2026-11-05T12:33:42.277Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -1149,7 +1165,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T11:59:25.746Z"
+              "extractedAt": "2026-11-05T12:33:42.273Z"
             }
           },
           "output": {
@@ -1187,7 +1203,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T11:59:25.749Z"
+              "extractedAt": "2026-11-05T12:33:42.276Z"
             }
           },
           "output": {
@@ -1463,7 +1479,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T11:59:25.746Z"
+              "extractedAt": "2026-11-05T12:33:42.273Z"
             }
           },
           "output": {
@@ -1929,7 +1945,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-05T11:59:25.746Z"
+            "extractedAt": "2026-11-05T12:33:42.273Z"
           },
           "cases": [
             "c1",
@@ -1965,7 +1981,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-05T11:59:25.749Z"
+            "extractedAt": "2026-11-05T12:33:42.276Z"
           },
           "cases": [
             "c11",
@@ -2116,7 +2132,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-05T11:59:25.748Z"
+            "checkedAt": "2026-11-05T12:33:42.275Z"
           },
           "cases": [
             "c5",
@@ -2131,7 +2147,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-05T11:59:25.749Z"
+            "checkedAt": "2026-11-05T12:33:42.276Z"
           },
           "cases": [
             "c15"
@@ -2197,7 +2213,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-05T11:59:25.748Z"
+            "checkedAt": "2026-11-05T12:33:42.275Z"
           },
           "cases": [
             "c6"
@@ -2210,7 +2226,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-05T11:59:25.749Z"
+            "checkedAt": "2026-11-05T12:33:42.276Z"
           },
           "cases": [
             "c16"
@@ -2559,7 +2575,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T11:59:25.746Z"
+              "extractedAt": "2026-11-05T12:33:42.273Z"
             }
           },
           "output": {
@@ -2595,7 +2611,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T11:59:25.749Z"
+              "extractedAt": "2026-11-05T12:33:42.276Z"
             }
           },
           "output": {
@@ -2829,7 +2845,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T11:59:25.746Z"
+              "extractedAt": "2026-11-05T12:33:42.273Z"
             }
           },
           "output": {
@@ -2858,7 +2874,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T11:59:25.749Z"
+              "extractedAt": "2026-11-05T12:33:42.276Z"
             }
           },
           "output": {

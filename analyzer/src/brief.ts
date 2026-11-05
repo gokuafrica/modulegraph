@@ -126,6 +126,23 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://localhos
   if (old) out.push('', `${old} pre-existing finding${old > 1 ? 's' : ''} not caused by this change (not listed).`);
   out.push('');
 
+  // ---------- descriptions the reviewer will see ----------
+  // Changed operations and every module they call: the ones the reviewer meets in the flows. Most code has no doc
+  // comment; the agent reads each one and writes a sentence into the profile, which the UI shows as agent-written.
+  const met = new Set<string>();
+  for (const q of g.review.queue) {
+    met.add(q.operation);
+    for (const step of g.scopes[q.operation]?.steps ?? []) if (step.target) met.add(step.target);
+  }
+  const undescribed = [...met].map((id) => g.operations[id]).filter((op) => op && !op.summary && op.change !== 'removed');
+  if (undescribed.length) {
+    out.push('## Needs a description', '');
+    out.push(`No doc comment: read each and write one or two sentences (what it does, not how) into the profile, \`configs/${g.service}/modulegraph.config.json\` → \`modules.overrides.<Class>.operations.<method>\`. Then refresh.`, '');
+    for (const op of undescribed.slice(0, 20)) out.push(`- \`${op.id}\` (${op.file}:${op.line})${op.change !== 'unchanged' ? `, ${op.change}` : ''}`);
+    if (undescribed.length > 20) out.push(`- … ${undescribed.length - 20} more`);
+    out.push('');
+  }
+
   // ---------- routing and links ----------
   out.push('## Request review from', '');
   out.push(g.review.reviewers.length ? g.review.reviewers.join(', ') : 'No owners configured for the changed modules.');

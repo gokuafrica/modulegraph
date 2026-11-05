@@ -144,6 +144,29 @@ export function architectureFindings(g: Graphish, config: Config): Finding[] {
     }
   }
 
+  // The same table read again through a module: `forUser()` reads document_birth_info, then `get()` reads it again
+  // to build the answer. Each read is fine on its own; together, one of them is usually redundant.
+  for (const op of live) {
+    const byTable = new Map<string, { who: string; condition?: string; through: boolean }[]>();
+    for (const step of g.scopes[op.id]?.steps ?? []) {
+      if (step.loop) continue;
+      const callee = step.target ? g.operations[step.target] : undefined;
+      const tables = new Set((step.effect ? [step.effect] : callee?.effects ?? []).filter((e) => e.kind === 'db.read').map((e) => e.target));
+      for (const t of tables) byTable.set(t, [...(byTable.get(t) ?? []), { who: callee ? opLabel(g, callee.id) : 'directly', condition: step.condition, through: !!callee }]);
+    }
+    for (const [table, reads] of byTable) {
+      if (!reads.some((r) => r.through) || mostTogether(reads.map((r) => r.condition)) < 2) continue;
+      findings.push({
+        rule: 'repeat-read',
+        severity: 'warning',
+        message: `${opLabel(g, op.id)} reads ${table} ${reads.length}× in one call: ${reads.map((r) => r.who).join(', then ')}`,
+        subject: { type: 'operation', id: op.id },
+        isNew: false,
+        hint: 'Pass down the value already read, or say why it must be read again.',
+      });
+    }
+  }
+
   // Shared expensive fetches must happen once per flow (e.g. Identity is fetched by the orchestrator and passed down).
   for (const entry of Object.values(g.entryPoints)) {
     if (entry.change === 'removed') continue;
