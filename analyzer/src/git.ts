@@ -170,6 +170,30 @@ export function revParse(repo: string, ref: string): string {
   return git(repo, ['rev-parse', '--verify', `${ref}^{commit}`]).trim();
 }
 
+/**
+ * The branch changes are compared with when none is named: the remote's default branch (origin/HEAD), as a local
+ * branch when there is one, else main, master, or the remote's copy of either. Undefined in a repo with none.
+ */
+export function defaultBranch(repo: string): string | undefined {
+  const exists = (ref: string) => {
+    try {
+      revParse(repo, ref);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  let remote: string | undefined;
+  try {
+    remote = git(repo, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD']).trim();
+  } catch {
+    // no remote, or origin/HEAD not set
+  }
+  const local = remote?.replace(/^origin\//, '');
+  const candidates = [local, remote, 'main', 'master', 'origin/main', 'origin/master'].filter((c): c is string => !!c);
+  return candidates.find(exists);
+}
+
 export interface PullRequest {
   number: number;
   title: string;

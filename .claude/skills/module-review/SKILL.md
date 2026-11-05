@@ -11,26 +11,44 @@ Reviewers look at **modules, contracts and flows**, not lines. The analyzer comp
 turn them into a short brief and point the reviewer at the 1–3 decisions only a human can make.
 
 **Hard rule: never modify the analyzed code** (no tags, comments, config files or scripts in it). Anything
-modulegraph needs about a service lives in its profile: `configs/<service>/` in the modulegraph repo.
+modulegraph needs about a service lives in its profile, in the modulegraph home on this machine
+(`~/.modulegraph/configs/<service>/`), never in the service's repo.
 
-## 1. Run the analyzer (from the modulegraph repo root)
+## Where things are
+
+- **modulegraph** is installed at <!-- modulegraph-path -->the root of this repository (the modulegraph checkout)<!-- /modulegraph-path -->.
+  Below, `modulegraph` means `node "<that folder>/bin/modulegraph.mjs"`. Run it from anywhere: `--project` is
+  the service folder, and defaults to the folder you run it in.
+- **Profiles** (one per service): `~/.modulegraph/configs/<package name>/modulegraph.config.json`, plus an optional
+  `scenario.ts`. The analyzer prints which profile it used, or the exact path to create when there is none.
+- **Reviews**: `~/.modulegraph/reviews/<id>.json` (the graph) and `<id>.brief.md` (the facts).
+- Templates, framework docs and the schema are in the modulegraph folder: `configs/`, `docs/analyzers.md`,
+  `schema/`.
+- Not set up yet (`modulegraph is not set up yet`, or no `node_modules`)? Run `npm run setup` in the modulegraph
+  folder once.
+
+## 1. Run the analyzer
 
 Pick the mode from what the user said:
 
 | User says | Command |
 |---|---|
-| "branch X" / "worktree X" | `npm run analyze -- --project <service dir> --head X --base main` |
-| "my branch", "this worktree", "the PR I'm fixing" (committed + uncommitted) | `npm run analyze -- --project <service dir inside that checkout> --base main` |
-| "my changes", "uncommitted" (only what isn't committed) | `npm run analyze -- --project <service dir inside that worktree> --uncommitted` |
-| "PR 123" | `npm run analyze -- --project <service dir> --pr 123` (needs `gh`) |
+| "branch X" / "worktree X" | `modulegraph analyze --project <service dir> --head X` |
+| "my branch", "this worktree", "the PR I'm fixing" (committed + uncommitted) | `modulegraph analyze --project <service dir inside that checkout>` |
+| "my changes", "uncommitted" (only what isn't committed) | `modulegraph analyze --project <service dir inside that worktree> --uncommitted` |
+| "PR 123" | `modulegraph analyze --project <service dir> --pr 123` (needs `gh`) |
+
+The base is the repo's default branch (from `origin/HEAD`, else `main` or `master`); add `--base <branch>` when
+the change targets another one (a release branch, or the PR it is stacked on).
 
 With `--head`/`--pr`, a branch that is checked out in `--project` with uncommitted edits is read from the working
 tree (the brief says "with its uncommitted edits"); `--committed` reads the commit only. For a person reviewing in
-the UI, use `npm run review` with the same arguments: it keeps serving, and the UI's refresh button re-analyzes
-only what changed after each edit.
+the UI, tell them to run `modulegraph review` with the same arguments in their terminal (or run it in the
+background yourself): it opens the review in their browser and keeps serving, and the UI's refresh button
+re-analyzes only what changed after each edit. `modulegraph open <id>` shows a saved review without analyzing.
 
-- `<service dir>` is the folder with the service's `package.json` (e.g. `sample-service`, or
-  `.worktrees/review-test/sample-service`).
+- `<service dir>` is the folder with the service's `package.json`; in a monorepo, the one package that changed
+  (run once per changed package).
 - **Don't pass `--config`, `--intent`, `--title` or `--examples`.** The analyzer finds the profile by package
   name, reads the intent from the PR or the branch's commits, and runs the profile's scenario. Pass `--intent`
   only if the user gave you a description that is not in git.
@@ -42,7 +60,6 @@ only what changed after each edit.
   fetch) find entry points and side effects without any profile rules.
 - If the output says `profile: none found`, stop and do step 4 first. Never copy another service's profile.
 - If it says `analyzer: no static analyzer for <language>`, use "Services no backend understands" below.
-- If `npm run` fails for environment reasons, run the same arguments with `node --import tsx analyzer/src/cli.ts`.
 
 The last lines print two paths: `<id>.json` (for the UI) and **`<id>.brief.md` (the facts: read this one)**.
 
@@ -68,7 +85,7 @@ For each contract change, open the changed functions it lists (`file:line`) and 
 
 If the brief has a **Needs a description** section, the reviewer will meet those operations in the graph with
 no explanation. Read each one (and what it calls), then write one or two sentences into the service's profile,
-`configs/<service>/modulegraph.config.json`, never into the code:
+the file the analyzer printed on its `profile:` line (none yet: create it as in step 4), never into the code:
 
 ```json
 "modules": { "overrides": { "BirthInfoService": { "operations": { "get": "The user's birth info as the document has it and as they told us in KYC, side by side." } } } }
@@ -99,15 +116,16 @@ say so. Say "no PR description" if the intent is missing.
 
 ## 4. Writing a profile for a new service (read-only on the service)
 
-Name the folder after the service's `package.json` name and set `"service"` to the same name; that's how the
-analyzer finds it. Templates: `configs/order-service/` (NestJS: no platform rules, the adapters cover them) and
-`configs/identity-profile-service/` (in-house platform classes described by rules).
+Write it to `~/.modulegraph/configs/<package name>/modulegraph.config.json` (the analyzer prints this path when
+there is none) and set `"service"` to the package name; that's how the analyzer finds it. Never put it in the
+service's repo. Templates, in the modulegraph folder: `configs/order-service/` (NestJS: no platform rules, the
+adapters cover them) and `configs/identity-profile-service/` (in-house platform classes described by rules).
 
-1. **Run a snapshot first**: `npm run analyze -- --project <dir> --snapshot`. Read the `frameworks:` line and
+1. **Run a snapshot first**: `modulegraph analyze --project <dir> --snapshot`. Read the `frameworks:` line and
    the brief's module and entry point counts. Compare them with the code: every route, consumer, queue worker and
    scheduled job should be an entry point; every service with logic should be a module.
 2. **Only add rules for what is missing** (in-house platform classes, frameworks without an adapter). Syntax and
-   examples: [docs/analyzers.md](../../../docs/analyzers.md#teaching-it-a-framework-without-writing-code).
+   examples: `docs/analyzers.md` in the modulegraph folder, "Teaching it a framework without writing code".
    - `entryPoints`: registration calls (class or module + method, which argument is the handler, the label).
    - `decoratorEntries`: decorated handler methods (decorator, the package it comes from, the label).
    - `sinks`: DB, outbox, broker, queue and HTTP client methods, and how to name their target.
@@ -124,17 +142,19 @@ analyzer finds it. Templates: `configs/order-service/` (NestJS: no platform rule
    dev data. Wrap each request in `step('<METHOD> <url or what it is>', () => …)`: every module call it makes is
    recorded as one case, which the UI follows through every module. Prefer reusing the service's own seed or
    fixtures over inventing data. NestJS without a container: construct the providers by hand with in-memory
-   repositories (see `configs/birth-info-service/scenario.ts`).
+   repositories (see `configs/birth-info-service/scenario.ts` in the modulegraph folder). A scenario runs the
+   service's code on this machine: write one only for code you trust, and never point it at real databases or APIs.
 
 Declared contracts (`modules.overrides.<Class>.effects`) are optional. Without them, the base revision is the
 contract and `new-side-effect` reports what a change adds.
 
 ### Services no backend understands
 
-Today there is a TypeScript backend only (see docs/analyzers.md for adding one). For other languages the schema
+Today there is a TypeScript backend only (see `docs/analyzers.md` in the modulegraph folder for adding one). For other languages the schema
 is still the same: write `modulegraph/v1` JSON yourself:
-- Follow `schema/modulegraph.schema.json`; `schema/modulegraph.ts` documents every field.
+- Follow `schema/modulegraph.schema.json` in the modulegraph folder; `schema/modulegraph.ts` documents every field.
 - Set `generator` to `agent:<model>` so reviewers know it was not statically extracted.
 - Only record effects and calls you saw in code. Put anything inferred in `findings` with
   `rule: "agent-uncertain"`, `severity: "info"`.
-- Validate: `npm run validate --workspace analyzer -- <file.json>`. Then add an entry to `ui/public/graphs/index.json`.
+- Save it as `~/.modulegraph/reviews/<id>.json` and validate it from the modulegraph folder:
+  `npm run validate --workspace analyzer -- <file.json>`. `modulegraph open <id>` shows it.

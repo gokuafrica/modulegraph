@@ -4,7 +4,7 @@
     "title": "Live (lazy, NestJS): users declare their home address during KYC",
     "mode": "branch",
     "lazy": true,
-    "generatedAt": "2026-11-05T21:40:51.474Z",
+    "generatedAt": "2026-11-05T21:47:57.404Z",
     "stats": {
       "files": 6,
       "linesAdded": 172,

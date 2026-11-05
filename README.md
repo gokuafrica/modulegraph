@@ -51,25 +51,57 @@ data) or a language.
 Design background: [docs/feasibility.md](docs/feasibility.md) · research: [docs/research-summary.md](docs/research-summary.md) ·
 how it is applied: [docs/review-conventions.md](docs/review-conventions.md).
 
-## Quick start
+## Install
+
+Tell your coding agent (Claude Code, Codex, Cursor, …):
+
+> Install modulegraph by following https://github.com/gokuafrica/modulegraph/blob/main/INSTALL.md
+
+Or by hand (Node 20.6+ and git):
 
 ```bash
-npm install
-npm run demo        # regenerate demo graphs from this repo's git history, then start the UI
+git clone https://github.com/gokuafrica/modulegraph ~/modulegraph
+cd ~/modulegraph && npm run setup
 ```
 
-Open http://localhost:5173. `npm run dev` starts only the UI.
+Setup installs the dependencies, builds the UI, installs the **module-review** skill for agents and checks that
+everything works on a bundled demo. [INSTALL.md](INSTALL.md) has the details: other agents, a `modulegraph` alias,
+updating and uninstalling.
+
+## Use it on your code
+
+- **Ask your agent**: "review my branch at module level", "what does PR 123 affect?". It runs the analyzer,
+  writes a short brief with the 1–3 decisions only you can make, and links to the graph.
+- **Or open the graph yourself**, in the service folder: `node ~/modulegraph/bin/modulegraph.mjs review` (or
+  `modulegraph review` with the alias). It compares your branch, committed and uncommitted, with the repo's default
+  branch and opens the review in your browser.
+
+**Your code stays yours.** The analyzed repo is never modified, and nothing leaves your machine: the analyzer reads
+through git, the review server accepts connections from this machine only, and only `--pr` talks to GitHub (via
+`gh`). Profiles and reviews live in `~/.modulegraph/` (`configs/`, `reviews/`), outside both your repo and this one.
+
+## Quick start (the demos)
+
+```bash
+npm run setup       # once
+npm run live        # the birth-info demo, served live: open http://127.0.0.1:5174
+npm run demo        # regenerate the saved demo graphs from this repo's git history, then start the UI dev server
+```
+
+`npm run dev` starts only the UI dev server (http://localhost:5173), for working on the UI.
 
 ### Reviewing a change, and fixing it as you go
 
 ```bash
-npm run review -- --project <service dir> --base main     # the branch checked out there, committed + uncommitted
-npm run review -- --project <service dir> --head <branch> --base main   # a branch, read straight from git
-npm run review -- --project <service dir> --pr 123        # a GitHub PR (needs gh)
+modulegraph review                        # the branch checked out here, committed + uncommitted, vs the default branch
+modulegraph review --head <branch>        # a branch, read straight from git (no checkout)
+modulegraph review --pr 123               # a GitHub PR (needs gh)
+modulegraph review --base release/2.3     # against another branch
 ```
 
-`npm run review` analyzes lazily and keeps serving the review; open http://localhost:5173 (the UI opens the review
-being served; there is no list to pick from). What it reads:
+(`modulegraph` is `node <modulegraph folder>/bin/modulegraph.mjs`; run it in the service folder or pass
+`--project <dir>`.) `review` analyzes lazily, serves the review on http://127.0.0.1:5174 and opens it. What it
+reads:
 
 | You review | Head side | Base side |
 |---|---|---|
@@ -93,13 +125,15 @@ window regains focus and every few seconds; nothing is analyzed until you click)
 On the demos a refresh takes 0.4–1.5 s against 2–7 s for the first analysis. `npm run lazy-check` edits each demo
 branch and checks the refreshed graph equals a full analysis of the edited code.
 
-Analyze a change in any TypeScript service (the NestJS demo needs nothing but the project folder):
+`modulegraph analyze` takes the same options, writes the review and exits: what agents run. On the NestJS demo,
+from this folder (it needs nothing but the project folder):
 
 ```bash
 npm run analyze -- --project sample-nest-service --head feature/order-fraud-hold --base main
 ```
 
-`--config` points at a service's profile, kept outside its repo; without it, the profile is found by package name:
+`--config` points at a service's profile, kept outside its repo; without it, the profile is found by package name
+in `~/.modulegraph/configs/`, then in this repo's `configs/` (the demos'):
 
 ```bash
 C=configs/identity-profile-service
@@ -110,8 +144,8 @@ npm run analyze -- --project sample-service --config $C/modulegraph.config.json 
 npm run analyze -- --project sample-service --config $C/modulegraph.config.json --head my-branch --examples $C/scenario.ts
 ```
 
-Each run writes `ui/public/graphs/<id>.json` (open it with `http://localhost:5173/#g=<id>`). It also writes
-`<id>.brief.md`, the **review facts** as plain Markdown:
+Each run writes `~/.modulegraph/reviews/<id>.json` (the demo services write to `ui/public/graphs/`); `modulegraph
+open <id>` shows it. It also writes `<id>.brief.md`, the **review facts** as plain Markdown:
 - the verdict (blocking or not);
 - every contract change with the behaviour changes inside it (new and removed steps, changed guards) and the
   changed functions;
@@ -119,8 +153,8 @@ Each run writes `ui/public/graphs/<id>.json` (open it with `http://localhost:517
 - grouped findings, owners and UI links.
 
 Agents start from this file instead of the JSON, so even a small model with no context gets the facts right. It
-only adds judgment. `--config` and `--intent` are optional: the profile is found in `configs/` by the service's
-package name, and the intent comes from the PR or the branch's commit messages.
+only adds judgment. `--config` and `--intent` are optional: the profile is found by the service's package name,
+and the intent comes from the PR or the branch's commit messages.
 
 Any coding agent (Claude Code, Codex, Cursor, …) finds the procedure through [AGENTS.md](AGENTS.md).
 
@@ -140,9 +174,9 @@ On a large service, analyzing every flow up front wastes time and buries the cha
    to the JSON file, so the file always holds what has been explored.
 
 ```bash
-npm run live            # live review of the birth-info demo (sample-birth-service, the small one); open http://localhost:5173
-npm run live -- all     # every live demo; or just one: birth | birthinfo | kyc | orders
-npm run review -- --project <dir> --head <branch>   # = analyze --lazy --serve
+npm run live            # live review of the birth-info demo (sample-birth-service, the small one); open http://127.0.0.1:5174
+npm run live -- all     # every live demo (view them with npm run dev: http://localhost:5173); or one: birth | residency | birthinfo | kyc | orders
+modulegraph review --head <branch>   # = analyze --lazy --serve --open
 npm run lazy-check --workspace analyzer   # proves lazy == full on everything lazy analyzed
 ```
 
@@ -205,7 +239,8 @@ Things to try:
    injection (it is injected somewhere, or injects collaborators), or is a framework provider (Nest
    `@Injectable`). Its public methods are its operations. Framework adapters, chosen from `package.json`, know
    the entry points and side effects of common libraries.
-2. **A profile describes the rest**, in `configs/<service>/` in this repo (or anywhere outside the service):
+2. **A profile describes the rest**, in `~/.modulegraph/configs/<service>/` (the demos' are in this repo's
+   `configs/`), never in the service:
    - `modulegraph.config.json`:
      - `sinks`: in-house client methods that are DB reads/writes, outbox, Kafka, queue or HTTP, and how to name the table or topic;
      - `entryPoints` / `decoratorEntries`: in-house route, consumer and cron registrations (frameworks without an adapter);
@@ -249,7 +284,8 @@ base + head sources        steps, data edges, side effects      modulegraph/v1  
 | `sample-nest-service/` | NestJS demo (order-service): REST, Kafka events, gRPC, BullMQ, cron, TypeORM. Branch `feature/order-fraud-hold` |
 | `sample-birth-service/` | NestJS demo (birth-info-service): document vs KYC birth info, with a scenario. Branch `feature/enforce-document-birth-info` |
 | `fixtures/frameworks/` | small Express + Prisma + KafkaJS + node-cron and Fastify + Mongoose + BullMQ services for `framework-check` |
-| `configs/` | per-service profiles (config + scenario), kept outside the analyzed code |
+| `configs/` | the demo services' profiles (config + scenario); yours go in `~/.modulegraph/configs/` |
+| `bin/`, `scripts/` | the `modulegraph` command; `setup.mjs` (install, build the UI, install the skill, self-check) |
 | `docs/` | feasibility, research summary, review conventions |
 
 ## Limits of the MVP
@@ -259,4 +295,4 @@ Effects come from framework adapters and configured sink methods; in-house data 
 rules in the profile. Module discovery relies on
 constructor injection; codebases built from plain functions need `modules.include` in the profile. Dynamic
 dispatch with several implementations is left unresolved. Example data needs a runnable scenario. No
-persistence or auth: it is a local tool.
+persistence or auth: it is a local tool, and the review server accepts connections from this machine only.

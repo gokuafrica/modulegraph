@@ -9,22 +9,24 @@ import { pickAnalyzer } from './analyzers/index.ts';
 import type { OperationTarget, RevisionAnalysis } from './analyzers/types.ts';
 import { compare } from './compare.ts';
 import { findProfile, loadConfig } from './config.ts';
+import { appRoot, graphsDirFor, insideApp, profileDirs, uiDistDir, userConfigsDir } from './home.ts';
 import { brief } from './brief.ts';
 import { describe, descriptionsKey } from './describe.ts';
 import { LazySession } from './lazy.ts';
 import { type RefreshResult, serve } from './server.ts';
-import { commitMessages, currentBranch, diffBetween, fetchPullRequest, filesAtRef, git, hasLocalChanges, mergeBase, repoRootOf, revParse, workingStateKey, type RawDiff } from './git.ts';
+import { commitMessages, currentBranch, defaultBranch, diffBetween, fetchPullRequest, filesAtRef, git, hasLocalChanges, mergeBase, repoRootOf, revParse, workingStateKey, type RawDiff } from './git.ts';
 import { architectureFindings, changeFindings, markNew, modulesOfFile, opLabel, reviewSummary } from './rules.ts';
 
 const HELP = `modulegraph: module-level review graph for a service
 
 usage: modulegraph --project <dir> [mode] [options]
 
-modes (default: --uncommitted)
+modes (default: the branch checked out in --project vs the repo's default branch, committed AND
+ uncommitted, as --base <default branch>; on the default branch itself that is just what isn't committed)
   --uncommitted            working tree (incl. untracked) vs HEAD: only what isn't committed yet
   --base <ref>             the branch checked out in --project, committed AND uncommitted, vs merge-base with
                            <ref>: "my branch as I edit it"
-  --head <ref> [--base <ref>]   branch ref vs merge-base with base (default base: main). Read from git, no
+  --head <ref> [--base <ref>]   branch ref vs merge-base with base (default base: the repo's default branch). Read from git, no
                            checkout needed. If <ref> is checked out in --project and has uncommitted edits
                            (you are fixing the PR locally), they are included; --committed reads the commit only
   --pr <number>            GitHub PR via gh (fetches head, uses PR description as intent); like --head
@@ -32,7 +34,8 @@ modes (default: --uncommitted)
 
 options
   --intent <text>          what the change is supposed to do (enables undisclosed-effect rule)
-  --config <file>          (default: the profile in configs/ whose service = the project's package name)
+  --config <file>          (default: the profile whose service = the project's package name, in
+                           ~/.modulegraph/configs/, then the demos' configs/)
                            modulegraph config kept OUTSIDE the analyzed repo (platform classes, owners,
                            module names/contracts). The analyzed code is never modified
   --no-examples            don't run the profile's scenario
@@ -43,7 +46,8 @@ options
                            kafkajs, bullmq, node-cron, typeorm, prisma, mongoose, axios, fetch)
   --title <text>           label shown in the UI
   --name <id>              output id (default derived from mode)
-  --out <file>             output path (default: ui/public/graphs/<id>.json, also updates index.json)
+  --out <file>             output path (default: ~/.modulegraph/reviews/<id>.json, also updates index.json;
+                           the demo services write to ui/public/graphs/)
   --check                  exit 1 when the change introduces new error-level findings (CI gate)
 
 lazy analysis (large codebases)
@@ -51,9 +55,10 @@ lazy analysis (large codebases)
                            this change, list the rest without analyzing them
   --seeds <n>              entry points to analyze up front (default 2)
   --seed-entries <a,b>     entry point ids or label fragments to analyze up front (e.g. an agent's pick)
-  --serve [--port 5174]    keep running and answer the UI's expand and refresh requests. Refresh re-reads only
-                           the files that changed since the last analysis and keeps the base side's analysis
-                           (npm run review = --lazy --serve)
+  --serve [--port 5174]    keep running: serves the review UI (http://127.0.0.1:5174) and answers its expand and
+                           refresh requests. Refresh re-reads only the files that changed since the last
+                           analysis and keeps the base side's analysis. Only this machine can connect
+  --open                   with --serve: open the review in the browser
 `;
 
 const { values: args } = parseArgs({
@@ -79,6 +84,7 @@ const { values: args } = parseArgs({
     'seed-entries': { type: 'string' },
     serve: { type: 'boolean' },
     port: { type: 'string' },
+    open: { type: 'boolean' },
     analyzer: { type: 'string' },
     frameworks: { type: 'string' },
     help: { type: 'boolean', short: 'h' },
@@ -101,12 +107,18 @@ if (!existsSync(projectDir)) {
 }
 const repo = (args.repo ? fromUser(args.repo) : repoRootOf(projectDir)).replace(/\\/g, '/');
 const projectRel = relative(repo, projectDir).replace(/\\/g, '/') || '.';
-// No --config: use the profile in configs/ whose service matches the project's package name.
-const profile = args.config ? undefined : findProfile(projectDir, resolve(dirname(fileURLToPath(import.meta.url)), '../../configs'));
-if (!args.config) {
-  console.log(profile?.config
-    ? `profile: ${relative(process.cwd(), profile.config)} (found by package name)`
-    : `profile: none found (looked for ${profile?.tried}); using defaults. Write one: .claude/skills/module-review/SKILL.md, step 4`);
+// No mode: the branch checked out, committed and uncommitted, vs the repo's default branch ("review my work").
+if (!args.pr && !args.head && !args.base && !args.uncommitted && !args.snapshot) {
+  const main = defaultBranch(repo);
+  if (main) args.base = main;
+  else args.uncommitted = true;
+}
+// No --config: use the profile whose service matches the project's package name (yours first, then the demos').
+const profile = args.config ? undefined : findProfile(projectDir, profileDirs());
+if (profile) {
+  console.log(profile.config
+    ? `profile: ${profile.config} (found by package name)`
+    : `profile: none found for "${profile.name}"; using defaults. To add one, write ${userConfigsDir}/${profile.name}/modulegraph.config.json (the module-review skill, step 4)`);
 }
 const configFile = args.config ? fromUser(args.config) : profile?.config;
 const config = loadConfig(projectDir, configFile);
@@ -154,7 +166,7 @@ function resolveRevisions(): Revisions {
   } else if (args.pr || args.head || args.base) {
     // --base alone: the branch checked out in --project, with whatever is not committed yet.
     let headRef = args.head ?? currentBranch(repo);
-    let baseRef = args.base ?? 'main';
+    let baseRef = args.base ?? defaultBranch(repo) ?? 'main';
     let title = args.title;
     if (args.pr) {
       const pr = fetchPullRequest(repo, Number(args.pr));
@@ -189,6 +201,8 @@ function resolveRevisions(): Revisions {
     const diff = diffBetween(repo, 'HEAD', undefined, projectRel);
     r = { baseSha: revParse(repo, 'HEAD'), diff, source: { mode: 'uncommitted', repo, project: projectRel, base: 'HEAD', head: 'working tree', files: diff.files, workingTree: true } };
   }
+  // The demos' saved graphs are shipped: no machine's folder names in them.
+  if (insideApp(repo)) r.source.repo = relative(appRoot, repo).replace(/\\/g, '/') || '.';
   r.source.title ??= args.title;
   r.source.analyzer = { id: analyzer.id, language: analyzer.language, frameworks: detectedFrameworks };
   if (intent) {
@@ -232,8 +246,7 @@ let diff = revisions.diff;
 let headProject: RevisionAnalysis = open(headSha ? filesOf(headSha) : undefined);
 let baseProject: RevisionAnalysis | undefined = revisions.baseSha ? open(filesOf(revisions.baseSha)) : undefined;
 
-const here = dirname(fileURLToPath(import.meta.url));
-const graphsDir = resolve(here, '../../ui/public/graphs');
+const graphsDir = graphsDirFor(projectDir);
 const id = args.name ?? slug(source.mode === 'snapshot' ? `snapshot-${config.service}` : `${source.mode}-${source.head}`);
 const outFile = args.out ? fromUser(args.out) : join(graphsDir, `${id}.json`);
 
@@ -327,13 +340,15 @@ if (output.lazy) {
   console.log(`\nlazy: analyzed ${st.entryPointsAnalyzed} of ${st.entryPointsKnown} entry points (${st.entryPointsReached} more known to reach the change), ${st.operationsAnalyzed} of ${st.operationsKnown} operations, ${st.ms} ms`);
   for (const s of output.lazy.seeds) console.log(`  seed ${s.id}: ${s.reason}`);
 }
-console.log(`\nwrote ${relative(process.cwd(), outFile)}`);
-console.log(`wrote ${relative(process.cwd(), briefFile)}   <- review facts for agents and people: start here`);
+// Short when it is below the folder the command ran in, else the full path: agents open it from anywhere.
+const displayPath = (file: string) => (relative(userCwd, file).startsWith('..') ? file : relative(userCwd, file)).replace(/\\/g, '/');
+console.log(`\nwrote ${displayPath(outFile)}`);
+console.log(`wrote ${displayPath(briefFile)}   <- review facts for agents and people: start here`);
 
 if (args.serve && session) {
   const live = session;
   let stateKey = currentStateKey();
-  serve(live, { persist: write, graphId: id, port: Number(args.port ?? 5174), refresh: () => refresh(live), stale: () => currentStateKey() !== stateKey });
+  serve(live, { persist: write, graphId: id, port: Number(args.port ?? 5174), graphsDir, uiDir: uiDistDir, open: args.open, refresh: () => refresh(live), stale: () => currentStateKey() !== stateKey });
 
   /** Re-analyze after the code changed: re-read only changed files, keep the base side when it didn't move. */
   function refresh(s: LazySession): RefreshResult {
@@ -441,7 +456,7 @@ function recordExamples(scenarioRel: string, targets: OperationTarget[]): Record
       return {};
     }
     const { examples: recorded, cases } = JSON.parse(readFileSync(out, 'utf8')) as { examples: Record<string, Example[]>; cases: ExampleCase[] };
-    source.examples = { scenario: relative(resolve(here, '../..'), scenario).replace(/\\/g, '/'), operationsCovered: Object.keys(recorded).length, cases };
+    source.examples = { scenario: (insideApp(scenario) ? relative(appRoot, scenario) : scenario).replace(/\\/g, '/'), operationsCovered: Object.keys(recorded).length, cases };
     rmSync(out, { force: true });
     rmSync(spec, { force: true });
     return recorded;

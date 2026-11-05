@@ -137,24 +137,27 @@ export const defaultConfig: Config = {
 };
 
 /**
- * Finds the service's profile in this repo's `configs/` folder without being told: the profile whose `service`
- * (or folder name) equals the analyzed project's package name. Agents never have to guess a path.
+ * Finds the service's profile without being told: the profile whose `service` (or folder name) equals the analyzed
+ * project's package name, in the first of `configsDirs` that has one (your modulegraph home, then the demos').
+ * Agents never have to guess a path.
  */
-export function findProfile(projectDir: string, configsDir: string): { config?: string; scenario?: string; tried: string } {
+export function findProfile(projectDir: string, configsDirs: string[]): { config?: string; scenario?: string; tried: string; name: string } {
   const pkg = join(projectDir, 'package.json');
   const name = existsSync(pkg) ? (JSON.parse(readFileSync(pkg, 'utf8')).name as string) : basename(projectDir);
-  const tried = `configs/*/modulegraph.config.json with service "${name}"`;
-  if (!existsSync(configsDir)) return { tried };
-  for (const dir of readdirSync(configsDir)) {
-    const file = join(configsDir, dir, 'modulegraph.config.json');
-    if (!existsSync(file)) continue;
-    const service = (JSON.parse(readFileSync(file, 'utf8')) as { service?: string }).service;
-    if (service === name || dir === name) {
-      const scenario = join(configsDir, dir, 'scenario.ts');
-      return { config: file, scenario: existsSync(scenario) ? scenario : undefined, tried };
+  const tried = `${configsDirs.map((d) => `${d}/*/modulegraph.config.json`).join(', ')} with service "${name}"`;
+  for (const configsDir of configsDirs) {
+    if (!existsSync(configsDir)) continue;
+    for (const dir of readdirSync(configsDir)) {
+      const file = join(configsDir, dir, 'modulegraph.config.json');
+      if (!existsSync(file)) continue;
+      const service = (JSON.parse(readFileSync(file, 'utf8')) as { service?: string }).service;
+      if (service === name || dir === name) {
+        const scenario = join(configsDir, dir, 'scenario.ts');
+        return { config: file, scenario: existsSync(scenario) ? scenario : undefined, tried, name };
+      }
     }
   }
-  return { tried };
+  return { tried, name };
 }
 
 /** `configPath` (outside the repo) wins; an in-repo modulegraph.config.json is only an opt-in fallback. */

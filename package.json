@@ -1,6 +1,16 @@
 {
-  "name": "modular-programming",
+  "name": "modulegraph",
+  "version": "0.4.0",
+  "description": "Module-level code review: turns a PR, branch or uncommitted change into an interactive graph of entry point → modules → exit, plus a brief for agents.",
   "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20.6"
+  },
+  "bin": {
+    "modulegraph": "bin/modulegraph.mjs"
+  },
   "workspaces": [
     "sample-service",
     "sample-nest-service",
@@ -10,11 +20,13 @@
     "ui"
   ],
   "scripts": {
+    "setup": "node scripts/setup.mjs",
     "analyze": "npm run analyze --workspace analyzer --",
+    "review": "npm run analyze --workspace analyzer -- --lazy --serve",
     "dev": "npm run dev --workspace ui",
     "demo": "npm run demo --workspace analyzer && npm run dev --workspace ui",
-    "check": "npm run typecheck --workspaces --if-present",
     "live": "npm run live --workspace analyzer --",
-    "review": "npm run analyze --workspace analyzer -- --lazy --serve"
+    "check": "npm run typecheck --workspaces --if-present",
+    "test": "npm test --workspace analyzer"
   }
 }

@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "birth-info-service",
-  "generatedAt": "2026-11-05T21:40:51.474Z",
+  "generatedAt": "2026-11-05T21:47:57.404Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -275,7 +275,9 @@
       "summarySource": "code",
       "owner": "team-onboarding",
       "declaredEffects": [],
-      "operations": [],
+      "operations": [
+        "EligibilityService.check"
+      ],
       "change": "unchanged"
     },
     "AddressCheckClient": {
@@ -1679,7 +1681,7 @@
         }
       ],
       "lazy": {
-        "callersLoaded": false,
+        "callersLoaded": true,
         "calleesLoaded": true
       }
     },
@@ -1837,6 +1839,186 @@
         "callersLoaded": true,
         "calleesLoaded": true
       }
+    },
+    "EligibilityService.check": {
+      "id": "EligibilityService.check",
+      "moduleId": "EligibilityService",
+      "name": "check",
+      "file": "sample-birth-service/src/eligibility/eligibility.service.ts",
+      "line": 23,
+      "endLine": 36,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Eligibility",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "eligible",
+            "type": "boolean [false | true]"
+          },
+          {
+            "name": "reasons",
+            "type": "string[]"
+          },
+          {
+            "name": "basedOn",
+            "type": "BirthPlace & { source: \"kyc\" | \"document\" | \"none\"; }"
+          }
+        ]
+      },
+      "directEffects": [],
+      "effects": [],
+      "calls": [
+        "BirthInfoService.get",
+        "CountryPolicy.isRestricted"
+      ],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "async check(userId: string): Promise<Eligibility> {\n  const info = await this.birthInfo.get(userId);\n  // The user's own (KYC) answer is the one we hold them to; the document is the fallback.\n  const basedOn = info.kyc\n    ? { source: 'kyc' as const, countryOfBirth: info.kyc.countryOfBirth, placeOfBirth: info.kyc.placeOfBirth }\n    : info.document\n      ? { source: 'document' as const, ...info.document }\n      : { source: 'none' as const };\n  const reasons: string[] = [];\n  if (!basedOn.countryOfBirth) reasons.push('country of birth unknown');\n  else if (this.policy.isRestricted(basedOn.countryOfBirth)) reasons.push(`country of birth ${basedOn.countryOfBirth} is restricted`);\n  if (!basedOn.placeOfBirth) reasons.push('place of birth unknown');\n  return { userId, eligible: reasons.length === 0, reasons, basedOn };\n}",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "eligible": true,
+            "reasons": [],
+            "basedOn": {
+              "source": "kyc",
+              "countryOfBirth": "PRT",
+              "placeOfBirth": "Porto"
+            }
+          },
+          "cases": [
+            "c2",
+            "c16"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "eligible": false,
+            "reasons": [
+              "place of birth unknown"
+            ],
+            "basedOn": {
+              "source": "document",
+              "countryOfBirth": "IND"
+            }
+          },
+          "cases": [
+            "c4"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-3"
+          },
+          "output": {
+            "userId": "u-3",
+            "eligible": false,
+            "reasons": [
+              "country of birth unknown",
+              "place of birth unknown"
+            ],
+            "basedOn": {
+              "source": "none"
+            }
+          },
+          "cases": [
+            "c6"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-4"
+          },
+          "output": {
+            "userId": "u-4",
+            "eligible": false,
+            "reasons": [
+              "country of birth unknown"
+            ],
+            "basedOn": {
+              "source": "document",
+              "placeOfBirth": "Lagos"
+            }
+          },
+          "cases": [
+            "c8"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "eligible": true,
+            "reasons": [],
+            "basedOn": {
+              "source": "kyc",
+              "countryOfBirth": "IND",
+              "placeOfBirth": "Mumbai"
+            }
+          },
+          "cases": [
+            "c17"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-3"
+          },
+          "output": {
+            "userId": "u-3",
+            "eligible": true,
+            "reasons": [],
+            "basedOn": {
+              "source": "kyc",
+              "countryOfBirth": "DEU",
+              "placeOfBirth": "Berlin"
+            }
+          },
+          "cases": [
+            "c18"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-4"
+          },
+          "output": {
+            "userId": "u-4",
+            "eligible": true,
+            "reasons": [],
+            "basedOn": {
+              "source": "kyc",
+              "countryOfBirth": "NGA",
+              "placeOfBirth": "lagos"
+            }
+          },
+          "cases": [
+            "c19"
+          ]
+        }
+      ],
+      "lazy": {
+        "callersLoaded": true,
+        "calleesLoaded": false
+      }
     }
   },
   "entryPoints": {
@@ -1880,7 +2062,7 @@
       "containsChanges": false,
       "effectsAdded": [],
       "effectsRemoved": [],
-      "analysis": "listed"
+      "analysis": "reached"
     },
     "api:GET /api/users/:userId/residency": {
       "id": "api:GET /api/users/:userId/residency",
@@ -2600,6 +2782,130 @@
           "kind": "control"
         }
       ]
+    },
+    "EligibilityService.check": {
+      "id": "EligibilityService.check",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Eligibility",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "eligible",
+            "type": "boolean [false | true]"
+          },
+          {
+            "name": "reasons",
+            "type": "string[]"
+          },
+          {
+            "name": "basedOn",
+            "type": "BirthPlace & { source: \"kyc\" | \"document\" | \"none\"; }"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "BirthInfoService.get",
+          "line": 24,
+          "file": "sample-birth-service/src/eligibility/eligibility.service.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "CountryPolicy.isRestricted",
+          "line": 33,
+          "file": "sample-birth-service/src/eligibility/eligibility.service.ts",
+          "condition": "if (basedOn.countryOfBirth)"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "data",
+          "label": "basedOn"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "basedOn"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    },
+    "api:GET /api/users/:userId/eligibility": {
+      "id": "api:GET /api/users/:userId/eligibility",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "Eligibility",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "eligible",
+            "type": "boolean [false | true]"
+          },
+          {
+            "name": "reasons",
+            "type": "string[]"
+          },
+          {
+            "name": "basedOn",
+            "type": "BirthPlace & { source: \"kyc\" | \"document\" | \"none\"; }"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "EligibilityService.check",
+          "line": 10,
+          "file": "sample-birth-service/src/eligibility/eligibility.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
     }
   },
   "findings": [
@@ -2783,10 +3089,10 @@
     "stats": {
       "entryPointsKnown": 5,
       "entryPointsAnalyzed": 2,
-      "entryPointsReached": 0,
+      "entryPointsReached": 1,
       "operationsKnown": 14,
-      "operationsAnalyzed": 7,
-      "ms": 4480
+      "operationsAnalyzed": 8,
+      "ms": 4953
     },
     "api": "/api"
   }

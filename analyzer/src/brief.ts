@@ -6,7 +6,7 @@ import { opLabel, reachIndex } from './rules.ts';
  * starts from this file instead of interpreting the JSON: everything here is computed, nothing is guessed.
  * The reviewing agent's job is reduced to judgment: which of these facts matter, and what to ask the author.
  */
-export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://localhost:5173'): string {
+export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://127.0.0.1:5174'): string {
   const out: string[] = [];
   const s = g.source;
   const reach = reachIndex(g);
@@ -164,6 +164,7 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://localhos
   out.push(g.review.reviewers.length ? g.review.reviewers.join(', ') : 'No owners configured for the changed modules.');
   out.push('');
   out.push('## Open in the UI', '');
+  out.push(`Served by \`modulegraph review\` while it runs, or \`modulegraph open ${graphId}\` for the saved review.`, '');
   const top = g.review.changes[0]?.root;
   if (top) out.push(`- Zoom out from the riskiest change: ${uiBase}/#g=${graphId}&v=impact&op=${encodeURIComponent(top)}&d=1`);
   const firstFlow = g.lazy?.seeds[0]?.id ?? (top ? [...(reach.get(top) ?? [])][0] : undefined);

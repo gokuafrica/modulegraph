@@ -77,7 +77,7 @@ if (wanted !== 'all' && !demos[wanted]) {
 const picked = wanted === 'all' ? [demos.birth, demos.birthinfo, demos.kyc, demos.orders] : [demos[wanted]];
 
 const children = picked.map((demo, i) => ({ ...demo, port: picked.length === 1 ? PORT : PORT + 1 + i, child: undefined as ChildProcess | undefined }));
-const healthy = (port: number) => fetch(`http://localhost:${port}/api/health`).then((r) => r.ok, () => false);
+const healthy = (port: number) => fetch(`http://127.0.0.1:${port}/api/health`).then((r) => r.ok, () => false);
 
 // One at a time: each analysis loads a TypeScript program and may check out a git worktree to record examples.
 void (async () => {
@@ -114,7 +114,7 @@ if (children.length > 1) {
       if (!owner) return send(404, { error: `no live analysis for ${id}; serving ${children.map((c) => c.id).join(', ')}` });
       const chunks: Buffer[] = [];
       for await (const chunk of req) chunks.push(chunk as Buffer);
-      const upstream = await fetch(`http://localhost:${owner.port}${url.pathname}${url.search}`, {
+      const upstream = await fetch(`http://127.0.0.1:${owner.port}${url.pathname}${url.search}`, {
         method: req.method,
         headers: { 'content-type': 'application/json' },
         body: req.method === 'GET' || req.method === 'HEAD' ? undefined : Buffer.concat(chunks),
@@ -123,5 +123,5 @@ if (children.length > 1) {
     } catch (err) {
       send(503, { error: `${owner?.id ?? id} is still starting or stopped: ${String(err)}` });
     }
-  }).listen(PORT, () => console.log(`\nmodulegraph live: ${children.map((c) => c.id).join(', ')} on http://localhost:${PORT}/api (each starts in a few seconds)`));
+  }).listen(PORT, '127.0.0.1', () => console.log(`\nmodulegraph live: ${children.map((c) => c.id).join(', ')} on http://127.0.0.1:${PORT}/api (each starts in a few seconds)`));
 }
