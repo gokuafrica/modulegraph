@@ -509,6 +509,7 @@ h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color:
 .change-chip.on { border-color: var(--focus); box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 35%, transparent); }
 .change-chip .badge { margin-left: 0; }
 .change-name { white-space: nowrap; }
+.change-parts { white-space: nowrap; font-family: system-ui, sans-serif; font-size: 11px; color: var(--muted); }
 .st-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mod-border); }
 .st-dot.st-added { background: var(--add-border); }
 .st-dot.st-removed { background: var(--rem-border); }

@@ -8,20 +8,11 @@ Change: 5 files, +68/−10, 3 contract changes, 1 entry points affected.
 
 Stated intent (commits): “BirthInfo: enforce document birth info on KYC submissions POST /users/:userId/birth-info now rejects (422) a submission that contradicts the user's identity document. Each part the document has (country of birth, place of birth) must match; a part extraction couldn't read is not enforced, and with no document data at all the user's answer is saved as before. The submission still overwrites the previous KYC birth info. Save the KYC birth info and its event in one transaction Answer a KYC submission from what was already read and saved updateKycBirthInfo read the identity document to verify the ”
 
-## Contract changes, riskiest first
+## Changes, riskiest first
 
-### 1. BirthInfoVerifier.verify: high risk, added, owner team-kyc
+1 change (3 changed operations). Each starts at its topmost changed operation; the operations under it are reached only through it.
 
-- **Code**: 2 functions in 1 file: `verify` (added, +8/−0, sample-birth-service/src/birth-info/birth-info-verifier.ts:32); `normalize` (added, +3/−0, sample-birth-service/src/birth-info/birth-info-verifier.ts:21)
-- **Reached from** 1 entry point: `POST /api/users/:userId/birth-info`
-
-### 2. KycBirthInfoStore.save: high risk, modified, owner team-kyc
-
-- **Inputs**: (userId: string, info: KycBirthInfoDto) → (userId: string, info: KycBirthInfoDto, manager: EntityManager | undefined)
-- **Code**: 1 function in 1 file: `save` (modified, +3/−2, sample-birth-service/src/birth-info/kyc-birth-info.store.ts:32)
-- **Reached from** 1 entry point: `POST /api/users/:userId/birth-info`
-
-### 3. BirthInfo.updateKycBirthInfo: medium risk, modified, owner team-kyc
+### 1. BirthInfo.updateKycBirthInfo: high risk (with its parts; medium on its own), modified, owner team-kyc
 
 - **Calls**: +DocumentBirthInfo.forUser, +BirthInfoVerifier.verify
 - **Behaviour inside** (steps of this operation, base → head):
@@ -31,6 +22,19 @@ Stated intent (commits): “BirthInfo: enforce document birth info on KYC submis
   - GUARD CHANGED event `kyc.birth_info.updated`: now only when `check.ok`; before: always
   - GUARD CHANGED call BirthInfo.get: now only when `check.ok`; before: always
 - **Code**: 1 function in 1 file: `updateKycBirthInfo` (modified, +11/−2, sample-birth-service/src/birth-info/birth-info.service.ts:33)
+- **Reached from** 1 entry point: `POST /api/users/:userId/birth-info`
+
+Inside this change (reached only through BirthInfo.updateKycBirthInfo): BirthInfoVerifier.verify (high), KycBirthInfoStore.save (high).
+
+#### 1.1. BirthInfoVerifier.verify: high risk, added, owner team-kyc
+
+- **Code**: 2 functions in 1 file: `verify` (added, +8/−0, sample-birth-service/src/birth-info/birth-info-verifier.ts:32); `normalize` (added, +3/−0, sample-birth-service/src/birth-info/birth-info-verifier.ts:21)
+- **Reached from** 1 entry point: `POST /api/users/:userId/birth-info`
+
+#### 1.2. KycBirthInfoStore.save: high risk, modified, owner team-kyc
+
+- **Inputs**: (userId: string, info: KycBirthInfoDto) → (userId: string, info: KycBirthInfoDto, manager: EntityManager | undefined)
+- **Code**: 1 function in 1 file: `save` (modified, +3/−2, sample-birth-service/src/birth-info/kyc-birth-info.store.ts:32)
 - **Reached from** 1 entry point: `POST /api/users/:userId/birth-info`
 
 ## New findings (machine-checked)
@@ -44,5 +48,5 @@ team-kyc
 
 ## Open in the UI
 
-- Zoom out from the riskiest change: http://localhost:5173/#g=demo-enforce-document-birth-info&v=impact&op=BirthInfoVerifier.verify&d=1
-- A flow through it: http://localhost:5173/#g=demo-enforce-document-birth-info&v=flow&t=api%3APOST%20%2Fapi%2Fusers%2F%3AuserId%2Fbirth-info&f=BirthInfoVerifier.verify
+- Zoom out from the riskiest change: http://localhost:5173/#g=demo-enforce-document-birth-info&v=impact&op=BirthInfoService.updateKycBirthInfo&d=1
+- A flow through it: http://localhost:5173/#g=demo-enforce-document-birth-info&v=flow&t=api%3APOST%20%2Fapi%2Fusers%2F%3AuserId%2Fbirth-info&f=BirthInfoService.updateKycBirthInfo

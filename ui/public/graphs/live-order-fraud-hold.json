@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "order-service",
-  "generatedAt": "2026-11-05T14:06:16.882Z",
+  "generatedAt": "2026-11-05T21:25:33.742Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -7932,6 +7932,92 @@
       "PaymentsService.handleWebhook",
       "CarrierClient.status"
     ],
+    "changes": [
+      {
+        "root": "OrdersService.release",
+        "parts": [],
+        "risk": "high",
+        "reach": 2,
+        "alsoIn": [
+          "OrdersService.resolveHold"
+        ]
+      },
+      {
+        "root": "FraudService.assess",
+        "parts": [],
+        "risk": "high",
+        "reach": 1,
+        "alsoIn": [
+          "OrdersService.preview",
+          "OrdersService.create"
+        ]
+      },
+      {
+        "root": "OrdersService.preview",
+        "parts": [],
+        "risk": "high",
+        "reach": 1
+      },
+      {
+        "root": "PricingService.quote",
+        "parts": [],
+        "risk": "high",
+        "reach": 1,
+        "alsoIn": [
+          "OrdersService.preview",
+          "OrdersService.create"
+        ]
+      },
+      {
+        "root": "ShippingService.updateStatus",
+        "parts": [],
+        "risk": "high",
+        "reach": 1
+      },
+      {
+        "root": "OrdersService.resolveHold",
+        "parts": [],
+        "risk": "high",
+        "reach": 1
+      },
+      {
+        "root": "OrdersService.create",
+        "parts": [],
+        "risk": "high",
+        "reach": 0
+      },
+      {
+        "root": "OrdersService.get",
+        "parts": [],
+        "risk": "high",
+        "reach": 0
+      },
+      {
+        "root": "ShippingService.tracking",
+        "parts": [],
+        "risk": "high",
+        "reach": 0,
+        "alsoIn": [
+          "OrdersService.get"
+        ]
+      },
+      {
+        "root": "CarrierClient.status",
+        "parts": [],
+        "risk": "high",
+        "reach": 0,
+        "alsoIn": [
+          "OrdersService.get",
+          "ShippingService.tracking"
+        ]
+      },
+      {
+        "root": "PaymentsService.handleWebhook",
+        "parts": [],
+        "risk": "medium",
+        "reach": 0
+      }
+    ],
     "queue": [
       {
         "operation": "OrdersService.release",
@@ -8031,7 +8117,7 @@
       "entryPointsReached": 0,
       "operationsKnown": 33,
       "operationsAnalyzed": 23,
-      "ms": 6013
+      "ms": 5875
     }
   }
 }

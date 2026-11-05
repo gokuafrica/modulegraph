@@ -10,7 +10,9 @@ Stated intent (flag): “KYC: add risk tiers from sanctions score, birth country
 
 Lazy analysis: 2 of 28 flows analyzed (`topic kyc.recheck_requested`, `cron kyc-nightly-rescreen (0 2 * * *)`). Reach counts are lower bounds.
 
-## Contract changes, riskiest first
+## Changes, riskiest first
+
+2 changes (3 changed operations). Each starts at its topmost changed operation; the operations under it are reached only through it.
 
 ### 1. KycCheck.runCheck: high risk, modified, owner team-compliance
 
@@ -26,6 +28,18 @@ Lazy analysis: 2 of 28 flows analyzed (`topic kyc.recheck_requested`, `cron kyc-
 - **Code**: 4 functions in 2 files: `runCheck` (modified, +11/−3, sample-service/src/modules/kyc/KycModule.ts:31); `riskTier` (added, +8/−0, sample-service/src/modules/kyc/riskTier.ts:15); `needsManualReview` (added, +4/−0, sample-service/src/modules/kyc/riskTier.ts:25); `KycModule.persist` (added, +4/−0, sample-service/src/modules/kyc/KycModule.ts:72)
 - **Reached from** 4 entry points: `topic user.documents.uploaded`, `topic kyc.recheck_requested`, `gRPC kyc.v1.KycService/RunCheck`, `POST /v1/kyc/:userId/check`
 
+Also reached through the change in `KycCheck.recheckExpired`, but other paths reach it too, so it is reviewed on its own.
+
+Inside this change (reached only through KycCheck.runCheck): SanctionsScreening.screen (medium).
+
+#### 1.1. SanctionsScreening.screen: medium risk, modified, owner team-compliance
+
+- **Output** `ScreeningResult`: +score: number
+- **Behaviour inside** (steps of this operation, base → head):
+  - NEW http `sanctions-api` (only on error)
+- **Code**: 2 functions in 1 file: `screen` (modified, +9/−1, sample-service/src/modules/kyc/SanctionsScreening.ts:16); `normaliseName` (added, +3/−0, sample-service/src/modules/kyc/SanctionsScreening.ts:29)
+- **Reached from** 4 entry points: `topic user.documents.uploaded`, `topic kyc.recheck_requested`, `gRPC kyc.v1.KycService/RunCheck`, `POST /v1/kyc/:userId/check`
+
 ### 2. KycCheck.recheckExpired: high risk, modified, owner team-compliance
 
 - **Side effects**: +outbox `kyc.recheck_requested`, −db.write `kyc_results`, −outbox `kyc.completed`, −db.read `user_documents`, −http `document-ai`, −db.read `country_codes`, −http `sanctions-api`
@@ -35,14 +49,6 @@ Lazy analysis: 2 of 28 flows analyzed (`topic kyc.recheck_requested`, `cron kyc-
   - REMOVED call KycCheck.runCheck (was once per item)
 - **Code**: 1 function in 1 file: `recheckExpired` (modified, +1/−1, sample-service/src/modules/kyc/KycModule.ts:65)
 - **Reached from** 1 entry point: `cron kyc-nightly-rescreen (0 2 * * *)`
-
-### 3. SanctionsScreening.screen: medium risk, modified, owner team-compliance
-
-- **Output** `ScreeningResult`: +score: number
-- **Behaviour inside** (steps of this operation, base → head):
-  - NEW http `sanctions-api` (only on error)
-- **Code**: 2 functions in 1 file: `screen` (modified, +9/−1, sample-service/src/modules/kyc/SanctionsScreening.ts:16); `normaliseName` (added, +3/−0, sample-service/src/modules/kyc/SanctionsScreening.ts:29)
-- **Reached from** 4 entry points: `topic user.documents.uploaded`, `topic kyc.recheck_requested`, `gRPC kyc.v1.KycService/RunCheck`, `POST /v1/kyc/:userId/check`
 
 ## Entry points
 

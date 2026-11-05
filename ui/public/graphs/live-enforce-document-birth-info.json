@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "birth-info-service",
-  "generatedAt": "2026-11-05T14:06:36.314Z",
+  "generatedAt": "2026-11-05T21:27:08.081Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -855,7 +855,7 @@
             "kyc": {
               "countryOfBirth": "PRT",
               "placeOfBirth": "Porto",
-              "updatedAt": "2026-11-05T14:06:36.155Z"
+              "updatedAt": "2026-11-05T21:27:07.926Z"
             }
           },
           "cases": [
@@ -892,7 +892,7 @@
             "kyc": {
               "countryOfBirth": "IND",
               "placeOfBirth": "Mumbai",
-              "updatedAt": "2026-11-05T14:06:36.155Z"
+              "updatedAt": "2026-11-05T21:27:07.927Z"
             }
           },
           "cases": [
@@ -927,7 +927,7 @@
             "kyc": {
               "countryOfBirth": "DEU",
               "placeOfBirth": "Berlin",
-              "updatedAt": "2026-11-05T14:06:36.156Z"
+              "updatedAt": "2026-11-05T21:27:07.927Z"
             }
           },
           "cases": [
@@ -950,7 +950,7 @@
             "kyc": {
               "countryOfBirth": "NGA",
               "placeOfBirth": "lagos",
-              "updatedAt": "2026-11-05T14:06:36.156Z"
+              "updatedAt": "2026-11-05T21:27:07.927Z"
             }
           },
           "cases": [
@@ -1272,7 +1272,7 @@
             "userId": "u-1",
             "countryOfBirth": "PRT",
             "placeOfBirth": "Porto",
-            "updatedAt": "2026-11-05T14:06:36.155Z"
+            "updatedAt": "2026-11-05T21:27:07.926Z"
           },
           "cases": [
             "c9"
@@ -1291,7 +1291,7 @@
             "userId": "u-2",
             "countryOfBirth": "IND",
             "placeOfBirth": "Mumbai",
-            "updatedAt": "2026-11-05T14:06:36.155Z"
+            "updatedAt": "2026-11-05T21:27:07.927Z"
           },
           "cases": [
             "c11"
@@ -1310,7 +1310,7 @@
             "userId": "u-3",
             "countryOfBirth": "DEU",
             "placeOfBirth": "Berlin",
-            "updatedAt": "2026-11-05T14:06:36.156Z"
+            "updatedAt": "2026-11-05T21:27:07.927Z"
           },
           "cases": [
             "c13"
@@ -1329,7 +1329,7 @@
             "userId": "u-4",
             "countryOfBirth": "NGA",
             "placeOfBirth": "lagos",
-            "updatedAt": "2026-11-05T14:06:36.156Z"
+            "updatedAt": "2026-11-05T21:27:07.927Z"
           },
           "cases": [
             "c14"
@@ -1477,7 +1477,7 @@
             "kyc": {
               "countryOfBirth": "IND",
               "placeOfBirth": "Mumbai",
-              "updatedAt": "2026-11-05T14:06:36.155Z"
+              "updatedAt": "2026-11-05T21:27:07.927Z"
             }
           },
           "cases": [
@@ -1495,7 +1495,7 @@
             "kyc": {
               "countryOfBirth": "DEU",
               "placeOfBirth": "Berlin",
-              "updatedAt": "2026-11-05T14:06:36.156Z"
+              "updatedAt": "2026-11-05T21:27:07.927Z"
             }
           },
           "cases": [
@@ -1515,7 +1515,7 @@
             "kyc": {
               "countryOfBirth": "NGA",
               "placeOfBirth": "lagos",
-              "updatedAt": "2026-11-05T14:06:36.156Z"
+              "updatedAt": "2026-11-05T21:27:07.927Z"
             }
           },
           "cases": [
@@ -1639,7 +1639,7 @@
             "userId": "u-2",
             "countryOfBirth": "IND",
             "placeOfBirth": "Mumbai",
-            "updatedAt": "2026-11-05T14:06:36.155Z"
+            "updatedAt": "2026-11-05T21:27:07.927Z"
           },
           "cases": [
             "c11",
@@ -1654,7 +1654,7 @@
             "userId": "u-3",
             "countryOfBirth": "DEU",
             "placeOfBirth": "Berlin",
-            "updatedAt": "2026-11-05T14:06:36.156Z"
+            "updatedAt": "2026-11-05T21:27:07.927Z"
           },
           "cases": [
             "c13",
@@ -1669,7 +1669,7 @@
             "userId": "u-4",
             "countryOfBirth": "NGA",
             "placeOfBirth": "lagos",
-            "updatedAt": "2026-11-05T14:06:36.156Z"
+            "updatedAt": "2026-11-05T21:27:07.927Z"
           },
           "cases": [
             "c14",
@@ -2350,6 +2350,17 @@
       "BirthInfoService.updateKycBirthInfo",
       "KycBirthInfoStore.save"
     ],
+    "changes": [
+      {
+        "root": "BirthInfoService.updateKycBirthInfo",
+        "parts": [
+          "BirthInfoVerifier.verify",
+          "KycBirthInfoStore.save"
+        ],
+        "risk": "high",
+        "reach": 1
+      }
+    ],
     "queue": [
       {
         "operation": "BirthInfoVerifier.verify",
@@ -2394,7 +2405,8 @@
       "entryPointsReached": 0,
       "operationsKnown": 8,
       "operationsAnalyzed": 6,
-      "ms": 4708
-    }
+      "ms": 4842
+    },
+    "api": "/api"
   }
 }

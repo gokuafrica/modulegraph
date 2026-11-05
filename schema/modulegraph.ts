@@ -311,9 +311,32 @@ export interface Finding {
 export interface ReviewSummary {
   changedModules: string[];
   changedOperations: string[];
-  /** Changed ops sorted by contract risk: what the reviewer should look at first. */
+  /**
+   * The change as the reviewer meets it, riskiest first: one item per independent change. Changed operations that
+   * are only reached through another changed one (every path to them passes through it) are parts of that change,
+   * so separate items never overlap.
+   */
+  changes: ReviewChange[];
+  /** Every changed op on its own, sorted by contract risk: the detail behind `changes`. */
   queue: { operation: string; risk: Risk; reason: string; reach: number }[];
   /** Owners whose modules' contracts changed. */
   reviewers: string[];
   stats: { files: number; linesAdded: number; linesRemoved: number; contractChanges: number; entryPointsAffected: number };
+}
+
+/** One change: where it begins, and the changed operations inside it. */
+export interface ReviewChange {
+  /** The topmost changed operation: open it and the rest of the change is below it. */
+  root: string;
+  /** Changed operations reached only through the root, riskiest first. */
+  parts: string[];
+  /** The highest risk of the root and its parts. */
+  risk: Risk;
+  /** Entry points that reach the root. */
+  reach: number;
+  /**
+   * Roots of other changes that also reach this one. A shared operation that changed together with one of its
+   * callers stays its own change (other flows reach it too), and says which change it is also part of.
+   */
+  alsoIn?: string[];
 }

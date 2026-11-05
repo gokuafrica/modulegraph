@@ -1,4 +1,4 @@
-import type { Effect, EntryPoint, Finding, ModuleGraph, Operation, Step } from '../../schema/modulegraph.ts';
+import type { Effect, EntryPoint, Finding, ModuleGraph, Operation, Risk, Step } from '../../schema/modulegraph.ts';
 import { opLabel, reachIndex } from './rules.ts';
 
 /**
@@ -38,14 +38,22 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://localhos
     out.push(`Lazy analysis: ${st.entryPointsAnalyzed} of ${st.entryPointsKnown} flows analyzed (${g.lazy!.seeds.map((x) => `\`${label(g, x.id)}\``).join(', ')}). Reach counts are lower bounds.`);
   }
 
-  // ---------- contract changes ----------
-  out.push('', '## Contract changes, riskiest first', '');
-  if (!g.review.queue.length) out.push('None: no module operation changed.');
-  g.review.queue.forEach((q, i) => {
-    const op = g.operations[q.operation];
+  // ---------- changes ----------
+  // One section per independent change. Its parts are the changed operations only reached through its root.
+  out.push('', '## Changes, riskiest first', '');
+  const changes = g.review.changes;
+  if (!changes.length) out.push('None: no module operation changed.');
+  else if (changes.length < g.review.queue.length) {
+    out.push(`${changes.length} change${changes.length > 1 ? 's' : ''} (${g.review.queue.length} changed operations). Each starts at its topmost changed operation; the operations under it are reached only through it.`, '');
+  }
+  const reason = new Map(g.review.queue.map((q) => [q.operation, q]));
+  const section = (opId: string, heading: string, risk?: Risk) => {
+    const op = g.operations[opId];
     const mod = g.modules[op.moduleId];
+    const q = reason.get(opId)!;
     const entries = [...(reach.get(op.id) ?? [])].filter((id) => g.entryPoints[id]?.change !== 'removed');
-    out.push(`### ${i + 1}. ${opLabel(g, op.id)}: ${q.risk} risk, ${op.change}${mod.owner ? `, owner ${mod.owner}` : ''}`);
+    const own = risk && risk !== q.risk ? ` (with its parts; ${q.risk} on its own)` : '';
+    out.push(`${heading} ${opLabel(g, op.id)}: ${risk ?? q.risk} risk${own}, ${op.change}${mod.owner ? `, owner ${mod.owner}` : ''}`);
     out.push('');
     const d = op.delta;
     if (d?.params) out.push(`- **Inputs**: (${sig(d.params.before)}) → (${sig(d.params.after)})`);
@@ -81,6 +89,14 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://localhos
     }
     out.push(`- **Reached from** ${entries.length}${partial && !op.lazy?.callersLoaded ? '+' : ''} entry point${entries.length === 1 ? '' : 's'}: ${list(entries.map((id) => `\`${label(g, id)}\``), 8)}`);
     out.push('');
+  };
+  changes.forEach((c, i) => {
+    section(c.root, `### ${i + 1}.`, c.risk);
+    if (c.alsoIn?.length) out.push(`Also reached through the change in ${c.alsoIn.map((r) => `\`${opLabel(g, r)}\``).join(', ')}, but other paths reach it too, so it is reviewed on its own.`, '');
+    if (c.parts.length) {
+      out.push(`Inside this change (reached only through ${opLabel(g, c.root)}): ${c.parts.map((p) => `${opLabel(g, p)} (${reason.get(p)!.risk})`).join(', ')}.`, '');
+    }
+    c.parts.forEach((p, k) => section(p, `#### ${i + 1}.${k + 1}.`));
   });
 
   // ---------- entry points ----------
@@ -148,7 +164,7 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://localhos
   out.push(g.review.reviewers.length ? g.review.reviewers.join(', ') : 'No owners configured for the changed modules.');
   out.push('');
   out.push('## Open in the UI', '');
-  const top = g.review.queue[0]?.operation;
+  const top = g.review.changes[0]?.root;
   if (top) out.push(`- Zoom out from the riskiest change: ${uiBase}/#g=${graphId}&v=impact&op=${encodeURIComponent(top)}&d=1`);
   const firstFlow = g.lazy?.seeds[0]?.id ?? (top ? [...(reach.get(top) ?? [])][0] : undefined);
   if (firstFlow) out.push(`- A flow through it: ${uiBase}/#g=${graphId}&v=flow&t=${encodeURIComponent(firstFlow)}${top ? `&f=${encodeURIComponent(top)}` : ''}`);

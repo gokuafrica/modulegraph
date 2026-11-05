@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-05T14:05:42.775Z",
+  "generatedAt": "2026-11-05T21:24:59.769Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
@@ -591,7 +591,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T14:05:42.648Z"
+              "extractedAt": "2026-11-05T21:24:59.633Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -619,7 +619,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T14:05:42.649Z"
+              "extractedAt": "2026-11-05T21:24:59.635Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -1165,7 +1165,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T14:05:42.645Z"
+              "extractedAt": "2026-11-05T21:24:59.630Z"
             }
           },
           "output": {
@@ -1203,7 +1203,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T14:05:42.648Z"
+              "extractedAt": "2026-11-05T21:24:59.633Z"
             }
           },
           "output": {
@@ -1479,7 +1479,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T14:05:42.645Z"
+              "extractedAt": "2026-11-05T21:24:59.630Z"
             }
           },
           "output": {
@@ -1945,7 +1945,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-05T14:05:42.645Z"
+            "extractedAt": "2026-11-05T21:24:59.630Z"
           },
           "cases": [
             "c1",
@@ -1981,7 +1981,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-05T14:05:42.648Z"
+            "extractedAt": "2026-11-05T21:24:59.633Z"
           },
           "cases": [
             "c11",
@@ -2132,7 +2132,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-05T14:05:42.647Z"
+            "checkedAt": "2026-11-05T21:24:59.632Z"
           },
           "cases": [
             "c5",
@@ -2147,7 +2147,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-05T14:05:42.648Z"
+            "checkedAt": "2026-11-05T21:24:59.633Z"
           },
           "cases": [
             "c15"
@@ -2213,7 +2213,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-05T14:05:42.647Z"
+            "checkedAt": "2026-11-05T21:24:59.632Z"
           },
           "cases": [
             "c6"
@@ -2226,7 +2226,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-05T14:05:42.648Z"
+            "checkedAt": "2026-11-05T21:24:59.633Z"
           },
           "cases": [
             "c16"
@@ -2575,7 +2575,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T14:05:42.645Z"
+              "extractedAt": "2026-11-05T21:24:59.630Z"
             }
           },
           "output": {
@@ -2611,7 +2611,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T14:05:42.648Z"
+              "extractedAt": "2026-11-05T21:24:59.633Z"
             }
           },
           "output": {
@@ -2845,7 +2845,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T14:05:42.645Z"
+              "extractedAt": "2026-11-05T21:24:59.630Z"
             }
           },
           "output": {
@@ -2874,7 +2874,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T14:05:42.648Z"
+              "extractedAt": "2026-11-05T21:24:59.633Z"
             }
           },
           "output": {
@@ -9722,6 +9722,25 @@
       "BirthInfoModule.resolve",
       "BirthInfoModule.recordConsent",
       "DocumentBirthExtractor.fromIdentity"
+    ],
+    "changes": [
+      {
+        "root": "BirthInfoModule.resolve",
+        "parts": [
+          "BirthConsentStore.findActiveConsent",
+          "DocumentBirthExtractor.fromIdentity"
+        ],
+        "risk": "high",
+        "reach": 21
+      },
+      {
+        "root": "BirthInfoModule.recordConsent",
+        "parts": [
+          "BirthConsentStore.recordConsent"
+        ],
+        "risk": "high",
+        "reach": 1
+      }
     ],
     "queue": [
       {

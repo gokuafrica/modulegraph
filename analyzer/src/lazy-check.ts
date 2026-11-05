@@ -13,6 +13,7 @@ import { loadConfig } from './config.ts';
 import { effectKey } from './effects.ts';
 import { diffBetween, filesAtRef, mergeBase, revParse } from './git.ts';
 import { LazySession } from './lazy.ts';
+import { reviewSummary } from './rules.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, '../..').replace(/\\/g, '/');
@@ -84,6 +85,11 @@ for (const [projectRel, profile, branch, intent, fix] of [
       if (e.containsChanges !== f.containsChanges) fail(`${stage}: ${e.id} containsChanges differs`);
     }
     if (Object.keys(g.entryPoints).length !== Object.keys(full.entryPoints).length) fail(`${stage}: entry point list incomplete`);
+    // Lazy may fold less (callers not listed yet), never differently: every part it folds, full analysis folds there too.
+    const fullChanges = reviewSummary(full, undefined).changes;
+    const rootIn = new Map(fullChanges.flatMap((c) => [c.root, ...c.parts].map((id) => [id, c.root] as const)));
+    for (const c of g.review.changes) for (const p of c.parts) if (rootIn.get(p) !== c.root) fail(`${stage}: lazy folds ${p} into ${c.root}, full analysis into ${rootIn.get(p)}`);
+    console.log(`  ${stage}: ${g.review.changes.length} change(s) from ${g.review.queue.length} changed operations (full analysis: ${fullChanges.length})`);
   };
 
   const st = lazy.lazy!.stats;

@@ -1,4 +1,4 @@
-import type { Effect, Finding, ReviewSummary, Risk } from '../../schema/modulegraph.ts';
+import type { Effect, Finding, ReviewChange, ReviewSummary, Risk } from '../../schema/modulegraph.ts';
 import type { Graphish } from './compare.ts';
 import type { Config } from './config.ts';
 import { dedupeEffects, effectKey } from './effects.ts';
@@ -360,6 +360,63 @@ export function markNew(head: Finding[], base: Finding[]): Finding[] {
 
 const riskOrder: Record<Risk, number> = { high: 0, medium: 1, low: 2, none: 3 };
 
+/**
+ * Folds the changed operations into independent changes. A changed operation is part of another changed one when
+ * every path to it passes through that one (it dominates it in the call graph); it goes to the topmost such one,
+ * where the change begins. One reached on any path that avoids the other changes (a shared module other flows use
+ * as well) stays a change of its own, so separate changes never hide each other's reach.
+ *
+ * Paths start at entry points and at operations nobody calls. A call the change removed counts as an edge: the
+ * removal is part of the caller's change. In a lazy graph an operation whose callers were never listed may have
+ * callers nobody has seen, so it is a start as well: nothing is folded on a guess.
+ */
+export function changeGroups(g: Graphish, queue: ReviewSummary['queue']): ReviewChange[] {
+  const callees = new Map<string, Set<string>>();
+  const called = new Set<string>();
+  for (const [id, scope] of Object.entries(g.scopes)) {
+    for (const s of [...scope.steps, ...(scope.removedSteps ?? [])]) {
+      if (!s.target || s.target === id) continue;
+      if (!callees.has(id)) callees.set(id, new Set());
+      callees.get(id)!.add(s.target);
+      called.add(s.target);
+    }
+  }
+  const walk = (from: Iterable<string>, avoid?: string): Set<string> => {
+    const seen = new Set<string>();
+    const stack = [...from].filter((id) => id !== avoid);
+    while (stack.length) {
+      const id = stack.pop()!;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      for (const c of callees.get(id) ?? []) if (c !== avoid && !seen.has(c)) stack.push(c);
+    }
+    return seen;
+  };
+  const nodes = new Set([...Object.keys(g.entryPoints), ...Object.keys(g.operations), ...Object.keys(g.scopes)]);
+  const starts = new Set([...nodes].filter((id) => g.entryPoints[id] || !called.has(id) || (g.operations[id]?.lazy && !g.operations[id].lazy!.callersLoaded)));
+  // Code no start reaches (a cycle nobody else calls) starts its own paths.
+  const reached = walk(starts);
+  for (const id of nodes) if (!reached.has(id)) starts.add(id);
+
+  const changed = queue.map((q) => q.operation);
+  const byId = new Map(queue.map((q) => [q.operation, q]));
+  const reachableWithout = new Map(changed.map((c) => [c, walk(starts, c)]));
+  /** Changed operations every path to `id` passes through. */
+  const dominators = (id: string) => changed.filter((c) => c !== id && !reachableWithout.get(c)!.has(id));
+  const dom = new Map(changed.map((id) => [id, dominators(id)]));
+  // Dominators form a chain, so exactly one of them has no changed dominator of its own: the topmost.
+  const rootOf = (id: string) => dom.get(id)!.find((c) => dom.get(c)!.length === 0) ?? id;
+  const roots = changed.filter((id) => dom.get(id)!.length === 0);
+  const below = new Map(roots.map((r) => [r, walk([r])]));
+  const changes = roots.map((root): ReviewChange => {
+    const parts = changed.filter((id) => id !== root && rootOf(id) === root);
+    const risk = [root, ...parts].map((id) => byId.get(id)!.risk).sort((a, b) => riskOrder[a] - riskOrder[b])[0];
+    const alsoIn = roots.filter((r) => r !== root && below.get(r)!.has(root));
+    return { root, parts, risk, reach: byId.get(root)!.reach, ...(alsoIn.length ? { alsoIn } : {}) };
+  });
+  return changes.sort((a, b) => riskOrder[a.risk] - riskOrder[b.risk] || b.reach - a.reach);
+}
+
 /** R2/R5/R10: review queue sorted by contract risk then reach, plus the owners to request. */
 export function reviewSummary(g: Graphish, diff: RawDiff | undefined): ReviewSummary {
   const reach = reachIndex(g);
@@ -394,6 +451,7 @@ export function reviewSummary(g: Graphish, diff: RawDiff | undefined): ReviewSum
       };
     })
     .sort((a, b) => riskOrder[a.risk] - riskOrder[b.risk] || b.reach - a.reach);
+  const changes = changeGroups(g, queue);
   const changedModules = Object.values(g.modules).filter((m) => m.change !== 'unchanged').map((m) => m.id);
   // Owners of contract changes first, then owners of modules whose behaviour changed inside (guards, steps).
   const contractFirst = [...changed].sort((a, b) => Number(!a.delta || a.delta.implementationOnly) - Number(!b.delta || b.delta.implementationOnly));
@@ -403,6 +461,7 @@ export function reviewSummary(g: Graphish, diff: RawDiff | undefined): ReviewSum
   return {
     changedModules,
     changedOperations: changed.map((op) => op.id),
+    changes,
     queue,
     reviewers,
     stats: {

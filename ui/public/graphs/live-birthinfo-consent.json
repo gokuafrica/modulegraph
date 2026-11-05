@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-05T14:05:55.432Z",
+  "generatedAt": "2026-11-05T21:25:12.587Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -1120,7 +1120,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T14:05:55.298Z"
+              "extractedAt": "2026-11-05T21:25:12.446Z"
             }
           },
           "output": {
@@ -1158,7 +1158,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T14:05:55.301Z"
+              "extractedAt": "2026-11-05T21:25:12.449Z"
             }
           },
           "output": {
@@ -1327,7 +1327,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T14:05:55.298Z"
+              "extractedAt": "2026-11-05T21:25:12.446Z"
             }
           },
           "output": {
@@ -1879,7 +1879,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T14:05:55.301Z"
+              "extractedAt": "2026-11-05T21:25:12.449Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -1907,7 +1907,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T14:05:55.302Z"
+              "extractedAt": "2026-11-05T21:25:12.450Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -2046,7 +2046,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-05T14:05:55.300Z"
+            "checkedAt": "2026-11-05T21:25:12.448Z"
           },
           "cases": [
             "c5",
@@ -2061,7 +2061,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-05T14:05:55.301Z"
+            "checkedAt": "2026-11-05T21:25:12.450Z"
           },
           "cases": [
             "c15"
@@ -3331,7 +3331,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-05T14:05:55.298Z"
+            "extractedAt": "2026-11-05T21:25:12.446Z"
           },
           "cases": [
             "c1",
@@ -3367,7 +3367,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-05T14:05:55.301Z"
+            "extractedAt": "2026-11-05T21:25:12.449Z"
           },
           "cases": [
             "c11",
@@ -7803,6 +7803,25 @@
       "BirthInfoModule.resolve",
       "DocumentBirthExtractor.fromIdentity"
     ],
+    "changes": [
+      {
+        "root": "BirthInfoModule.resolve",
+        "parts": [
+          "BirthConsentStore.findActiveConsent",
+          "DocumentBirthExtractor.fromIdentity"
+        ],
+        "risk": "high",
+        "reach": 19
+      },
+      {
+        "root": "BirthInfoModule.recordConsent",
+        "parts": [
+          "BirthConsentStore.recordConsent"
+        ],
+        "risk": "high",
+        "reach": 1
+      }
+    ],
     "queue": [
       {
         "operation": "BirthConsentStore.findActiveConsent",
@@ -7863,7 +7882,7 @@
       "entryPointsReached": 18,
       "operationsKnown": 29,
       "operationsAnalyzed": 21,
-      "ms": 2562
+      "ms": 2528
     }
   }
 }

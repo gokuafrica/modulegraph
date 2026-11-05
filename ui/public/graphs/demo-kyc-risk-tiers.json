@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-05T14:05:48.798Z",
+  "generatedAt": "2026-11-05T21:25:05.852Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
@@ -519,7 +519,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T14:05:48.670Z"
+              "extractedAt": "2026-11-05T21:25:05.708Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -546,7 +546,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T14:05:48.671Z"
+              "extractedAt": "2026-11-05T21:25:05.710Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -607,7 +607,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T14:05:48.667Z"
+              "extractedAt": "2026-11-05T21:25:05.706Z"
             }
           },
           "output": {
@@ -644,7 +644,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T14:05:48.670Z"
+              "extractedAt": "2026-11-05T21:25:05.708Z"
             }
           },
           "output": {
@@ -711,7 +711,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T14:05:48.667Z"
+              "extractedAt": "2026-11-05T21:25:05.706Z"
             }
           },
           "output": {
@@ -748,7 +748,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T14:05:48.670Z"
+              "extractedAt": "2026-11-05T21:25:05.708Z"
             }
           },
           "output": {
@@ -1175,7 +1175,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-05T14:05:48.667Z"
+            "extractedAt": "2026-11-05T21:25:05.706Z"
           },
           "cases": [
             "c1",
@@ -1211,7 +1211,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-05T14:05:48.670Z"
+            "extractedAt": "2026-11-05T21:25:05.708Z"
           },
           "cases": [
             "c11",
@@ -1770,7 +1770,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-05T14:05:48.669Z"
+            "checkedAt": "2026-11-05T21:25:05.708Z"
           },
           "cases": [
             "c5",
@@ -1786,7 +1786,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-05T14:05:48.670Z"
+            "checkedAt": "2026-11-05T21:25:05.709Z"
           },
           "cases": [
             "c15"
@@ -1913,7 +1913,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-05T14:05:48.669Z"
+            "checkedAt": "2026-11-05T21:25:05.708Z"
           },
           "cases": [
             "c6",
@@ -1937,7 +1937,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-05T14:05:48.670Z"
+            "checkedAt": "2026-11-05T21:25:05.709Z"
           },
           "cases": [
             "c16"
@@ -2619,7 +2619,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T14:05:48.667Z"
+              "extractedAt": "2026-11-05T21:25:05.706Z"
             }
           },
           "output": {
@@ -2655,7 +2655,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T14:05:48.670Z"
+              "extractedAt": "2026-11-05T21:25:05.708Z"
             }
           },
           "output": {
@@ -2889,7 +2889,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T14:05:48.667Z"
+              "extractedAt": "2026-11-05T21:25:05.706Z"
             }
           },
           "output": {
@@ -2918,7 +2918,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T14:05:48.670Z"
+              "extractedAt": "2026-11-05T21:25:05.708Z"
             }
           },
           "output": {
@@ -9205,6 +9205,25 @@
       "KycModule.runCheck",
       "KycModule.recheckExpired",
       "SanctionsScreening.screen"
+    ],
+    "changes": [
+      {
+        "root": "KycModule.runCheck",
+        "parts": [
+          "SanctionsScreening.screen"
+        ],
+        "risk": "high",
+        "reach": 5,
+        "alsoIn": [
+          "KycModule.recheckExpired"
+        ]
+      },
+      {
+        "root": "KycModule.recheckExpired",
+        "parts": [],
+        "risk": "high",
+        "reach": 1
+      }
     ],
     "queue": [
       {

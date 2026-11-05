@@ -10,15 +10,11 @@ Stated intent (flag): “BirthInfo: prefer user-consented birth data (birth_info
 
 Lazy analysis: 2 of 28 flows analyzed (`PUT /v1/users/:userId/birth-info/consent`, `GET /v1/users/:userId/birth-info`). Reach counts are lower bounds.
 
-## Contract changes, riskiest first
+## Changes, riskiest first
 
-### 1. BirthConsentStore.findActiveConsent: high risk, added, owner team-identity
+2 changes (5 changed operations). Each starts at its topmost changed operation; the operations under it are reached only through it.
 
-- **Side effects**: +db.read `birth_info_consents`
-- **Code**: 1 function in 1 file: `findActiveConsent` (added, +4/−0, sample-service/src/modules/birth-info/BirthConsentStore.ts:10)
-- **Reached from** 19 entry points: `topic user.documents.uploaded`, `topic user.profile.changed`, `topic tax.year.closed`, `topic travel.booking.created`, `cron kyc-nightly-rescreen (0 2 * * *)`, `cron tax-weekly-sweep (0 4 * * 1)`, `gRPC identity.v1.ProfileService/GetProfile`, `gRPC identity.v1.ProfileService/GetBirthInfo`, … 11 more
-
-### 2. BirthInfo.resolve: high risk, modified, owner team-identity
+### 1. BirthInfo.resolve: high risk, modified, owner team-identity
 
 - **Output** `BirthInfo`: +source: "consent" | "document"
 - **Side effects**: +outbox `birth_info.source_resolved`, +db.read `birth_info_consents` (via a submodule)
@@ -30,24 +26,34 @@ Lazy analysis: 2 of 28 flows analyzed (`PUT /v1/users/:userId/birth-info/consent
 - **Code**: 1 function in 1 file: `resolve` (modified, +7/−0, sample-service/src/modules/birth-info/BirthInfoModule.ts:17)
 - **Reached from** 19 entry points: `topic user.documents.uploaded`, `topic user.profile.changed`, `topic tax.year.closed`, `topic travel.booking.created`, `cron kyc-nightly-rescreen (0 2 * * *)`, `cron tax-weekly-sweep (0 4 * * 1)`, `gRPC identity.v1.ProfileService/GetProfile`, `gRPC identity.v1.ProfileService/GetBirthInfo`, … 11 more
 
-### 3. BirthInfo.recordConsent: high risk, added, owner team-identity
+Inside this change (reached only through BirthInfo.resolve): BirthConsentStore.findActiveConsent (high), DocumentBirthExtractor.fromIdentity (medium).
+
+#### 1.1. BirthConsentStore.findActiveConsent: high risk, added, owner team-identity
+
+- **Side effects**: +db.read `birth_info_consents`
+- **Code**: 1 function in 1 file: `findActiveConsent` (added, +4/−0, sample-service/src/modules/birth-info/BirthConsentStore.ts:10)
+- **Reached from** 19 entry points: `topic user.documents.uploaded`, `topic user.profile.changed`, `topic tax.year.closed`, `topic travel.booking.created`, `cron kyc-nightly-rescreen (0 2 * * *)`, `cron tax-weekly-sweep (0 4 * * 1)`, `gRPC identity.v1.ProfileService/GetProfile`, `gRPC identity.v1.ProfileService/GetBirthInfo`, … 11 more
+
+#### 1.2. DocumentBirthExtractor.fromIdentity: medium risk, modified, owner team-identity
+
+- **Output** `BirthInfo`: +source: "consent" | "document"
+- **Code**: 1 function in 1 file: `fromIdentity` (modified, +1/−1, sample-service/src/modules/birth-info/DocumentBirthExtractor.ts:8)
+- **Reached from** 19 entry points: `topic user.documents.uploaded`, `topic user.profile.changed`, `topic tax.year.closed`, `topic travel.booking.created`, `cron kyc-nightly-rescreen (0 2 * * *)`, `cron tax-weekly-sweep (0 4 * * 1)`, `gRPC identity.v1.ProfileService/GetProfile`, `gRPC identity.v1.ProfileService/GetBirthInfo`, … 11 more
+
+### 2. BirthInfo.recordConsent: high risk, added, owner team-identity
 
 - **Side effects**: +db.write `birth_info_consents` (via a submodule)
 - **Calls**: +BirthConsentStore.recordConsent
 - **Code**: 1 function in 1 file: `recordConsent` (added, +3/−0, sample-service/src/modules/birth-info/BirthInfoModule.ts:28)
 - **Reached from** 1 entry point: `PUT /v1/users/:userId/birth-info/consent`
 
-### 4. BirthConsentStore.recordConsent: high risk, added, owner team-identity
+Inside this change (reached only through BirthInfo.recordConsent): BirthConsentStore.recordConsent (high).
+
+#### 2.1. BirthConsentStore.recordConsent: high risk, added, owner team-identity
 
 - **Side effects**: +db.write `birth_info_consents`
 - **Code**: 1 function in 1 file: `recordConsent` (added, +4/−0, sample-service/src/modules/birth-info/BirthConsentStore.ts:15)
 - **Reached from** 1 entry point: `PUT /v1/users/:userId/birth-info/consent`
-
-### 5. DocumentBirthExtractor.fromIdentity: medium risk, modified, owner team-identity
-
-- **Output** `BirthInfo`: +source: "consent" | "document"
-- **Code**: 1 function in 1 file: `fromIdentity` (modified, +1/−1, sample-service/src/modules/birth-info/DocumentBirthExtractor.ts:8)
-- **Reached from** 19 entry points: `topic user.documents.uploaded`, `topic user.profile.changed`, `topic tax.year.closed`, `topic travel.booking.created`, `cron kyc-nightly-rescreen (0 2 * * *)`, `cron tax-weekly-sweep (0 4 * * 1)`, `gRPC identity.v1.ProfileService/GetProfile`, `gRPC identity.v1.ProfileService/GetBirthInfo`, … 11 more
 
 ## Entry points
 
@@ -118,5 +124,5 @@ team-identity
 
 ## Open in the UI
 
-- Zoom out from the riskiest change: http://localhost:5173/#g=live-birthinfo-consent&v=impact&op=BirthConsentStore.findActiveConsent&d=1
-- A flow through it: http://localhost:5173/#g=live-birthinfo-consent&v=flow&t=api%3APUT%20%2Fv1%2Fusers%2F%3AuserId%2Fbirth-info%2Fconsent&f=BirthConsentStore.findActiveConsent
+- Zoom out from the riskiest change: http://localhost:5173/#g=live-birthinfo-consent&v=impact&op=BirthInfoModule.resolve&d=1
+- A flow through it: http://localhost:5173/#g=live-birthinfo-consent&v=flow&t=api%3APUT%20%2Fv1%2Fusers%2F%3AuserId%2Fbirth-info%2Fconsent&f=BirthInfoModule.resolve

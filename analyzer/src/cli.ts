@@ -309,8 +309,12 @@ const ops = Object.keys(output.operations).length;
 console.log(`\n${config.service}: ${Object.keys(output.modules).length} modules, ${ops} operations, ${Object.keys(output.entryPoints).length} entry points (${Date.now() - started} ms)`);
 if (base) {
   console.log(`change: ${r.stats.files} files, +${r.stats.linesAdded}/−${r.stats.linesRemoved}, ${r.stats.contractChanges} contract changes, ${r.stats.entryPointsAffected} entry points affected`);
-  if (r.queue.length) console.log('\nreview queue (riskiest first):');
-  for (const q of r.queue) console.log(`  [${q.risk.padEnd(6)}] ${opLabel(output, q.operation).padEnd(40)} reach ${String(q.reach).padStart(2)}  ${q.reason}`);
+  if (r.changes.length) console.log(`\nchanges (riskiest first): ${r.changes.length}, from ${r.queue.length} changed operations`);
+  const why = new Map(r.queue.map((q) => [q.operation, q]));
+  for (const c of r.changes) {
+    console.log(`  [${c.risk.padEnd(6)}] ${opLabel(output, c.root).padEnd(40)} reach ${String(c.reach).padStart(2)}  ${why.get(c.root)!.reason}${c.alsoIn ? ` (also reached through ${c.alsoIn.map((x) => opLabel(output, x)).join(', ')})` : ''}`);
+    for (const p of c.parts) console.log(`    └ [${why.get(p)!.risk.padEnd(6)}] ${opLabel(output, p).padEnd(36)} ${why.get(p)!.reason}`);
+  }
   if (r.reviewers.length) console.log(`\nrequest review from: ${r.reviewers.join(', ')}`);
 }
 const shown = findings.filter((f) => f.isNew || !base);

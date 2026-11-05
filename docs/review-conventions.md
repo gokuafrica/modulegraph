@@ -88,7 +88,7 @@ SAST stay in their usual CI jobs. Keep any checker below ~10% effective false po
 | | Recommendation | Status in the MVP |
 |---|---|---|
 | R1 | Module contract schema | Partial: inputs, outputs, example data, typed side effects, owner, all derived without code changes. Pre/postconditions, errors, idempotency not yet |
-| R2 | Contract diffs first | Done: review queue by risk, `changes inside` markers, implementation-only ranked last |
+| R2 | Contract diffs first | Done: one item per independent change (changed operations reached only through another changed one are its parts), riskiest first; `changes inside` markers; implementation-only ranked last |
 | R3 | Undeclared side effects block merge | Done: `new-side-effect` against the base by default; `undeclared-effect` + `--check` when the profile declares a contract |
 | R4 | Size budget in modules | Done: `review-budget`; stacking itself is up to the team's tooling |
 | R5 | Impact view to entry points | Done: zoom-out view, entry grouping, reach counts. Ranking by history not yet |

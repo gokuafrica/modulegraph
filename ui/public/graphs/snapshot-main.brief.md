@@ -8,7 +8,7 @@ Change: 0 files, +0/−0, 0 contract changes, 0 entry points affected.
 
 Stated intent: **none**. The undisclosed-effect check did not run; ask the author what the change is for.
 
-## Contract changes, riskiest first
+## Changes, riskiest first
 
 None: no module operation changed.
 ## New findings (machine-checked)

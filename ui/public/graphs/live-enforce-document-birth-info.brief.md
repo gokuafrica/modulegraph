@@ -10,20 +10,11 @@ Stated intent (commits): “BirthInfo: enforce document birth info on KYC submis
 
 Lazy analysis: 1 of 3 flows analyzed (`POST /api/users/:userId/birth-info`). Reach counts are lower bounds.
 
-## Contract changes, riskiest first
+## Changes, riskiest first
 
-### 1. BirthInfoVerifier.verify: high risk, added, owner team-kyc
+1 change (3 changed operations). Each starts at its topmost changed operation; the operations under it are reached only through it.
 
-- **Code**: 2 functions in 1 file: `verify` (added, +8/−0, sample-birth-service/src/birth-info/birth-info-verifier.ts:32); `normalize` (added, +3/−0, sample-birth-service/src/birth-info/birth-info-verifier.ts:21)
-- **Reached from** 1 entry point: `POST /api/users/:userId/birth-info`
-
-### 2. KycBirthInfoStore.save: high risk, modified, owner team-kyc
-
-- **Inputs**: (userId: string, info: KycBirthInfoDto) → (userId: string, info: KycBirthInfoDto, manager: EntityManager | undefined)
-- **Code**: 1 function in 1 file: `save` (modified, +3/−2, sample-birth-service/src/birth-info/kyc-birth-info.store.ts:32)
-- **Reached from** 1 entry point: `POST /api/users/:userId/birth-info`
-
-### 3. BirthInfo.updateKycBirthInfo: medium risk, modified, owner team-kyc
+### 1. BirthInfo.updateKycBirthInfo: high risk (with its parts; medium on its own), modified, owner team-kyc
 
 - **Calls**: +DocumentBirthInfo.forUser, +BirthInfoVerifier.verify
 - **Behaviour inside** (steps of this operation, base → head):
@@ -33,6 +24,19 @@ Lazy analysis: 1 of 3 flows analyzed (`POST /api/users/:userId/birth-info`). Rea
   - GUARD CHANGED event `kyc.birth_info.updated`: now only when `check.ok`; before: always
   - GUARD CHANGED call BirthInfo.get: now only when `check.ok`; before: always
 - **Code**: 1 function in 1 file: `updateKycBirthInfo` (modified, +11/−2, sample-birth-service/src/birth-info/birth-info.service.ts:33)
+- **Reached from** 1 entry point: `POST /api/users/:userId/birth-info`
+
+Inside this change (reached only through BirthInfo.updateKycBirthInfo): BirthInfoVerifier.verify (high), KycBirthInfoStore.save (high).
+
+#### 1.1. BirthInfoVerifier.verify: high risk, added, owner team-kyc
+
+- **Code**: 2 functions in 1 file: `verify` (added, +8/−0, sample-birth-service/src/birth-info/birth-info-verifier.ts:32); `normalize` (added, +3/−0, sample-birth-service/src/birth-info/birth-info-verifier.ts:21)
+- **Reached from** 1 entry point: `POST /api/users/:userId/birth-info`
+
+#### 1.2. KycBirthInfoStore.save: high risk, modified, owner team-kyc
+
+- **Inputs**: (userId: string, info: KycBirthInfoDto) → (userId: string, info: KycBirthInfoDto, manager: EntityManager | undefined)
+- **Code**: 1 function in 1 file: `save` (modified, +3/−2, sample-birth-service/src/birth-info/kyc-birth-info.store.ts:32)
 - **Reached from** 1 entry point: `POST /api/users/:userId/birth-info`
 
 ## New findings (machine-checked)
@@ -46,5 +50,5 @@ team-kyc
 
 ## Open in the UI
 
-- Zoom out from the riskiest change: http://localhost:5173/#g=live-enforce-document-birth-info&v=impact&op=BirthInfoVerifier.verify&d=1
-- A flow through it: http://localhost:5173/#g=live-enforce-document-birth-info&v=flow&t=api%3APOST%20%2Fapi%2Fusers%2F%3AuserId%2Fbirth-info&f=BirthInfoVerifier.verify
+- Zoom out from the riskiest change: http://localhost:5173/#g=live-enforce-document-birth-info&v=impact&op=BirthInfoService.updateKycBirthInfo&d=1
+- A flow through it: http://localhost:5173/#g=live-enforce-document-birth-info&v=flow&t=api%3APOST%20%2Fapi%2Fusers%2F%3AuserId%2Fbirth-info&f=BirthInfoService.updateKycBirthInfo

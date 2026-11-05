@@ -10,7 +10,7 @@ Stated intent (commits): “Orders: hold high-risk orders for fraud review; loya
 
 Lazy analysis: 4 of 18 flows analyzed (`GET /api/orders/quote`, `POST /api/orders/:id/release`). Reach counts are lower bounds.
 
-## Contract changes, riskiest first
+## Changes, riskiest first
 
 ### 1. Orders.release: high risk, added, owner team-checkout
 
@@ -19,11 +19,15 @@ Lazy analysis: 4 of 18 flows analyzed (`GET /api/orders/quote`, `POST /api/order
 - **Code**: 1 function in 1 file: `release` (added, +11/−0, sample-nest-service/src/orders/orders.service.ts:65)
 - **Reached from** 2+ entry points: `POST /api/orders/:id/release`, `topic fraud.decisions`
 
+Also reached through the change in `Orders.resolveHold`, but other paths reach it too, so it is reviewed on its own.
+
 ### 2. Fraud.assess: high risk, added, owner team-risk
 
 - **Side effects**: +http `risk.example.com`, +db.write `fraud_checks`
 - **Code**: 2 functions in 2 files: `assess` (added, +8/−0, sample-nest-service/src/fraud/fraud.service.ts:47); `needsReview` (added, +4/−0, sample-nest-service/src/fraud/policy.ts:9)
 - **Reached from** 1+ entry point: `GET /api/orders/quote`
+
+Also reached through the change in `Orders.preview`, `Orders.create`, but other paths reach it too, so it is reviewed on its own.
 
 ### 3. Orders.preview: high risk, modified, owner team-checkout
 
@@ -41,6 +45,8 @@ Lazy analysis: 4 of 18 flows analyzed (`GET /api/orders/quote`, `POST /api/order
 - **Output** `Quote`: +loyaltyDiscount: number
 - **Code**: 1 function in 1 file: `quote` (modified, +7/−3, sample-nest-service/src/pricing/pricing.service.ts:54)
 - **Reached from** 1+ entry point: `GET /api/orders/quote`
+
+Also reached through the change in `Orders.preview`, `Orders.create`, but other paths reach it too, so it is reviewed on its own.
 
 ### 5. Shipping.updateStatus: high risk, added, owner team-fulfilment
 
@@ -87,10 +93,14 @@ Lazy analysis: 4 of 18 flows analyzed (`GET /api/orders/quote`, `POST /api/order
 - **Code**: 1 function in 1 file: `tracking` (modified, +1/−2, sample-nest-service/src/shipping/shipping.service.ts:76)
 - **Reached from** 0+ entry points: none found
 
+Also reached through the change in `Orders.get`, but other paths reach it too, so it is reviewed on its own.
+
 ### 10. CarrierApi.status: high risk, removed, owner team-fulfilment
 
 - **Side effects**: −http `carrier.example.com`
 - **Reached from** 0+ entry points: none found
+
+Also reached through the change in `Orders.get`, `Shipping.tracking`, but other paths reach it too, so it is reviewed on its own.
 
 ### 11. Payments.handleWebhook: medium risk, modified, owner team-payments
 

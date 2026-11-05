@@ -1216,6 +1216,13 @@
             "type": "string"
           }
         },
+        "changes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ReviewChange"
+          },
+          "description": "The change as the reviewer meets it, riskiest first: one item per independent change. Changed operations that\nare only reached through another changed one (every path to them passes through it) are parts of that change,\nso separate items never overlap."
+        },
         "queue": {
           "type": "array",
           "items": {
@@ -1242,7 +1249,7 @@
             ],
             "additionalProperties": false
           },
-          "description": "Changed ops sorted by contract risk: what the reviewer should look at first."
+          "description": "Every changed op on its own, sorted by contract risk: the detail behind `changes`."
         },
         "reviewers": {
           "type": "array",
@@ -1283,9 +1290,48 @@
       "required": [
         "changedModules",
         "changedOperations",
+        "changes",
         "queue",
         "reviewers",
         "stats"
+      ],
+      "additionalProperties": false
+    },
+    "ReviewChange": {
+      "type": "object",
+      "properties": {
+        "root": {
+          "type": "string",
+          "description": "The topmost changed operation: open it and the rest of the change is below it."
+        },
+        "parts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Changed operations reached only through the root, riskiest first."
+        },
+        "risk": {
+          "$ref": "#/definitions/Risk",
+          "description": "The highest risk of the root and its parts."
+        },
+        "reach": {
+          "type": "number",
+          "description": "Entry points that reach the root."
+        },
+        "alsoIn": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Roots of other changes that also reach this one. A shared operation that changed together with one of its\ncallers stays its own change (other flows reach it too), and says which change it is also part of."
+        }
+      },
+      "required": [
+        "root",
+        "parts",
+        "risk",
+        "reach"
       ],
       "additionalProperties": false
     }

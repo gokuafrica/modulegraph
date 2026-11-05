@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-05T14:06:02.035Z",
+  "generatedAt": "2026-11-05T21:25:19.095Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -958,7 +958,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-05T14:06:01.896Z"
+            "checkedAt": "2026-11-05T21:25:18.961Z"
           },
           "cases": [
             "c5",
@@ -974,7 +974,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-05T14:06:01.897Z"
+            "checkedAt": "2026-11-05T21:25:18.962Z"
           },
           "cases": [
             "c15"
@@ -1073,7 +1073,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-05T14:06:01.894Z"
+            "extractedAt": "2026-11-05T21:25:18.959Z"
           },
           "cases": [
             "c1",
@@ -1109,7 +1109,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-05T14:06:01.897Z"
+            "extractedAt": "2026-11-05T21:25:18.962Z"
           },
           "cases": [
             "c11",
@@ -1421,7 +1421,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T14:06:01.894Z"
+              "extractedAt": "2026-11-05T21:25:18.959Z"
             }
           },
           "output": {
@@ -1458,7 +1458,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T14:06:01.897Z"
+              "extractedAt": "2026-11-05T21:25:18.962Z"
             }
           },
           "output": {
@@ -1529,7 +1529,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T14:06:01.894Z"
+              "extractedAt": "2026-11-05T21:25:18.959Z"
             }
           },
           "output": {
@@ -1566,7 +1566,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T14:06:01.897Z"
+              "extractedAt": "2026-11-05T21:25:18.962Z"
             }
           },
           "output": {
@@ -1655,7 +1655,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T14:06:01.894Z"
+              "extractedAt": "2026-11-05T21:25:18.959Z"
             }
           },
           "output": {
@@ -1691,7 +1691,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T14:06:01.897Z"
+              "extractedAt": "2026-11-05T21:25:18.962Z"
             }
           },
           "output": {
@@ -2120,7 +2120,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-05T14:06:01.896Z"
+            "checkedAt": "2026-11-05T21:25:18.961Z"
           },
           "cases": [
             "c6",
@@ -2144,7 +2144,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-05T14:06:01.897Z"
+            "checkedAt": "2026-11-05T21:25:18.962Z"
           },
           "cases": [
             "c16"
@@ -5109,6 +5109,25 @@
       "SanctionsScreening.screen",
       "KycModule.recheckExpired"
     ],
+    "changes": [
+      {
+        "root": "KycModule.runCheck",
+        "parts": [
+          "SanctionsScreening.screen"
+        ],
+        "risk": "high",
+        "reach": 4,
+        "alsoIn": [
+          "KycModule.recheckExpired"
+        ]
+      },
+      {
+        "root": "KycModule.recheckExpired",
+        "parts": [],
+        "risk": "high",
+        "reach": 1
+      }
+    ],
     "queue": [
       {
         "operation": "KycModule.runCheck",
@@ -5157,7 +5176,7 @@
       "entryPointsReached": 5,
       "operationsKnown": 26,
       "operationsAnalyzed": 12,
-      "ms": 2581
+      "ms": 2486
     }
   }
 }

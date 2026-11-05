@@ -8,7 +8,9 @@ Change: 9 files, +178/−24, 10 contract changes, 8 entry points affected.
 
 Stated intent (commits): “Orders: hold high-risk orders for fraud review; loyalty discounts; carrier status from events - New FraudService scores every order with the risk provider. Orders scoring 0.8 or more, or above 5000 for standard-tier customers, are held: no stock reservation, orders.held instead of orders.created and no confirmation email. - POST /orders/:id/release lets a reviewer release a held order; fraud.decisions events from the fraud desk approve (release) or reject (cancel) held orders. - The checkout quote preview says whether the order would need review. - Gold and platinum customers get a 5% / 10% lo”
 
-## Contract changes, riskiest first
+## Changes, riskiest first
+
+9 changes (11 changed operations). Each starts at its topmost changed operation; the operations under it are reached only through it.
 
 ### 1. Fraud.assess: high risk, added, owner team-risk
 
@@ -16,12 +18,16 @@ Stated intent (commits): “Orders: hold high-risk orders for fraud review; loya
 - **Code**: 2 functions in 2 files: `assess` (added, +8/−0, sample-nest-service/src/fraud/fraud.service.ts:47); `needsReview` (added, +4/−0, sample-nest-service/src/fraud/policy.ts:9)
 - **Reached from** 2 entry points: `POST /api/orders`, `GET /api/orders/quote`
 
+Also reached through the change in `Orders.preview`, `Orders.create`, but other paths reach it too, so it is reviewed on its own.
+
 ### 2. Orders.release: high risk, added, owner team-checkout
 
 - **Side effects**: +db.read `orders`, +db.read `order_lines`, +db.write `orders`, +kafka `orders.created`, +event `order.created`, +db.read `stock_items` (via a submodule), +db.write `stock_items` (via a submodule), +db.write `audit_log` (via a submodule), +db.read `customers` (via a submodule)
 - **Calls**: +Inventory.reserve, +Audit.record, +Customers.profile
 - **Code**: 1 function in 1 file: `release` (added, +11/−0, sample-nest-service/src/orders/orders.service.ts:65)
 - **Reached from** 2 entry points: `POST /api/orders/:id/release`, `topic fraud.decisions`
+
+Also reached through the change in `Orders.resolveHold`, but other paths reach it too, so it is reviewed on its own.
 
 ### 3. Orders.get: high risk, modified, owner team-checkout
 
@@ -32,14 +38,9 @@ Stated intent (commits): “Orders: hold high-risk orders for fraud review; loya
 - **Code**: 1 function in 1 file: `get` (modified, +1/−0, sample-nest-service/src/orders/orders.service.ts:83)
 - **Reached from** 2 entry points: `GET /api/orders/:id`, `gRPC OrderService/GetOrder`
 
-### 4. Pricing.quote: high risk, modified, owner team-checkout
+Inside this change (reached only through Orders.get): Shipping.tracking (high), CarrierApi.status (high).
 
-- **Inputs**: (lines: OrderLine[], country: string) → (lines: OrderLine[], country: string, tier: Tier ["standard" | "gold" | "platinum"])
-- **Output** `Quote`: +loyaltyDiscount: number
-- **Code**: 1 function in 1 file: `quote` (modified, +7/−3, sample-nest-service/src/pricing/pricing.service.ts:54)
-- **Reached from** 2 entry points: `POST /api/orders`, `GET /api/orders/quote`
-
-### 5. Shipping.tracking: high risk, modified, owner team-fulfilment
+#### 3.1. Shipping.tracking: high risk, modified, owner team-fulfilment
 
 - **Side effects**: −http `carrier.example.com`
 - **Calls**: −CarrierApi.status
@@ -48,7 +49,21 @@ Stated intent (commits): “Orders: hold high-risk orders for fraud review; loya
 - **Code**: 1 function in 1 file: `tracking` (modified, +1/−2, sample-nest-service/src/shipping/shipping.service.ts:76)
 - **Reached from** 2 entry points: `GET /api/orders/:id`, `gRPC OrderService/GetOrder`
 
-### 6. Orders.preview: high risk, modified, owner team-checkout
+#### 3.2. CarrierApi.status: high risk, removed, owner team-fulfilment
+
+- **Side effects**: −http `carrier.example.com`
+- **Reached from** 0 entry points: none found
+
+### 4. Pricing.quote: high risk, modified, owner team-checkout
+
+- **Inputs**: (lines: OrderLine[], country: string) → (lines: OrderLine[], country: string, tier: Tier ["standard" | "gold" | "platinum"])
+- **Output** `Quote`: +loyaltyDiscount: number
+- **Code**: 1 function in 1 file: `quote` (modified, +7/−3, sample-nest-service/src/pricing/pricing.service.ts:54)
+- **Reached from** 2 entry points: `POST /api/orders`, `GET /api/orders/quote`
+
+Also reached through the change in `Orders.preview`, `Orders.create`, but other paths reach it too, so it is reviewed on its own.
+
+### 5. Orders.preview: high risk, modified, owner team-checkout
 
 - **Output** `QuotePreview`: +needsReview: boolean [false | true], +loyaltyDiscount: number
 - **Side effects**: +http `risk.example.com` (via a submodule), +db.write `fraud_checks` (via a submodule)
@@ -58,7 +73,7 @@ Stated intent (commits): “Orders: hold high-risk orders for fraud review; loya
 - **Code**: 1 function in 1 file: `preview` (modified, +5/−3, sample-nest-service/src/orders/orders.service.ts:34)
 - **Reached from** 1 entry point: `GET /api/orders/quote`
 
-### 7. Orders.create: high risk, modified, owner team-checkout
+### 6. Orders.create: high risk, modified, owner team-checkout
 
 - **Output** `Order`: status gains "held" (callers that branch on it must handle this)
 - **Side effects**: +kafka `orders.held`, +http `risk.example.com` (via a submodule), +db.write `fraud_checks` (via a submodule)
@@ -72,25 +87,20 @@ Stated intent (commits): “Orders: hold high-risk orders for fraud review; loya
 - **Code**: 1 function in 1 file: `create` (modified, +9/−3, sample-nest-service/src/orders/orders.service.ts:43)
 - **Reached from** 1 entry point: `POST /api/orders`
 
-### 8. Orders.resolveHold: high risk, added, owner team-checkout
+### 7. Orders.resolveHold: high risk, added, owner team-checkout
 
 - **Side effects**: +db.read `orders` (via Orders.release), +db.read `order_lines` (via Orders.release), +db.write `orders` (via Orders.release), +kafka `orders.created` (via Orders.release), +event `order.created` (via Orders.release), +db.read `stock_items` (via Orders.release), +db.write `stock_items` (via Orders.release), +db.write `audit_log` (via Orders.release), +db.read `customers` (via Orders.release), +kafka `orders.cancelled` (via Orders.cancel), +http `api.payments.example` (via Orders.cancel), +db.write `payments` (via Orders.cancel)
 - **Calls**: +Orders.release, +Orders.cancel
 - **Code**: 1 function in 1 file: `resolveHold` (added, +4/−0, sample-nest-service/src/orders/orders.service.ts:78)
 - **Reached from** 1 entry point: `topic fraud.decisions`
 
-### 9. Shipping.updateStatus: high risk, added, owner team-fulfilment
+### 8. Shipping.updateStatus: high risk, added, owner team-fulfilment
 
 - **Side effects**: +db.write `shipments`
 - **Code**: 1 function in 1 file: `updateStatus` (added, +3/−0, sample-nest-service/src/shipping/shipping.service.ts:72)
 - **Reached from** 1 entry point: `topic shipments.status`
 
-### 10. CarrierApi.status: high risk, removed, owner team-fulfilment
-
-- **Side effects**: −http `carrier.example.com`
-- **Reached from** 0 entry points: none found
-
-### 11. Payments.handleWebhook: medium risk, modified, owner team-payments
+### 9. Payments.handleWebhook: medium risk, modified, owner team-payments
 
 - **Behaviour inside** (steps of this operation, base → head):
   - GUARD CHANGED queue `receipts`: now only when `status === 'succeeded'`; before: always

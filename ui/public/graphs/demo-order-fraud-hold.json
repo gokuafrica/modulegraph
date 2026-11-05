@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "order-service",
-  "generatedAt": "2026-11-05T14:06:08.935Z",
+  "generatedAt": "2026-11-05T21:25:25.952Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
@@ -9890,6 +9890,76 @@
       "ShippingService.updateStatus",
       "ShippingService.tracking",
       "CarrierClient.status"
+    ],
+    "changes": [
+      {
+        "root": "FraudService.assess",
+        "parts": [],
+        "risk": "high",
+        "reach": 2,
+        "alsoIn": [
+          "OrdersService.preview",
+          "OrdersService.create"
+        ]
+      },
+      {
+        "root": "OrdersService.release",
+        "parts": [],
+        "risk": "high",
+        "reach": 2,
+        "alsoIn": [
+          "OrdersService.resolveHold"
+        ]
+      },
+      {
+        "root": "OrdersService.get",
+        "parts": [
+          "ShippingService.tracking",
+          "CarrierClient.status"
+        ],
+        "risk": "high",
+        "reach": 2
+      },
+      {
+        "root": "PricingService.quote",
+        "parts": [],
+        "risk": "high",
+        "reach": 2,
+        "alsoIn": [
+          "OrdersService.preview",
+          "OrdersService.create"
+        ]
+      },
+      {
+        "root": "OrdersService.preview",
+        "parts": [],
+        "risk": "high",
+        "reach": 1
+      },
+      {
+        "root": "OrdersService.create",
+        "parts": [],
+        "risk": "high",
+        "reach": 1
+      },
+      {
+        "root": "OrdersService.resolveHold",
+        "parts": [],
+        "risk": "high",
+        "reach": 1
+      },
+      {
+        "root": "ShippingService.updateStatus",
+        "parts": [],
+        "risk": "high",
+        "reach": 1
+      },
+      {
+        "root": "PaymentsService.handleWebhook",
+        "parts": [],
+        "risk": "medium",
+        "reach": 1
+      }
     ],
     "queue": [
       {

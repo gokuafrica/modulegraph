@@ -161,9 +161,10 @@ export default function App() {
           setView({ mode: 'impact', op: h.op, depth: Number(h.d ?? 1) });
         }
         else {
-          const top = data.review.queue.find((q) => data.operations[q.operation]?.change === 'modified') ?? data.review.queue[0];
+          // Where the riskiest change begins; the changes inside it are below it.
+          const top = data.review.changes[0];
           if (top) {
-            setView({ mode: 'impact', op: top.operation, depth: 1 });
+            setView({ mode: 'impact', op: top.root, depth: 1 });
           } else {
             setView({ mode: 'flow', trail: [Object.keys(data.entryPoints)[0]] });
           }
@@ -223,8 +224,8 @@ export default function App() {
       setG(r.graph);
       const v = viewRef.current && stillValid(r.graph, viewRef.current);
       if (viewRef.current && !v) {
-        const top = r.graph.review.queue[0];
-        setView(top ? { mode: 'impact', op: top.operation, depth: 1 } : { mode: 'flow', trail: [Object.keys(r.graph.entryPoints)[0]] });
+        const top = r.graph.review.changes[0];
+        setView(top ? { mode: 'impact', op: top.root, depth: 1 } : { mode: 'flow', trail: [Object.keys(r.graph.entryPoints)[0]] });
       } else if (v && v !== viewRef.current) setView(v);
       const names = r.files.map((f) => f.split('/').pop());
       setToast(`Re-analyzed in ${(r.ms / 1000).toFixed(1)} s: ${names.length ? `${names.slice(0, 3).join(', ')}${names.length > 3 ? ` and ${names.length - 3} more` : ''} changed` : 'same code, now read from the commit'}${r.baseKept ? '; base side reused' : ''}.`);

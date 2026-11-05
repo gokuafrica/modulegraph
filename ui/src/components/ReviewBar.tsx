@@ -1,10 +1,11 @@
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import type { Finding, ModuleGraph } from '../../../schema/modulegraph.ts';
+import type { Finding, ModuleGraph, ReviewChange } from '../../../schema/modulegraph.ts';
 import { opTitle } from '../graph/model.ts';
 import { ActionsContext } from './Nodes.tsx';
 
 /**
- * The review's home base, always on screen: one chip per changed module (riskiest first). A chip opens that
+ * The review's home base, always on screen: one chip per change (riskiest first), named after the module where it
+ * begins; changed modules reached only through it are counted inside it, not listed again. A chip opens that
  * module's impact view and starts a new path from it, so wherever exploring leads, the change is one click away.
  * Also: find any entry point or module, and the machine checks.
  */
@@ -17,15 +18,15 @@ export function ReviewBar({ g, home, onHome }: { g: ModuleGraph; home?: string; 
         {hasDiff ? 'Changes' : 'No change (snapshot)'}
       </span>
       <div className="change-chips">
-        {g.review.queue.map((q) => (
-          <button key={q.operation} className={`change-chip ${home === q.operation ? 'on' : ''}`} onClick={() => onHome(q.operation)}
-            title={`${q.reason}\nReached from ${q.reach} entry point${q.reach === 1 ? '' : 's'}. Click: everything that calls it.`}>
-            <span className={`badge risk-${q.risk}`}>{q.risk}</span>
-            <span className="change-name">{opTitle(g, q.operation)}</span>
-            <span className={`st-dot st-${g.operations[q.operation]?.change ?? 'modified'}`} />
+        {g.review.changes.map((c) => (
+          <button key={c.root} className={`change-chip ${home === c.root ? 'on' : ''}`} onClick={() => onHome(c.root)} title={changeTip(g, c)}>
+            <span className={`badge risk-${c.risk}`}>{c.risk}</span>
+            <span className="change-name">{opTitle(g, c.root)}</span>
+            {c.parts.length > 0 && <span className="change-parts">+{c.parts.length} inside</span>}
+            <span className={`st-dot st-${g.operations[c.root]?.change ?? 'modified'}`} />
           </button>
         ))}
-        {hasDiff && g.review.queue.length === 0 && <span className="muted small">no module changes</span>}
+        {hasDiff && g.review.changes.length === 0 && <span className="muted small">no module changes</span>}
       </div>
       <div className="spacer" />
       <Search g={g} />
@@ -38,6 +39,18 @@ export function ReviewBar({ g, home, onHome }: { g: ModuleGraph; home?: string; 
       }} />
     </div>
   );
+}
+
+/** What a change chip says on hover: why the root changed, the changed modules inside it, and how far it reaches. */
+function changeTip(g: ModuleGraph, c: ReviewChange): string {
+  const why = new Map(g.review.queue.map((q) => [q.operation, q]));
+  return [
+    `${opTitle(g, c.root)}: ${why.get(c.root)?.reason}`,
+    ...(c.parts.length ? ['', 'Changed inside it (reached only through it):', ...c.parts.map((p) => `  ${why.get(p)?.risk}  ${opTitle(g, p)}: ${why.get(p)?.reason}`)] : []),
+    ...(c.alsoIn?.length ? ['', `Also reached through the change in ${c.alsoIn.map((r) => opTitle(g, r)).join(', ')}; other flows reach it too.`] : []),
+    '',
+    `Reached from ${c.reach} entry point${c.reach === 1 ? '' : 's'}. Click: everything that calls it.`,
+  ].join('\n');
 }
 
 function Search({ g }: { g: ModuleGraph }) {

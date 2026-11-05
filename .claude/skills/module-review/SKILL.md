@@ -48,8 +48,12 @@ The last lines print two paths: `<id>.json` (for the UI) and **`<id>.brief.md` (
 
 ## 2. Read the facts, then the code behind them
 
-Read `<id>.brief.md` completely. It has the verdict, every contract change with its **Behaviour inside**
-lines, entry-point changes, grouped findings, owners and UI links. Don't read the JSON; it's for the UI.
+Read `<id>.brief.md` completely. It has the verdict, every change with its **Behaviour inside** lines,
+entry-point changes, grouped findings, owners and UI links. Don't read the JSON; it's for the UI.
+
+A change starts at its topmost changed operation. Changed operations reached only through it are its parts
+(numbered 1.1, 1.2, …): review them as one change, not as separate ones. A changed operation that other flows
+also reach stays its own change, even when a changed caller uses it too.
 
 For each contract change, open the changed functions it lists (`file:line`) and read them. The facts tell you
 *what* changed; the code tells you whether it is right. Look especially at:
@@ -79,8 +83,10 @@ Then refresh (or re-run the analyzer).
 ```
 **Goal:** one sentence (from the intent), and whether the contract changes match it.
 **Verdict:** copy the brief's verdict (BLOCKING with the error rules, or not blocked).
-**Contract changes, riskiest first:** one bullet each: Module.op (reach N): output/effect deltas, and in
-  words every GUARD CHANGED / REMOVED / NEW step from "Behaviour inside". Don't drop any of those.
+**Changes, riskiest first:** one bullet per change in the brief's "Changes" (not per changed operation):
+  Module.op where it begins (reach N): output/effect deltas, then its parts ("inside: X gains …, new Y"),
+  and in words every GUARD CHANGED / REMOVED / NEW step from "Behaviour inside" of the root and its parts.
+  Don't drop any of those. A change marked "also reached through" another is a shared module: say who else uses it.
 **New entry points:** if any.
 **Findings:** errors first, grouped by rule with counts (e.g. "fetch-once ×7: …"). Pre-existing: count only.
 **Decisions for the human (1–3):** questions only a person can answer, each tied to a specific fact above.
