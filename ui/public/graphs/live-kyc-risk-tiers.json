@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-05T21:25:19.095Z",
+  "generatedAt": "2026-11-05T21:39:10.173Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -958,7 +958,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-05T21:25:18.961Z"
+            "checkedAt": "2026-11-05T21:39:10.037Z"
           },
           "cases": [
             "c5",
@@ -974,7 +974,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-05T21:25:18.962Z"
+            "checkedAt": "2026-11-05T21:39:10.038Z"
           },
           "cases": [
             "c15"
@@ -1073,7 +1073,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-05T21:25:18.959Z"
+            "extractedAt": "2026-11-05T21:39:10.035Z"
           },
           "cases": [
             "c1",
@@ -1109,7 +1109,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-05T21:25:18.962Z"
+            "extractedAt": "2026-11-05T21:39:10.037Z"
           },
           "cases": [
             "c11",
@@ -1421,7 +1421,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T21:25:18.959Z"
+              "extractedAt": "2026-11-05T21:39:10.035Z"
             }
           },
           "output": {
@@ -1458,7 +1458,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T21:25:18.962Z"
+              "extractedAt": "2026-11-05T21:39:10.037Z"
             }
           },
           "output": {
@@ -1529,7 +1529,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T21:25:18.959Z"
+              "extractedAt": "2026-11-05T21:39:10.035Z"
             }
           },
           "output": {
@@ -1566,7 +1566,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T21:25:18.962Z"
+              "extractedAt": "2026-11-05T21:39:10.037Z"
             }
           },
           "output": {
@@ -1655,7 +1655,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T21:25:18.959Z"
+              "extractedAt": "2026-11-05T21:39:10.035Z"
             }
           },
           "output": {
@@ -1691,7 +1691,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T21:25:18.962Z"
+              "extractedAt": "2026-11-05T21:39:10.037Z"
             }
           },
           "output": {
@@ -2120,7 +2120,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-05T21:25:18.961Z"
+            "checkedAt": "2026-11-05T21:39:10.037Z"
           },
           "cases": [
             "c6",
@@ -2144,7 +2144,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-05T21:25:18.962Z"
+            "checkedAt": "2026-11-05T21:39:10.038Z"
           },
           "cases": [
             "c16"
@@ -4953,34 +4953,6 @@
         }
       ]
     },
-    "cron:cron kyc-nightly-rescreen (0 2 * * *)": {
-      "id": "cron:cron kyc-nightly-rescreen (0 2 * * *)",
-      "params": [],
-      "returns": {
-        "type": "void"
-      },
-      "steps": [
-        {
-          "id": "s1",
-          "kind": "call",
-          "target": "KycModule.recheckExpired",
-          "line": 6,
-          "file": "sample-service/src/entrypoints/cron.ts"
-        }
-      ],
-      "edges": [
-        {
-          "from": "s1",
-          "to": "exit",
-          "kind": "control"
-        },
-        {
-          "from": "entry",
-          "to": "s1",
-          "kind": "control"
-        }
-      ]
-    },
     "api:GET /v1/kyc/:userId/status": {
       "id": "api:GET /v1/kyc/:userId/status",
       "params": [
@@ -5030,6 +5002,34 @@
           "from": "s1",
           "to": "exit",
           "kind": "data"
+        }
+      ]
+    },
+    "cron:cron kyc-nightly-rescreen (0 2 * * *)": {
+      "id": "cron:cron kyc-nightly-rescreen (0 2 * * *)",
+      "params": [],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "KycModule.recheckExpired",
+          "line": 6,
+          "file": "sample-service/src/entrypoints/cron.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "control"
         }
       ]
     }

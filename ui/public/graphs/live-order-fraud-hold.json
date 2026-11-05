@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "order-service",
-  "generatedAt": "2026-11-05T21:25:33.742Z",
+  "generatedAt": "2026-11-05T21:39:25.174Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -528,7 +528,7 @@
         "implementationOnly": false
       },
       "lazy": {
-        "callersLoaded": false,
+        "callersLoaded": true,
         "calleesLoaded": true
       }
     },
@@ -859,7 +859,7 @@
         "implementationOnly": false
       },
       "lazy": {
-        "callersLoaded": false,
+        "callersLoaded": true,
         "calleesLoaded": true
       }
     },
@@ -1333,7 +1333,7 @@
         "implementationOnly": false
       },
       "lazy": {
-        "callersLoaded": false,
+        "callersLoaded": true,
         "calleesLoaded": true
       }
     },
@@ -1834,7 +1834,7 @@
         "implementationOnly": false
       },
       "lazy": {
-        "callersLoaded": false,
+        "callersLoaded": true,
         "calleesLoaded": true
       }
     },
@@ -2034,7 +2034,7 @@
         "implementationOnly": false
       },
       "lazy": {
-        "callersLoaded": false,
+        "callersLoaded": true,
         "calleesLoaded": true
       }
     },
@@ -2278,7 +2278,7 @@
         "implementationOnly": false
       },
       "lazy": {
-        "callersLoaded": false,
+        "callersLoaded": true,
         "calleesLoaded": true
       }
     },
@@ -3099,7 +3099,7 @@
         "implementationOnly": false
       },
       "lazy": {
-        "callersLoaded": false,
+        "callersLoaded": true,
         "calleesLoaded": true
       }
     },
@@ -3145,7 +3145,7 @@
       "containsChanges": false,
       "source": "async redeem(orderId: string, customerId: string, quote: Quote): Promise<void> {\n  if (quote.promotionIds.length) await this.promotions.redeem(orderId, customerId, quote.promotionIds);\n}",
       "lazy": {
-        "callersLoaded": false,
+        "callersLoaded": true,
         "calleesLoaded": true
       }
     },
@@ -3514,7 +3514,7 @@
         "implementationOnly": false
       },
       "lazy": {
-        "callersLoaded": false,
+        "callersLoaded": true,
         "calleesLoaded": true
       }
     },
@@ -3672,7 +3672,7 @@
         "implementationOnly": false
       },
       "lazy": {
-        "callersLoaded": false,
+        "callersLoaded": true,
         "calleesLoaded": true
       }
     },
@@ -3834,7 +3834,7 @@
         "implementationOnly": true
       },
       "lazy": {
-        "callersLoaded": false,
+        "callersLoaded": true,
         "calleesLoaded": true
       }
     },
@@ -3918,7 +3918,7 @@
         "implementationOnly": false
       },
       "lazy": {
-        "callersLoaded": false,
+        "callersLoaded": true,
         "calleesLoaded": true
       }
     }
@@ -3987,12 +3987,122 @@
       "readOnly": false,
       "file": "sample-nest-service/src/orders/orders.controller.ts",
       "line": 13,
-      "effects": [],
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 50
+        },
+        {
+          "kind": "db.write",
+          "target": "order_lines",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 53
+        },
+        {
+          "kind": "kafka",
+          "target": "orders.held",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 56
+        },
+        {
+          "kind": "kafka",
+          "target": "orders.created",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 59
+        },
+        {
+          "kind": "event",
+          "target": "order.created",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 60
+        },
+        {
+          "kind": "db.read",
+          "target": "customers",
+          "file": "sample-nest-service/src/customers/customers.service.ts",
+          "line": 38
+        },
+        {
+          "kind": "db.read",
+          "target": "products",
+          "file": "sample-nest-service/src/pricing/pricing.service.ts",
+          "line": 56
+        },
+        {
+          "kind": "db.read",
+          "target": "promotions",
+          "file": "sample-nest-service/src/pricing/promotions.service.ts",
+          "line": 44
+        },
+        {
+          "kind": "http",
+          "target": "tax-api.internal",
+          "file": "sample-nest-service/src/pricing/pricing.service.ts",
+          "line": 40
+        },
+        {
+          "kind": "http",
+          "target": "carrier.example.com",
+          "file": "sample-nest-service/src/shipping/shipping.service.ts",
+          "line": 49
+        },
+        {
+          "kind": "http",
+          "target": "risk.example.com",
+          "file": "sample-nest-service/src/fraud/fraud.service.ts",
+          "line": 48
+        },
+        {
+          "kind": "db.write",
+          "target": "fraud_checks",
+          "file": "sample-nest-service/src/fraud/fraud.service.ts",
+          "line": 52
+        },
+        {
+          "kind": "db.read",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 24
+        },
+        {
+          "kind": "db.write",
+          "target": "stock_items",
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "line": 26
+        },
+        {
+          "kind": "db.write",
+          "target": "promotion_redemptions",
+          "file": "sample-nest-service/src/pricing/promotions.service.ts",
+          "line": 48
+        }
+      ],
       "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "kafka",
+          "target": "orders.held",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 56
+        },
+        {
+          "kind": "http",
+          "target": "risk.example.com",
+          "file": "sample-nest-service/src/fraud/fraud.service.ts",
+          "line": 48
+        },
+        {
+          "kind": "db.write",
+          "target": "fraud_checks",
+          "file": "sample-nest-service/src/fraud/fraud.service.ts",
+          "line": 52
+        }
+      ],
       "effectsRemoved": [],
-      "analysis": "listed"
+      "analysis": "reached"
     },
     "api:GET /api/orders/quote": {
       "id": "api:GET /api/orders/quote",
@@ -4071,12 +4181,57 @@
       "readOnly": true,
       "file": "sample-nest-service/src/orders/orders.controller.ts",
       "line": 23,
-      "effects": [],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 127
+        },
+        {
+          "kind": "db.read",
+          "target": "order_lines",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 133
+        },
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 85
+        },
+        {
+          "kind": "db.read",
+          "target": "customers",
+          "file": "sample-nest-service/src/customers/customers.service.ts",
+          "line": 38
+        },
+        {
+          "kind": "db.read",
+          "target": "shipments",
+          "file": "sample-nest-service/src/shipping/shipping.service.ts",
+          "line": 77
+        }
+      ],
       "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 85
+        }
+      ],
+      "effectsRemoved": [
+        {
+          "kind": "http",
+          "target": "carrier.example.com",
+          "file": "sample-nest-service/src/shipping/shipping.service.ts",
+          "line": 41
+        }
+      ],
+      "analysis": "reached"
     },
     "api:GET /api/orders": {
       "id": "api:GET /api/orders",
@@ -4552,12 +4707,57 @@
       "readOnly": true,
       "file": "sample-nest-service/src/orders/orders.controller.ts",
       "line": 72,
-      "effects": [],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "orders",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 127
+        },
+        {
+          "kind": "db.read",
+          "target": "order_lines",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 133
+        },
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 85
+        },
+        {
+          "kind": "db.read",
+          "target": "customers",
+          "file": "sample-nest-service/src/customers/customers.service.ts",
+          "line": 38
+        },
+        {
+          "kind": "db.read",
+          "target": "shipments",
+          "file": "sample-nest-service/src/shipping/shipping.service.ts",
+          "line": 77
+        }
+      ],
       "change": "unchanged",
-      "containsChanges": false,
-      "effectsAdded": [],
-      "effectsRemoved": [],
-      "analysis": "listed"
+      "containsChanges": true,
+      "effectsAdded": [
+        {
+          "kind": "db.write",
+          "target": "order_views",
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "line": 85
+        }
+      ],
+      "effectsRemoved": [
+        {
+          "kind": "http",
+          "target": "carrier.example.com",
+          "file": "sample-nest-service/src/shipping/shipping.service.ts",
+          "line": 41
+        }
+      ],
+      "analysis": "reached"
     },
     "api:POST /api/payments/webhook": {
       "id": "api:POST /api/payments/webhook",
@@ -4566,12 +4766,25 @@
       "readOnly": false,
       "file": "sample-nest-service/src/payments/payments.controller.ts",
       "line": 11,
-      "effects": [],
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "payments",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 47
+        },
+        {
+          "kind": "queue",
+          "target": "receipts",
+          "file": "sample-nest-service/src/payments/payments.service.ts",
+          "line": 48
+        }
+      ],
       "change": "unchanged",
-      "containsChanges": false,
+      "containsChanges": true,
       "effectsAdded": [],
       "effectsRemoved": [],
-      "analysis": "listed"
+      "analysis": "reached"
     },
     "api:GET /api/payments/:orderId": {
       "id": "api:GET /api/payments/:orderId",
@@ -7699,6 +7912,274 @@
         }
       }
     },
+    "api:POST /api/orders": {
+      "id": "api:POST /api/orders",
+      "params": [
+        {
+          "name": "dto",
+          "type": "CreateOrderDto"
+        }
+      ],
+      "returns": {
+        "type": "Order",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "shippingCost",
+            "type": "number"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "createdAt",
+            "type": "Date"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "OrdersService.create",
+          "line": 15,
+          "file": "sample-nest-service/src/orders/orders.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "dto"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:GET /api/orders/:id": {
+      "id": "api:GET /api/orders/:id",
+      "params": [
+        {
+          "name": "id",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "OrderView",
+        "fields": [
+          {
+            "name": "customer",
+            "type": "{ name: string; tier: Tier; }"
+          },
+          {
+            "name": "tracking",
+            "type": "Tracking | undefined"
+          },
+          {
+            "name": "lines",
+            "type": "OrderLine[]"
+          },
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "shippingCost",
+            "type": "number"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "createdAt",
+            "type": "Date"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "OrdersService.get",
+          "line": 25,
+          "file": "sample-nest-service/src/orders/orders.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "id"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "grpc:gRPC OrderService/GetOrder": {
+      "id": "grpc:gRPC OrderService/GetOrder",
+      "params": [
+        {
+          "name": "data",
+          "type": "{ id: string; }"
+        }
+      ],
+      "returns": {
+        "type": "OrderView",
+        "fields": [
+          {
+            "name": "customer",
+            "type": "{ name: string; tier: Tier; }"
+          },
+          {
+            "name": "tracking",
+            "type": "Tracking | undefined"
+          },
+          {
+            "name": "lines",
+            "type": "OrderLine[]"
+          },
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "customerId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "OrderStatus [\"held\" | \"pending\" | \"paid\" | \"cancelled\" | \"shipped\" | \"expired\"]"
+          },
+          {
+            "name": "country",
+            "type": "string"
+          },
+          {
+            "name": "shippingCost",
+            "type": "number"
+          },
+          {
+            "name": "total",
+            "type": "number"
+          },
+          {
+            "name": "createdAt",
+            "type": "Date"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "OrdersService.get",
+          "line": 74,
+          "file": "sample-nest-service/src/orders/orders.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "data.id"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:POST /api/payments/webhook": {
+      "id": "api:POST /api/payments/webhook",
+      "params": [
+        {
+          "name": "event",
+          "type": "ProviderEvent"
+        }
+      ],
+      "returns": {
+        "type": "Payment",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string"
+          },
+          {
+            "name": "orderId",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "\"refunded\" | \"authorized\" | \"succeeded\" | \"failed\""
+          },
+          {
+            "name": "amount",
+            "type": "number"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "PaymentsService.handleWebhook",
+          "line": 13,
+          "file": "sample-nest-service/src/payments/payments.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "event"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
     "CarrierClient.status": {
       "id": "CarrierClient.status",
       "params": [
@@ -7763,6 +8244,27 @@
         {
           "type": "entry",
           "id": "api:GET /api/orders/quote"
+        }
+      ],
+      "isNew": true,
+      "hint": "Reads that write break caching, retries and replica routing. Move the write to a command path or make it explicit in the API contract."
+    },
+    {
+      "rule": "read-path-writes",
+      "severity": "warning",
+      "message": "db.write `order_views` runs on 2 read-only entry points: GET /api/orders/:id, gRPC OrderService/GetOrder",
+      "subject": {
+        "type": "entry",
+        "id": "api:GET /api/orders/:id"
+      },
+      "related": [
+        {
+          "type": "entry",
+          "id": "api:GET /api/orders/:id"
+        },
+        {
+          "type": "entry",
+          "id": "grpc:gRPC OrderService/GetOrder"
         }
       ],
       "isNew": true,
@@ -7934,6 +8436,26 @@
     ],
     "changes": [
       {
+        "root": "FraudService.assess",
+        "parts": [],
+        "risk": "high",
+        "reach": 2,
+        "alsoIn": [
+          "OrdersService.preview",
+          "OrdersService.create"
+        ]
+      },
+      {
+        "root": "PricingService.quote",
+        "parts": [],
+        "risk": "high",
+        "reach": 2,
+        "alsoIn": [
+          "OrdersService.preview",
+          "OrdersService.create"
+        ]
+      },
+      {
         "root": "OrdersService.release",
         "parts": [],
         "risk": "high",
@@ -7943,30 +8465,19 @@
         ]
       },
       {
-        "root": "FraudService.assess",
-        "parts": [],
+        "root": "OrdersService.get",
+        "parts": [
+          "ShippingService.tracking",
+          "CarrierClient.status"
+        ],
         "risk": "high",
-        "reach": 1,
-        "alsoIn": [
-          "OrdersService.preview",
-          "OrdersService.create"
-        ]
+        "reach": 2
       },
       {
         "root": "OrdersService.preview",
         "parts": [],
         "risk": "high",
         "reach": 1
-      },
-      {
-        "root": "PricingService.quote",
-        "parts": [],
-        "risk": "high",
-        "reach": 1,
-        "alsoIn": [
-          "OrdersService.preview",
-          "OrdersService.create"
-        ]
       },
       {
         "root": "ShippingService.updateStatus",
@@ -7984,41 +8495,28 @@
         "root": "OrdersService.create",
         "parts": [],
         "risk": "high",
-        "reach": 0
-      },
-      {
-        "root": "OrdersService.get",
-        "parts": [],
-        "risk": "high",
-        "reach": 0
-      },
-      {
-        "root": "ShippingService.tracking",
-        "parts": [],
-        "risk": "high",
-        "reach": 0,
-        "alsoIn": [
-          "OrdersService.get"
-        ]
-      },
-      {
-        "root": "CarrierClient.status",
-        "parts": [],
-        "risk": "high",
-        "reach": 0,
-        "alsoIn": [
-          "OrdersService.get",
-          "ShippingService.tracking"
-        ]
+        "reach": 1
       },
       {
         "root": "PaymentsService.handleWebhook",
         "parts": [],
         "risk": "medium",
-        "reach": 0
+        "reach": 1
       }
     ],
     "queue": [
+      {
+        "operation": "FraudService.assess",
+        "risk": "high",
+        "reason": "new operation; +http risk.example.com, +db.write fraud_checks",
+        "reach": 2
+      },
+      {
+        "operation": "PricingService.quote",
+        "risk": "high",
+        "reason": "signature changed; output shape changed",
+        "reach": 2
+      },
       {
         "operation": "OrdersService.release",
         "risk": "high",
@@ -8026,21 +8524,21 @@
         "reach": 2
       },
       {
-        "operation": "FraudService.assess",
+        "operation": "OrdersService.get",
         "risk": "high",
-        "reason": "new operation; +http risk.example.com, +db.write fraud_checks",
-        "reach": 1
+        "reason": "output shape changed; +db.write order_views; −http carrier.example.com; 1 step added or removed inside",
+        "reach": 2
+      },
+      {
+        "operation": "ShippingService.tracking",
+        "risk": "high",
+        "reason": "−http carrier.example.com; 1 step added or removed inside",
+        "reach": 2
       },
       {
         "operation": "OrdersService.preview",
         "risk": "high",
         "reason": "output shape changed; +http risk.example.com, +db.write fraud_checks; now calls Fraud.assess; 1 step added or removed inside",
-        "reach": 1
-      },
-      {
-        "operation": "PricingService.quote",
-        "risk": "high",
-        "reason": "signature changed; output shape changed",
         "reach": 1
       },
       {
@@ -8059,19 +8557,7 @@
         "operation": "OrdersService.create",
         "risk": "high",
         "reason": "output shape changed; +kafka orders.held, +http risk.example.com, +db.write fraud_checks; now calls Fraud.assess; 3 guards changed inside",
-        "reach": 0
-      },
-      {
-        "operation": "OrdersService.get",
-        "risk": "high",
-        "reason": "output shape changed; +db.write order_views; −http carrier.example.com; 1 step added or removed inside",
-        "reach": 0
-      },
-      {
-        "operation": "ShippingService.tracking",
-        "risk": "high",
-        "reason": "−http carrier.example.com; 1 step added or removed inside",
-        "reach": 0
+        "reach": 1
       },
       {
         "operation": "CarrierClient.status",
@@ -8083,7 +8569,7 @@
         "operation": "PaymentsService.handleWebhook",
         "risk": "medium",
         "reason": "1 guard changed inside",
-        "reach": 0
+        "reach": 1
       }
     ],
     "reviewers": [
@@ -8097,7 +8583,7 @@
       "linesAdded": 178,
       "linesRemoved": 24,
       "contractChanges": 10,
-      "entryPointsAffected": 4
+      "entryPointsAffected": 8
     }
   },
   "lazy": {
@@ -8114,10 +8600,10 @@
     "stats": {
       "entryPointsKnown": 18,
       "entryPointsAnalyzed": 4,
-      "entryPointsReached": 0,
+      "entryPointsReached": 4,
       "operationsKnown": 33,
       "operationsAnalyzed": 23,
-      "ms": 5875
+      "ms": 6042
     }
   }
 }

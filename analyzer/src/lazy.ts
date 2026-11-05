@@ -105,6 +105,10 @@ export class LazySession {
     }
     const changed = this.changedScopes();
     for (const id of changed) this.ensure(id, true);
+    // Who calls each changed operation: grouping folds an operation into the change that calls it only when its
+    // callers are known, and the seed search below may stop before it gets to them (new entry points fill it).
+    const isEntry = (id: string) => !!(this.head.snapshot.entryPoints[id] ?? this.base?.snapshot.entryPoints[id]);
+    for (const id of changed) if (!isEntry(id)) this.loadCallers(id);
     this.pickSeeds(changed, this.opts);
   }
 

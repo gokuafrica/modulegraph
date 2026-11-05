@@ -2,7 +2,7 @@
  * Starts live lazy analysis of the demo branches for the UI (http://localhost:5173 proxies /api to :5174).
  * usage: npm run live                      the birth-info demo (sample-birth-service): the small one to start with
  *        npm run live -- all               every live demo at once (adds the identity-profile and order services)
- *        npm run live -- birthinfo|kyc|orders|birth   just that one
+ *        npm run live -- birthinfo|kyc|orders|birth|residency   just that one
  * With several demos, each runs its own analysis server (one TypeScript program each) on 5175, 5176, …, and
  * :5174 routes every /api/graphs/<id> request to the server that owns <id>.
  */
@@ -56,6 +56,15 @@ const demos: Record<string, Demo> = {
       '--project', resolve(here, '../../sample-birth-service'),
       '--head', 'feature/enforce-document-birth-info', '--base', 'main',
       '--title', 'Live (lazy, NestJS): KYC birth info must match the identity document',
+    ],
+  },
+  // The next change on top of the birth-info one, as if that had shipped: a new area (residency).
+  residency: {
+    id: 'live-residency-declaration',
+    args: [
+      '--project', resolve(here, '../../sample-birth-service'),
+      '--head', 'feature/residency-declaration', '--base', 'feature/enforce-document-birth-info',
+      '--title', 'Live (lazy, NestJS): users declare their home address during KYC',
     ],
   },
 };

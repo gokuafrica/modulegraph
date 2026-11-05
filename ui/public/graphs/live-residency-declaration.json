@@ -1,0 +1,2793 @@
+{
+  "schema": "modulegraph/v1",
+  "service": "birth-info-service",
+  "generatedAt": "2026-11-05T21:40:51.474Z",
+  "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
+  "source": {
+    "mode": "branch",
+    "repo": ".",
+    "project": "sample-birth-service",
+    "base": "feature/enforce-document-birth-info",
+    "head": "feature/residency-declaration",
+    "title": "Live (lazy, NestJS): users declare their home address during KYC",
+    "files": [
+      {
+        "path": "sample-birth-service/src/app.module.ts",
+        "status": "modified",
+        "added": 8,
+        "removed": 3,
+        "modules": []
+      },
+      {
+        "path": "sample-birth-service/src/residency/address-check.client.ts",
+        "status": "added",
+        "added": 23,
+        "removed": 0,
+        "modules": [
+          "AddressCheckClient"
+        ]
+      },
+      {
+        "path": "sample-birth-service/src/residency/residency.controller.ts",
+        "status": "added",
+        "added": 19,
+        "removed": 0,
+        "modules": [
+          "AddressCheckClient",
+          "ResidencyService",
+          "ResidencyStore"
+        ]
+      },
+      {
+        "path": "sample-birth-service/src/residency/residency.service.ts",
+        "status": "added",
+        "added": 52,
+        "removed": 0,
+        "modules": [
+          "ResidencyService"
+        ]
+      },
+      {
+        "path": "sample-birth-service/src/residency/residency.store.ts",
+        "status": "added",
+        "added": 50,
+        "removed": 0,
+        "modules": [
+          "ResidencyStore"
+        ]
+      },
+      {
+        "path": "sample-birth-service/src/residency/residency.types.ts",
+        "status": "added",
+        "added": 20,
+        "removed": 0,
+        "modules": [
+          "AddressCheckClient",
+          "ResidencyService",
+          "ResidencyStore"
+        ]
+      }
+    ],
+    "analyzer": {
+      "id": "typescript",
+      "language": "TypeScript",
+      "frameworks": [
+        {
+          "id": "nestjs",
+          "name": "NestJS",
+          "reason": "package.json depends on @nestjs/core"
+        },
+        {
+          "id": "typeorm",
+          "name": "TypeORM",
+          "reason": "package.json depends on typeorm"
+        }
+      ]
+    },
+    "intent": "Residency: users declare their home address during KYC\nGET and POST /users/:userId/residency. A declaration is normalized, rejected for\nresidents of restricted countries (the same country policy eligibility uses),\nchecked with the external address verification service, and stored as a new row\nin residency_declarations, verified or pending review. Each declaration emits\nkyc.residency.declared.",
+    "intentSource": "commits",
+    "examples": {
+      "scenario": "configs/birth-info-service/scenario.ts",
+      "operationsCovered": 14,
+      "cases": [
+        {
+          "id": "c1",
+          "label": "GET /users/u-1/birth-info"
+        },
+        {
+          "id": "c2",
+          "label": "GET /users/u-1/eligibility"
+        },
+        {
+          "id": "c3",
+          "label": "GET /users/u-2/birth-info"
+        },
+        {
+          "id": "c4",
+          "label": "GET /users/u-2/eligibility"
+        },
+        {
+          "id": "c5",
+          "label": "GET /users/u-3/birth-info"
+        },
+        {
+          "id": "c6",
+          "label": "GET /users/u-3/eligibility"
+        },
+        {
+          "id": "c7",
+          "label": "GET /users/u-4/birth-info"
+        },
+        {
+          "id": "c8",
+          "label": "GET /users/u-4/eligibility"
+        },
+        {
+          "id": "c9",
+          "label": "POST /users/u-1/birth-info PRT/Porto (matches document)"
+        },
+        {
+          "id": "c10",
+          "label": "POST /users/u-1/birth-info ESP/Madrid (contradicts document)"
+        },
+        {
+          "id": "c11",
+          "label": "POST /users/u-2/birth-info IND/Mumbai (country matches, document has no place)"
+        },
+        {
+          "id": "c12",
+          "label": "POST /users/u-2/birth-info PAK/Lahore (country contradicts document)"
+        },
+        {
+          "id": "c13",
+          "label": "POST /users/u-3/birth-info DEU/Berlin (no document data)"
+        },
+        {
+          "id": "c14",
+          "label": "POST /users/u-4/birth-info nga/lagos (place matches, document has no country)"
+        },
+        {
+          "id": "c15",
+          "label": "POST /users/u-4/birth-info NGA/Abuja (place contradicts document)"
+        },
+        {
+          "id": "c16",
+          "label": "GET /users/u-1/eligibility"
+        },
+        {
+          "id": "c17",
+          "label": "GET /users/u-2/eligibility"
+        },
+        {
+          "id": "c18",
+          "label": "GET /users/u-3/eligibility"
+        },
+        {
+          "id": "c19",
+          "label": "GET /users/u-4/eligibility"
+        },
+        {
+          "id": "c20",
+          "label": "GET /users/u-1/residency"
+        },
+        {
+          "id": "c21",
+          "label": "GET /users/u-2/residency"
+        },
+        {
+          "id": "c22",
+          "label": "POST /users/u-2/residency ind/Mumbai (address confirmed)"
+        },
+        {
+          "id": "c23",
+          "label": "POST /users/u-3/residency DEU/Berlin (address service cannot confirm)"
+        },
+        {
+          "id": "c24",
+          "label": "POST /users/u-4/residency IRN/Tehran (restricted country)"
+        },
+        {
+          "id": "c25",
+          "label": "POST /users/u-1/residency ESP/Madrid (moved: second declaration)"
+        },
+        {
+          "id": "c26",
+          "label": "GET /users/u-1/residency"
+        }
+      ]
+    }
+  },
+  "modules": {
+    "BirthInfoVerifier": {
+      "id": "BirthInfoVerifier",
+      "name": "BirthInfoVerifier",
+      "className": "BirthInfoVerifier",
+      "file": "sample-birth-service/src/birth-info/birth-info-verifier.ts",
+      "line": 30,
+      "summary": "Holds what a user submits in KYC to their identity document: every part the document has must match. A part the document is missing (extraction couldn't read it) is not enforced, and with no document data at all the user's answer stands, as it always did.",
+      "summarySource": "code",
+      "owner": "team-kyc",
+      "declaredEffects": [],
+      "operations": [],
+      "change": "unchanged"
+    },
+    "BirthInfoService": {
+      "id": "BirthInfoService",
+      "name": "BirthInfo",
+      "className": "BirthInfoService",
+      "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+      "line": 10,
+      "summary": "A user's birth info: what their identity document says and what they told us in KYC.",
+      "summarySource": "profile",
+      "owner": "team-kyc",
+      "declaredEffects": [],
+      "operations": [],
+      "change": "unchanged"
+    },
+    "KycBirthInfoStore": {
+      "id": "KycBirthInfoStore",
+      "name": "KycBirthInfoStore",
+      "className": "KycBirthInfoStore",
+      "file": "sample-birth-service/src/birth-info/kyc-birth-info.store.ts",
+      "line": 23,
+      "summary": "The user-provided (KYC) birth info. A submission overwrites the previous one.",
+      "summarySource": "profile",
+      "owner": "team-kyc",
+      "declaredEffects": [],
+      "operations": [],
+      "change": "unchanged"
+    },
+    "DocumentBirthInfoService": {
+      "id": "DocumentBirthInfoService",
+      "name": "DocumentBirthInfo",
+      "className": "DocumentBirthInfoService",
+      "file": "sample-birth-service/src/documents/document-birth-info.service.ts",
+      "line": 26,
+      "summary": "Birth data the document pipeline extracted from the identity document. Parts may be missing.",
+      "summarySource": "profile",
+      "owner": "team-documents",
+      "declaredEffects": [],
+      "operations": [],
+      "change": "unchanged"
+    },
+    "CountryPolicy": {
+      "id": "CountryPolicy",
+      "name": "CountryPolicy",
+      "className": "CountryPolicy",
+      "file": "sample-birth-service/src/eligibility/country-policy.service.ts",
+      "line": 7,
+      "summary": "Which countries of birth the product is available for.",
+      "summarySource": "code",
+      "owner": "team-onboarding",
+      "declaredEffects": [],
+      "operations": [
+        "CountryPolicy.isRestricted"
+      ],
+      "change": "unchanged"
+    },
+    "EligibilityService": {
+      "id": "EligibilityService",
+      "name": "Eligibility",
+      "className": "EligibilityService",
+      "file": "sample-birth-service/src/eligibility/eligibility.service.ts",
+      "line": 16,
+      "summary": "Decides whether a user is eligible, given what we know about their birth.",
+      "summarySource": "code",
+      "owner": "team-onboarding",
+      "declaredEffects": [],
+      "operations": [],
+      "change": "unchanged"
+    },
+    "AddressCheckClient": {
+      "id": "AddressCheckClient",
+      "name": "AddressCheckClient",
+      "className": "AddressCheckClient",
+      "file": "sample-birth-service/src/residency/address-check.client.ts",
+      "line": 11,
+      "summary": "The external address verification service (address-check.example.com).",
+      "summarySource": "profile",
+      "owner": "team-kyc",
+      "declaredEffects": [],
+      "operations": [
+        "AddressCheckClient.verify"
+      ],
+      "change": "added"
+    },
+    "ResidencyService": {
+      "id": "ResidencyService",
+      "name": "Residency",
+      "className": "ResidencyService",
+      "file": "sample-birth-service/src/residency/residency.service.ts",
+      "line": 9,
+      "summary": "Where a user lives, as they declared it during KYC.",
+      "summarySource": "code",
+      "owner": "team-kyc",
+      "declaredEffects": [],
+      "operations": [
+        "ResidencyService.get",
+        "ResidencyService.declare"
+      ],
+      "change": "added"
+    },
+    "ResidencyStore": {
+      "id": "ResidencyStore",
+      "name": "ResidencyStore",
+      "className": "ResidencyStore",
+      "file": "sample-birth-service/src/residency/residency.store.ts",
+      "line": 35,
+      "summary": "Owns residency_declarations. Every declaration is a new row; nothing is overwritten.",
+      "summarySource": "profile",
+      "owner": "team-kyc",
+      "declaredEffects": [],
+      "operations": [
+        "ResidencyStore.latest",
+        "ResidencyStore.count",
+        "ResidencyStore.add"
+      ],
+      "change": "added"
+    }
+  },
+  "operations": {
+    "AddressCheckClient.verify": {
+      "id": "AddressCheckClient.verify",
+      "moduleId": "AddressCheckClient",
+      "name": "verify",
+      "file": "sample-birth-service/src/residency/address-check.client.ts",
+      "line": 13,
+      "endLine": 22,
+      "params": [
+        {
+          "name": "address",
+          "type": "ResidencyDeclarationDto"
+        }
+      ],
+      "returns": {
+        "type": "AddressCheck",
+        "fields": [
+          {
+            "name": "confirmed",
+            "type": "boolean [false | true]"
+          },
+          {
+            "name": "reason",
+            "type": "string | undefined"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "http",
+          "target": "address-check.example.com",
+          "file": "sample-birth-service/src/residency/address-check.client.ts",
+          "line": 14
+        }
+      ],
+      "effects": [
+        {
+          "kind": "http",
+          "target": "address-check.example.com",
+          "file": "sample-birth-service/src/residency/address-check.client.ts",
+          "line": 14
+        }
+      ],
+      "calls": [],
+      "change": "added",
+      "containsChanges": true,
+      "source": "async verify(address: ResidencyDeclarationDto): Promise<AddressCheck> {\n  const res = await fetch('https://address-check.example.com/v1/verify', {\n    method: 'POST',\n    headers: { 'content-type': 'application/json' },\n    body: JSON.stringify(address),\n  });\n  if (!res.ok) return { confirmed: false, reason: `address service answered ${res.status}` };\n  const body = (await res.json()) as { match: 'exact' | 'partial' | 'none' };\n  return body.match === 'exact' ? { confirmed: true } : { confirmed: false, reason: `address match: ${body.match}` };\n}",
+      "diff": [
+        {
+          "t": "+",
+          "text": "async verify(address: ResidencyDeclarationDto): Promise<AddressCheck> {"
+        },
+        {
+          "t": "+",
+          "text": "  const res = await fetch('https://address-check.example.com/v1/verify', {"
+        },
+        {
+          "t": "+",
+          "text": "    method: 'POST',"
+        },
+        {
+          "t": "+",
+          "text": "    headers: { 'content-type': 'application/json' },"
+        },
+        {
+          "t": "+",
+          "text": "    body: JSON.stringify(address),"
+        },
+        {
+          "t": "+",
+          "text": "  });"
+        },
+        {
+          "t": "+",
+          "text": "  if (!res.ok) return { confirmed: false, reason: `address service answered ${res.status}` };"
+        },
+        {
+          "t": "+",
+          "text": "  const body = (await res.json()) as { match: 'exact' | 'partial' | 'none' };"
+        },
+        {
+          "t": "+",
+          "text": "  return body.match === 'exact' ? { confirmed: true } : { confirmed: false, reason: `address match: ${body.match}` };"
+        },
+        {
+          "t": "+",
+          "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "verify",
+          "role": "operation",
+          "file": "sample-birth-service/src/residency/address-check.client.ts",
+          "line": 13,
+          "status": "added",
+          "added": 10,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "async verify(address: ResidencyDeclarationDto): Promise<AddressCheck> {",
+              "b": 13
+            },
+            {
+              "t": "+",
+              "text": "  const res = await fetch('https://address-check.example.com/v1/verify', {",
+              "b": 14
+            },
+            {
+              "t": "+",
+              "text": "    method: 'POST',",
+              "b": 15
+            },
+            {
+              "t": "+",
+              "text": "    headers: { 'content-type': 'application/json' },",
+              "b": 16
+            },
+            {
+              "t": "+",
+              "text": "    body: JSON.stringify(address),",
+              "b": 17
+            },
+            {
+              "t": "+",
+              "text": "  });",
+              "b": 18
+            },
+            {
+              "t": "+",
+              "text": "  if (!res.ok) return { confirmed: false, reason: `address service answered ${res.status}` };",
+              "b": 19
+            },
+            {
+              "t": "+",
+              "text": "  const body = (await res.json()) as { match: 'exact' | 'partial' | 'none' };",
+              "b": 20
+            },
+            {
+              "t": "+",
+              "text": "  return body.match === 'exact' ? { confirmed: true } : { confirmed: false, reason: `address match: ${body.match}` };",
+              "b": 21
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 22
+            }
+          ]
+        }
+      ],
+      "delta": {
+        "risk": "high",
+        "effectsAdded": [
+          {
+            "kind": "http",
+            "target": "address-check.example.com",
+            "file": "sample-birth-service/src/residency/address-check.client.ts",
+            "line": 14
+          }
+        ],
+        "effectsRemoved": [],
+        "callsAdded": [],
+        "callsRemoved": [],
+        "implementationOnly": false
+      },
+      "summary": "Asks the address service whether the address exists. Confirmed only on an exact match; a partial match, no match or an error answer is not confirmed, with the reason. A network failure is not caught: it fails the request.",
+      "summarySource": "profile",
+      "examples": [
+        {
+          "input": {
+            "address": {
+              "countryOfResidence": "IND",
+              "city": "Mumbai",
+              "postalCode": "400001",
+              "addressLine": "Marine Drive 5"
+            }
+          },
+          "output": {
+            "confirmed": true
+          },
+          "cases": [
+            "c22"
+          ]
+        },
+        {
+          "input": {
+            "address": {
+              "countryOfResidence": "DEU",
+              "city": "Berlin",
+              "postalCode": "00000",
+              "addressLine": "Unter den Linden 1"
+            }
+          },
+          "output": {
+            "confirmed": false,
+            "reason": "address match: none"
+          },
+          "cases": [
+            "c23"
+          ]
+        },
+        {
+          "input": {
+            "address": {
+              "countryOfResidence": "ESP",
+              "city": "Madrid",
+              "postalCode": "28001",
+              "addressLine": "Calle de Serrano 7"
+            }
+          },
+          "output": {
+            "confirmed": true
+          },
+          "cases": [
+            "c25"
+          ]
+        }
+      ],
+      "lazy": {
+        "callersLoaded": true,
+        "calleesLoaded": true
+      }
+    },
+    "ResidencyService.get": {
+      "id": "ResidencyService.get",
+      "moduleId": "ResidencyService",
+      "name": "get",
+      "file": "sample-birth-service/src/residency/residency.service.ts",
+      "line": 18,
+      "endLine": 30,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "ResidencyView",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "current",
+            "type": "(ResidencyDeclarationDto & { status: ResidencyStatus; declaredAt: string; }) | null"
+          },
+          {
+            "name": "declarations",
+            "type": "number"
+          }
+        ]
+      },
+      "directEffects": [],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "residency_declarations",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 40
+        }
+      ],
+      "calls": [
+        "ResidencyStore.latest",
+        "ResidencyStore.count"
+      ],
+      "change": "added",
+      "containsChanges": true,
+      "source": "async get(userId: string): Promise<ResidencyView> {\n  const [latest, declarations] = await Promise.all([this.store.latest(userId), this.store.count(userId)]);\n  return {\n    userId,\n    current: latest\n      ? {\n          countryOfResidence: latest.countryOfResidence, city: latest.city, postalCode: latest.postalCode,\n          addressLine: latest.addressLine, status: latest.status, declaredAt: latest.declaredAt,\n        }\n      : null,\n    declarations,\n  };\n}",
+      "diff": [
+        {
+          "t": "+",
+          "text": "async get(userId: string): Promise<ResidencyView> {"
+        },
+        {
+          "t": "+",
+          "text": "  const [latest, declarations] = await Promise.all([this.store.latest(userId), this.store.count(userId)]);"
+        },
+        {
+          "t": "+",
+          "text": "  return {"
+        },
+        {
+          "t": "+",
+          "text": "    userId,"
+        },
+        {
+          "t": "+",
+          "text": "    current: latest"
+        },
+        {
+          "t": "+",
+          "text": "      ? {"
+        },
+        {
+          "t": "+",
+          "text": "          countryOfResidence: latest.countryOfResidence, city: latest.city, postalCode: latest.postalCode,"
+        },
+        {
+          "t": "+",
+          "text": "          addressLine: latest.addressLine, status: latest.status, declaredAt: latest.declaredAt,"
+        },
+        {
+          "t": "+",
+          "text": "        }"
+        },
+        {
+          "t": "+",
+          "text": "      : null,"
+        },
+        {
+          "t": "+",
+          "text": "    declarations,"
+        },
+        {
+          "t": "+",
+          "text": "  };"
+        },
+        {
+          "t": "+",
+          "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "get",
+          "role": "operation",
+          "file": "sample-birth-service/src/residency/residency.service.ts",
+          "line": 18,
+          "status": "added",
+          "added": 13,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "async get(userId: string): Promise<ResidencyView> {",
+              "b": 18
+            },
+            {
+              "t": "+",
+              "text": "  const [latest, declarations] = await Promise.all([this.store.latest(userId), this.store.count(userId)]);",
+              "b": 19
+            },
+            {
+              "t": "+",
+              "text": "  return {",
+              "b": 20
+            },
+            {
+              "t": "+",
+              "text": "    userId,",
+              "b": 21
+            },
+            {
+              "t": "+",
+              "text": "    current: latest",
+              "b": 22
+            },
+            {
+              "t": "+",
+              "text": "      ? {",
+              "b": 23
+            },
+            {
+              "t": "+",
+              "text": "          countryOfResidence: latest.countryOfResidence, city: latest.city, postalCode: latest.postalCode,",
+              "b": 24
+            },
+            {
+              "t": "+",
+              "text": "          addressLine: latest.addressLine, status: latest.status, declaredAt: latest.declaredAt,",
+              "b": 25
+            },
+            {
+              "t": "+",
+              "text": "        }",
+              "b": 26
+            },
+            {
+              "t": "+",
+              "text": "      : null,",
+              "b": 27
+            },
+            {
+              "t": "+",
+              "text": "    declarations,",
+              "b": 28
+            },
+            {
+              "t": "+",
+              "text": "  };",
+              "b": 29
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 30
+            }
+          ]
+        }
+      ],
+      "delta": {
+        "risk": "high",
+        "effectsAdded": [
+          {
+            "kind": "db.read",
+            "target": "residency_declarations",
+            "file": "sample-birth-service/src/residency/residency.store.ts",
+            "line": 40
+          }
+        ],
+        "effectsRemoved": [],
+        "callsAdded": [
+          "ResidencyStore.latest",
+          "ResidencyStore.count"
+        ],
+        "callsRemoved": [],
+        "implementationOnly": false
+      },
+      "summary": "The user's current home address (their latest declaration, with its verification status and date), or null if they never declared one, plus how many declarations they have made.",
+      "summarySource": "profile",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "current": {
+              "countryOfResidence": "PRT",
+              "city": "Porto",
+              "postalCode": "4000-001",
+              "addressLine": "Rua das Flores 12",
+              "status": "verified",
+              "declaredAt": "2026-10-01T09:00:00.000Z"
+            },
+            "declarations": 1
+          },
+          "cases": [
+            "c20"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "current": null,
+            "declarations": 0
+          },
+          "cases": [
+            "c21"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "userId": "u-2",
+            "current": {
+              "countryOfResidence": "IND",
+              "city": "Mumbai",
+              "postalCode": "400001",
+              "addressLine": "Marine Drive 5",
+              "status": "verified",
+              "declaredAt": "2026-11-05T21:40:15.502Z"
+            },
+            "declarations": 1
+          },
+          "cases": [
+            "c22"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-3"
+          },
+          "output": {
+            "userId": "u-3",
+            "current": {
+              "countryOfResidence": "DEU",
+              "city": "Berlin",
+              "postalCode": "00000",
+              "addressLine": "Unter den Linden 1",
+              "status": "pending_review",
+              "declaredAt": "2026-11-05T21:40:15.503Z"
+            },
+            "declarations": 1
+          },
+          "cases": [
+            "c23"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "userId": "u-1",
+            "current": {
+              "countryOfResidence": "ESP",
+              "city": "Madrid",
+              "postalCode": "28001",
+              "addressLine": "Calle de Serrano 7",
+              "status": "verified",
+              "declaredAt": "2026-11-05T21:40:15.503Z"
+            },
+            "declarations": 2
+          },
+          "cases": [
+            "c25",
+            "c26"
+          ]
+        }
+      ],
+      "lazy": {
+        "callersLoaded": true,
+        "calleesLoaded": true
+      }
+    },
+    "ResidencyStore.latest": {
+      "id": "ResidencyStore.latest",
+      "moduleId": "ResidencyStore",
+      "name": "latest",
+      "file": "sample-birth-service/src/residency/residency.store.ts",
+      "line": 39,
+      "endLine": 41,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "ResidencyDeclaration | null",
+        "fields": [
+          {
+            "name": "id",
+            "type": "number"
+          },
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "countryOfResidence",
+            "type": "string"
+          },
+          {
+            "name": "city",
+            "type": "string"
+          },
+          {
+            "name": "postalCode",
+            "type": "string"
+          },
+          {
+            "name": "addressLine",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "ResidencyStatus [\"verified\" | \"pending_review\"]"
+          },
+          {
+            "name": "declaredAt",
+            "type": "string"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "residency_declarations",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 40
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "residency_declarations",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 40
+        }
+      ],
+      "calls": [],
+      "change": "added",
+      "containsChanges": true,
+      "source": "async latest(userId: string): Promise<ResidencyDeclaration | null> {\n  return this.rows.findOne({ where: { userId }, order: { declaredAt: 'DESC' } });\n}",
+      "diff": [
+        {
+          "t": "+",
+          "text": "async latest(userId: string): Promise<ResidencyDeclaration | null> {"
+        },
+        {
+          "t": "+",
+          "text": "  return this.rows.findOne({ where: { userId }, order: { declaredAt: 'DESC' } });"
+        },
+        {
+          "t": "+",
+          "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "latest",
+          "role": "operation",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 39,
+          "status": "added",
+          "added": 3,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "async latest(userId: string): Promise<ResidencyDeclaration | null> {",
+              "b": 39
+            },
+            {
+              "t": "+",
+              "text": "  return this.rows.findOne({ where: { userId }, order: { declaredAt: 'DESC' } });",
+              "b": 40
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 41
+            }
+          ]
+        }
+      ],
+      "delta": {
+        "risk": "high",
+        "effectsAdded": [
+          {
+            "kind": "db.read",
+            "target": "residency_declarations",
+            "file": "sample-birth-service/src/residency/residency.store.ts",
+            "line": 40
+          }
+        ],
+        "effectsRemoved": [],
+        "callsAdded": [],
+        "callsRemoved": [],
+        "implementationOnly": false
+      },
+      "summary": "The user's most recent declaration, or null if they have none.",
+      "summarySource": "profile",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "id": 1,
+            "userId": "u-1",
+            "countryOfResidence": "PRT",
+            "city": "Porto",
+            "postalCode": "4000-001",
+            "addressLine": "Rua das Flores 12",
+            "status": "verified",
+            "declaredAt": "2026-10-01T09:00:00.000Z"
+          },
+          "cases": [
+            "c20"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": null,
+          "cases": [
+            "c21"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": {
+            "id": 2,
+            "userId": "u-2",
+            "countryOfResidence": "IND",
+            "city": "Mumbai",
+            "postalCode": "400001",
+            "addressLine": "Marine Drive 5",
+            "status": "verified",
+            "declaredAt": "2026-11-05T21:40:15.502Z"
+          },
+          "cases": [
+            "c22"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-3"
+          },
+          "output": {
+            "id": 3,
+            "userId": "u-3",
+            "countryOfResidence": "DEU",
+            "city": "Berlin",
+            "postalCode": "00000",
+            "addressLine": "Unter den Linden 1",
+            "status": "pending_review",
+            "declaredAt": "2026-11-05T21:40:15.503Z"
+          },
+          "cases": [
+            "c23"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": {
+            "id": 4,
+            "userId": "u-1",
+            "countryOfResidence": "ESP",
+            "city": "Madrid",
+            "postalCode": "28001",
+            "addressLine": "Calle de Serrano 7",
+            "status": "verified",
+            "declaredAt": "2026-11-05T21:40:15.503Z"
+          },
+          "cases": [
+            "c25",
+            "c26"
+          ]
+        }
+      ],
+      "lazy": {
+        "callersLoaded": true,
+        "calleesLoaded": true
+      }
+    },
+    "ResidencyStore.count": {
+      "id": "ResidencyStore.count",
+      "moduleId": "ResidencyStore",
+      "name": "count",
+      "file": "sample-birth-service/src/residency/residency.store.ts",
+      "line": 43,
+      "endLine": 45,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "number"
+      },
+      "directEffects": [
+        {
+          "kind": "db.read",
+          "target": "residency_declarations",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 44
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "residency_declarations",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 44
+        }
+      ],
+      "calls": [],
+      "change": "added",
+      "containsChanges": true,
+      "source": "async count(userId: string): Promise<number> {\n  return this.rows.countBy({ userId });\n}",
+      "diff": [
+        {
+          "t": "+",
+          "text": "async count(userId: string): Promise<number> {"
+        },
+        {
+          "t": "+",
+          "text": "  return this.rows.countBy({ userId });"
+        },
+        {
+          "t": "+",
+          "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "count",
+          "role": "operation",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 43,
+          "status": "added",
+          "added": 3,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "async count(userId: string): Promise<number> {",
+              "b": 43
+            },
+            {
+              "t": "+",
+              "text": "  return this.rows.countBy({ userId });",
+              "b": 44
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 45
+            }
+          ]
+        }
+      ],
+      "delta": {
+        "risk": "high",
+        "effectsAdded": [
+          {
+            "kind": "db.read",
+            "target": "residency_declarations",
+            "file": "sample-birth-service/src/residency/residency.store.ts",
+            "line": 44
+          }
+        ],
+        "effectsRemoved": [],
+        "callsAdded": [],
+        "callsRemoved": [],
+        "implementationOnly": false
+      },
+      "summary": "How many declarations the user has made.",
+      "summarySource": "profile",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": 1,
+          "cases": [
+            "c20"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": 0,
+          "cases": [
+            "c21"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-2"
+          },
+          "output": 1,
+          "cases": [
+            "c22"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-3"
+          },
+          "output": 1,
+          "cases": [
+            "c23"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-1"
+          },
+          "output": 2,
+          "cases": [
+            "c25",
+            "c26"
+          ]
+        }
+      ],
+      "lazy": {
+        "callersLoaded": true,
+        "calleesLoaded": true
+      }
+    },
+    "ResidencyService.declare": {
+      "id": "ResidencyService.declare",
+      "moduleId": "ResidencyService",
+      "name": "declare",
+      "file": "sample-birth-service/src/residency/residency.service.ts",
+      "line": 36,
+      "endLine": 51,
+      "summary": "Records a new home address for the user. Residents of restricted countries are rejected. The address service confirms the address; if it can't, the declaration is kept as pending review for an analyst.",
+      "summarySource": "code",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "dto",
+          "type": "ResidencyDeclarationDto"
+        }
+      ],
+      "returns": {
+        "type": "ResidencyView",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "current",
+            "type": "(ResidencyDeclarationDto & { status: ResidencyStatus; declaredAt: string; }) | null"
+          },
+          {
+            "name": "declarations",
+            "type": "number"
+          }
+        ]
+      },
+      "directEffects": [
+        {
+          "kind": "event",
+          "target": "kyc.residency.declared",
+          "file": "sample-birth-service/src/residency/residency.service.ts",
+          "line": 49
+        }
+      ],
+      "effects": [
+        {
+          "kind": "event",
+          "target": "kyc.residency.declared",
+          "file": "sample-birth-service/src/residency/residency.service.ts",
+          "line": 49
+        },
+        {
+          "kind": "http",
+          "target": "address-check.example.com",
+          "file": "sample-birth-service/src/residency/address-check.client.ts",
+          "line": 14
+        },
+        {
+          "kind": "db.write",
+          "target": "residency_declarations",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 48
+        },
+        {
+          "kind": "db.read",
+          "target": "residency_declarations",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 40
+        }
+      ],
+      "calls": [
+        "CountryPolicy.isRestricted",
+        "AddressCheckClient.verify",
+        "ResidencyStore.add",
+        "ResidencyService.get"
+      ],
+      "change": "added",
+      "containsChanges": true,
+      "source": "async declare(userId: string, dto: ResidencyDeclarationDto): Promise<ResidencyView> {\n  const address = {\n    countryOfResidence: dto.countryOfResidence.trim().toUpperCase(),\n    city: dto.city.trim(),\n    postalCode: dto.postalCode.replace(/\\s+/g, '').toUpperCase(),\n    addressLine: dto.addressLine.trim(),\n  };\n  if (this.policy.isRestricted(address.countryOfResidence)) {\n    throw new UnprocessableEntityException({ message: `Residents of ${address.countryOfResidence} can't be onboarded` });\n  }\n  const check = await this.addressCheck.verify(address);\n  const status = check.confirmed ? 'verified' : 'pending_review';\n  await this.store.add(userId, address, status);\n  this.events.emit('kyc.residency.declared', { userId, status, reason: check.reason });\n  return this.get(userId);\n}",
+      "diff": [
+        {
+          "t": "+",
+          "text": "async declare(userId: string, dto: ResidencyDeclarationDto): Promise<ResidencyView> {"
+        },
+        {
+          "t": "+",
+          "text": "  const address = {"
+        },
+        {
+          "t": "+",
+          "text": "    countryOfResidence: dto.countryOfResidence.trim().toUpperCase(),"
+        },
+        {
+          "t": "+",
+          "text": "    city: dto.city.trim(),"
+        },
+        {
+          "t": "+",
+          "text": "    postalCode: dto.postalCode.replace(/\\s+/g, '').toUpperCase(),"
+        },
+        {
+          "t": "+",
+          "text": "    addressLine: dto.addressLine.trim(),"
+        },
+        {
+          "t": "+",
+          "text": "  };"
+        },
+        {
+          "t": "+",
+          "text": "  if (this.policy.isRestricted(address.countryOfResidence)) {"
+        },
+        {
+          "t": "+",
+          "text": "    throw new UnprocessableEntityException({ message: `Residents of ${address.countryOfResidence} can't be onboarded` });"
+        },
+        {
+          "t": "+",
+          "text": "  }"
+        },
+        {
+          "t": "+",
+          "text": "  const check = await this.addressCheck.verify(address);"
+        },
+        {
+          "t": "+",
+          "text": "  const status = check.confirmed ? 'verified' : 'pending_review';"
+        },
+        {
+          "t": "+",
+          "text": "  await this.store.add(userId, address, status);"
+        },
+        {
+          "t": "+",
+          "text": "  this.events.emit('kyc.residency.declared', { userId, status, reason: check.reason });"
+        },
+        {
+          "t": "+",
+          "text": "  return this.get(userId);"
+        },
+        {
+          "t": "+",
+          "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "declare",
+          "role": "operation",
+          "file": "sample-birth-service/src/residency/residency.service.ts",
+          "line": 36,
+          "status": "added",
+          "added": 16,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "async declare(userId: string, dto: ResidencyDeclarationDto): Promise<ResidencyView> {",
+              "b": 36
+            },
+            {
+              "t": "+",
+              "text": "  const address = {",
+              "b": 37
+            },
+            {
+              "t": "+",
+              "text": "    countryOfResidence: dto.countryOfResidence.trim().toUpperCase(),",
+              "b": 38
+            },
+            {
+              "t": "+",
+              "text": "    city: dto.city.trim(),",
+              "b": 39
+            },
+            {
+              "t": "+",
+              "text": "    postalCode: dto.postalCode.replace(/\\s+/g, '').toUpperCase(),",
+              "b": 40
+            },
+            {
+              "t": "+",
+              "text": "    addressLine: dto.addressLine.trim(),",
+              "b": 41
+            },
+            {
+              "t": "+",
+              "text": "  };",
+              "b": 42
+            },
+            {
+              "t": "+",
+              "text": "  if (this.policy.isRestricted(address.countryOfResidence)) {",
+              "b": 43
+            },
+            {
+              "t": "+",
+              "text": "    throw new UnprocessableEntityException({ message: `Residents of ${address.countryOfResidence} can't be onboarded` });",
+              "b": 44
+            },
+            {
+              "t": "+",
+              "text": "  }",
+              "b": 45
+            },
+            {
+              "t": "+",
+              "text": "  const check = await this.addressCheck.verify(address);",
+              "b": 46
+            },
+            {
+              "t": "+",
+              "text": "  const status = check.confirmed ? 'verified' : 'pending_review';",
+              "b": 47
+            },
+            {
+              "t": "+",
+              "text": "  await this.store.add(userId, address, status);",
+              "b": 48
+            },
+            {
+              "t": "+",
+              "text": "  this.events.emit('kyc.residency.declared', { userId, status, reason: check.reason });",
+              "b": 49
+            },
+            {
+              "t": "+",
+              "text": "  return this.get(userId);",
+              "b": 50
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 51
+            }
+          ]
+        }
+      ],
+      "delta": {
+        "risk": "high",
+        "effectsAdded": [
+          {
+            "kind": "event",
+            "target": "kyc.residency.declared",
+            "file": "sample-birth-service/src/residency/residency.service.ts",
+            "line": 49
+          },
+          {
+            "kind": "http",
+            "target": "address-check.example.com",
+            "file": "sample-birth-service/src/residency/address-check.client.ts",
+            "line": 14
+          },
+          {
+            "kind": "db.write",
+            "target": "residency_declarations",
+            "file": "sample-birth-service/src/residency/residency.store.ts",
+            "line": 48
+          },
+          {
+            "kind": "db.read",
+            "target": "residency_declarations",
+            "file": "sample-birth-service/src/residency/residency.store.ts",
+            "line": 40
+          }
+        ],
+        "effectsRemoved": [],
+        "callsAdded": [
+          "CountryPolicy.isRestricted",
+          "AddressCheckClient.verify",
+          "ResidencyStore.add",
+          "ResidencyService.get"
+        ],
+        "callsRemoved": [],
+        "implementationOnly": false
+      },
+      "examples": [
+        {
+          "input": {
+            "userId": "u-2",
+            "dto": {
+              "countryOfResidence": "ind",
+              "city": "Mumbai",
+              "postalCode": "400 001",
+              "addressLine": "Marine Drive 5"
+            }
+          },
+          "output": {
+            "userId": "u-2",
+            "current": {
+              "countryOfResidence": "IND",
+              "city": "Mumbai",
+              "postalCode": "400001",
+              "addressLine": "Marine Drive 5",
+              "status": "verified",
+              "declaredAt": "2026-11-05T21:40:15.502Z"
+            },
+            "declarations": 1
+          },
+          "cases": [
+            "c22"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-3",
+            "dto": {
+              "countryOfResidence": "DEU",
+              "city": "Berlin",
+              "postalCode": "00000",
+              "addressLine": "Unter den Linden 1"
+            }
+          },
+          "output": {
+            "userId": "u-3",
+            "current": {
+              "countryOfResidence": "DEU",
+              "city": "Berlin",
+              "postalCode": "00000",
+              "addressLine": "Unter den Linden 1",
+              "status": "pending_review",
+              "declaredAt": "2026-11-05T21:40:15.503Z"
+            },
+            "declarations": 1
+          },
+          "cases": [
+            "c23"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-4",
+            "dto": {
+              "countryOfResidence": "IRN",
+              "city": "Tehran",
+              "postalCode": "11369",
+              "addressLine": "Valiasr St 100"
+            }
+          },
+          "error": "UnprocessableEntityException: Residents of IRN can't be onboarded",
+          "status": 422,
+          "cases": [
+            "c24"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-1",
+            "dto": {
+              "countryOfResidence": "ESP",
+              "city": "Madrid",
+              "postalCode": "28001",
+              "addressLine": "Calle de Serrano 7"
+            }
+          },
+          "output": {
+            "userId": "u-1",
+            "current": {
+              "countryOfResidence": "ESP",
+              "city": "Madrid",
+              "postalCode": "28001",
+              "addressLine": "Calle de Serrano 7",
+              "status": "verified",
+              "declaredAt": "2026-11-05T21:40:15.503Z"
+            },
+            "declarations": 2
+          },
+          "cases": [
+            "c25"
+          ]
+        }
+      ],
+      "lazy": {
+        "callersLoaded": true,
+        "calleesLoaded": true
+      }
+    },
+    "CountryPolicy.isRestricted": {
+      "id": "CountryPolicy.isRestricted",
+      "moduleId": "CountryPolicy",
+      "name": "isRestricted",
+      "file": "sample-birth-service/src/eligibility/country-policy.service.ts",
+      "line": 9,
+      "endLine": 11,
+      "params": [
+        {
+          "name": "countryOfBirth",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "boolean [false | true]"
+      },
+      "directEffects": [],
+      "effects": [],
+      "calls": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "source": "isRestricted(countryOfBirth: string): boolean {\n  return RESTRICTED.has(countryOfBirth.toUpperCase());\n}",
+      "summary": "Whether a country (ISO alpha-3, any case) is on the sanctions list the product can't onboard: PRK, IRN, SYR, CUB.",
+      "summarySource": "profile",
+      "examples": [
+        {
+          "input": {
+            "countryOfBirth": "PRT"
+          },
+          "output": false,
+          "cases": [
+            "c2",
+            "c16"
+          ]
+        },
+        {
+          "input": {
+            "countryOfBirth": "IND"
+          },
+          "output": false,
+          "cases": [
+            "c4",
+            "c17",
+            "c22"
+          ]
+        },
+        {
+          "input": {
+            "countryOfBirth": "DEU"
+          },
+          "output": false,
+          "cases": [
+            "c18",
+            "c23"
+          ]
+        },
+        {
+          "input": {
+            "countryOfBirth": "NGA"
+          },
+          "output": false,
+          "cases": [
+            "c19"
+          ]
+        },
+        {
+          "input": {
+            "countryOfBirth": "IRN"
+          },
+          "output": true,
+          "cases": [
+            "c24"
+          ]
+        },
+        {
+          "input": {
+            "countryOfBirth": "ESP"
+          },
+          "output": false,
+          "cases": [
+            "c25"
+          ]
+        }
+      ],
+      "lazy": {
+        "callersLoaded": false,
+        "calleesLoaded": true
+      }
+    },
+    "ResidencyStore.add": {
+      "id": "ResidencyStore.add",
+      "moduleId": "ResidencyStore",
+      "name": "add",
+      "file": "sample-birth-service/src/residency/residency.store.ts",
+      "line": 47,
+      "endLine": 49,
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "address",
+          "type": "ResidencyDeclarationDto"
+        },
+        {
+          "name": "status",
+          "type": "ResidencyStatus [\"verified\" | \"pending_review\"]"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "directEffects": [
+        {
+          "kind": "db.write",
+          "target": "residency_declarations",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 48
+        }
+      ],
+      "effects": [
+        {
+          "kind": "db.write",
+          "target": "residency_declarations",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 48
+        }
+      ],
+      "calls": [],
+      "change": "added",
+      "containsChanges": true,
+      "source": "async add(userId: string, address: ResidencyDeclarationDto, status: ResidencyStatus): Promise<void> {\n  await this.rows.insert({ userId, ...address, status, declaredAt: new Date().toISOString() });\n}",
+      "diff": [
+        {
+          "t": "+",
+          "text": "async add(userId: string, address: ResidencyDeclarationDto, status: ResidencyStatus): Promise<void> {"
+        },
+        {
+          "t": "+",
+          "text": "  await this.rows.insert({ userId, ...address, status, declaredAt: new Date().toISOString() });"
+        },
+        {
+          "t": "+",
+          "text": "}"
+        }
+      ],
+      "changes": [
+        {
+          "name": "add",
+          "role": "operation",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 47,
+          "status": "added",
+          "added": 3,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "async add(userId: string, address: ResidencyDeclarationDto, status: ResidencyStatus): Promise<void> {",
+              "b": 47
+            },
+            {
+              "t": "+",
+              "text": "  await this.rows.insert({ userId, ...address, status, declaredAt: new Date().toISOString() });",
+              "b": 48
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 49
+            }
+          ]
+        }
+      ],
+      "delta": {
+        "risk": "high",
+        "effectsAdded": [
+          {
+            "kind": "db.write",
+            "target": "residency_declarations",
+            "file": "sample-birth-service/src/residency/residency.store.ts",
+            "line": 48
+          }
+        ],
+        "effectsRemoved": [],
+        "callsAdded": [],
+        "callsRemoved": [],
+        "implementationOnly": false
+      },
+      "summary": "Inserts a new declaration with the given status, stamped with the current time. Earlier ones stay.",
+      "summarySource": "profile",
+      "examples": [
+        {
+          "input": {
+            "userId": "u-2",
+            "address": {
+              "countryOfResidence": "IND",
+              "city": "Mumbai",
+              "postalCode": "400001",
+              "addressLine": "Marine Drive 5"
+            },
+            "status": "verified"
+          },
+          "cases": [
+            "c22"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-3",
+            "address": {
+              "countryOfResidence": "DEU",
+              "city": "Berlin",
+              "postalCode": "00000",
+              "addressLine": "Unter den Linden 1"
+            },
+            "status": "pending_review"
+          },
+          "cases": [
+            "c23"
+          ]
+        },
+        {
+          "input": {
+            "userId": "u-1",
+            "address": {
+              "countryOfResidence": "ESP",
+              "city": "Madrid",
+              "postalCode": "28001",
+              "addressLine": "Calle de Serrano 7"
+            },
+            "status": "verified"
+          },
+          "cases": [
+            "c25"
+          ]
+        }
+      ],
+      "lazy": {
+        "callersLoaded": true,
+        "calleesLoaded": true
+      }
+    }
+  },
+  "entryPoints": {
+    "api:GET /api/users/:userId/birth-info": {
+      "id": "api:GET /api/users/:userId/birth-info",
+      "kind": "api",
+      "label": "GET /api/users/:userId/birth-info",
+      "readOnly": true,
+      "file": "sample-birth-service/src/birth-info/birth-info.controller.ts",
+      "line": 9,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:POST /api/users/:userId/birth-info": {
+      "id": "api:POST /api/users/:userId/birth-info",
+      "kind": "api",
+      "label": "POST /api/users/:userId/birth-info",
+      "readOnly": false,
+      "file": "sample-birth-service/src/birth-info/birth-info.controller.ts",
+      "line": 15,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:GET /api/users/:userId/eligibility": {
+      "id": "api:GET /api/users/:userId/eligibility",
+      "kind": "api",
+      "label": "GET /api/users/:userId/eligibility",
+      "readOnly": true,
+      "file": "sample-birth-service/src/eligibility/eligibility.controller.ts",
+      "line": 8,
+      "effects": [],
+      "change": "unchanged",
+      "containsChanges": false,
+      "effectsAdded": [],
+      "effectsRemoved": [],
+      "analysis": "listed"
+    },
+    "api:GET /api/users/:userId/residency": {
+      "id": "api:GET /api/users/:userId/residency",
+      "kind": "api",
+      "label": "GET /api/users/:userId/residency",
+      "readOnly": true,
+      "file": "sample-birth-service/src/residency/residency.controller.ts",
+      "line": 9,
+      "effects": [
+        {
+          "kind": "db.read",
+          "target": "residency_declarations",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 40
+        }
+      ],
+      "change": "added",
+      "containsChanges": true,
+      "changes": [
+        {
+          "name": "GET /api/users/:userId/residency",
+          "role": "handler",
+          "file": "sample-birth-service/src/residency/residency.controller.ts",
+          "line": 9,
+          "status": "added",
+          "added": 4,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "@Get()",
+              "b": 9
+            },
+            {
+              "t": "+",
+              "text": "get(@Param('userId') userId: string): Promise<ResidencyView> {",
+              "b": 10
+            },
+            {
+              "t": "+",
+              "text": "  return this.residency.get(userId);",
+              "b": 11
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 12
+            }
+          ]
+        }
+      ],
+      "effectsAdded": [
+        {
+          "kind": "db.read",
+          "target": "residency_declarations",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 40
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "full"
+    },
+    "api:POST /api/users/:userId/residency": {
+      "id": "api:POST /api/users/:userId/residency",
+      "kind": "api",
+      "label": "POST /api/users/:userId/residency",
+      "readOnly": false,
+      "file": "sample-birth-service/src/residency/residency.controller.ts",
+      "line": 15,
+      "effects": [
+        {
+          "kind": "event",
+          "target": "kyc.residency.declared",
+          "file": "sample-birth-service/src/residency/residency.service.ts",
+          "line": 49
+        },
+        {
+          "kind": "http",
+          "target": "address-check.example.com",
+          "file": "sample-birth-service/src/residency/address-check.client.ts",
+          "line": 14
+        },
+        {
+          "kind": "db.write",
+          "target": "residency_declarations",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 48
+        },
+        {
+          "kind": "db.read",
+          "target": "residency_declarations",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 40
+        }
+      ],
+      "change": "added",
+      "containsChanges": true,
+      "changes": [
+        {
+          "name": "POST /api/users/:userId/residency",
+          "role": "handler",
+          "file": "sample-birth-service/src/residency/residency.controller.ts",
+          "line": 15,
+          "status": "added",
+          "added": 4,
+          "removed": 0,
+          "diff": [
+            {
+              "t": "+",
+              "text": "@Post()",
+              "b": 15
+            },
+            {
+              "t": "+",
+              "text": "declare(@Param('userId') userId: string, @Body() dto: ResidencyDeclarationDto): Promise<ResidencyView> {",
+              "b": 16
+            },
+            {
+              "t": "+",
+              "text": "  return this.residency.declare(userId, dto);",
+              "b": 17
+            },
+            {
+              "t": "+",
+              "text": "}",
+              "b": 18
+            }
+          ]
+        }
+      ],
+      "effectsAdded": [
+        {
+          "kind": "event",
+          "target": "kyc.residency.declared",
+          "file": "sample-birth-service/src/residency/residency.service.ts",
+          "line": 49
+        },
+        {
+          "kind": "http",
+          "target": "address-check.example.com",
+          "file": "sample-birth-service/src/residency/address-check.client.ts",
+          "line": 14
+        },
+        {
+          "kind": "db.write",
+          "target": "residency_declarations",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 48
+        },
+        {
+          "kind": "db.read",
+          "target": "residency_declarations",
+          "file": "sample-birth-service/src/residency/residency.store.ts",
+          "line": 40
+        }
+      ],
+      "effectsRemoved": [],
+      "analysis": "full"
+    }
+  },
+  "scopes": {
+    "AddressCheckClient.verify": {
+      "id": "AddressCheckClient.verify",
+      "params": [
+        {
+          "name": "address",
+          "type": "ResidencyDeclarationDto"
+        }
+      ],
+      "returns": {
+        "type": "AddressCheck",
+        "fields": [
+          {
+            "name": "confirmed",
+            "type": "boolean [false | true]"
+          },
+          {
+            "name": "reason",
+            "type": "string | undefined"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "http",
+            "target": "address-check.example.com",
+            "file": "sample-birth-service/src/residency/address-check.client.ts",
+            "line": 14
+          },
+          "line": 14,
+          "file": "sample-birth-service/src/residency/address-check.client.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "address"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "res, body"
+        }
+      ]
+    },
+    "api:GET /api/users/:userId/residency": {
+      "id": "api:GET /api/users/:userId/residency",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "ResidencyView",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "current",
+            "type": "(ResidencyDeclarationDto & { status: ResidencyStatus; declaredAt: string; }) | null"
+          },
+          {
+            "name": "declarations",
+            "type": "number"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "ResidencyService.get",
+          "line": 11,
+          "file": "sample-birth-service/src/residency/residency.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "ResidencyService.get": {
+      "id": "ResidencyService.get",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "ResidencyView",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "current",
+            "type": "(ResidencyDeclarationDto & { status: ResidencyStatus; declaredAt: string; }) | null"
+          },
+          {
+            "name": "declarations",
+            "type": "number"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "ResidencyStore.latest",
+          "line": 19,
+          "file": "sample-birth-service/src/residency/residency.service.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "ResidencyStore.count",
+          "line": 19,
+          "file": "sample-birth-service/src/residency/residency.service.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data",
+          "label": "latest"
+        },
+        {
+          "from": "s2",
+          "to": "exit",
+          "kind": "data",
+          "label": "declarations"
+        }
+      ]
+    },
+    "ResidencyStore.latest": {
+      "id": "ResidencyStore.latest",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "ResidencyDeclaration | null",
+        "fields": [
+          {
+            "name": "id",
+            "type": "number"
+          },
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "countryOfResidence",
+            "type": "string"
+          },
+          {
+            "name": "city",
+            "type": "string"
+          },
+          {
+            "name": "postalCode",
+            "type": "string"
+          },
+          {
+            "name": "addressLine",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "type": "ResidencyStatus [\"verified\" | \"pending_review\"]"
+          },
+          {
+            "name": "declaredAt",
+            "type": "string"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "residency_declarations",
+            "file": "sample-birth-service/src/residency/residency.store.ts",
+            "line": 40
+          },
+          "line": 40,
+          "file": "sample-birth-service/src/residency/residency.store.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "ResidencyStore.count": {
+      "id": "ResidencyStore.count",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "number"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.read",
+            "target": "residency_declarations",
+            "file": "sample-birth-service/src/residency/residency.store.ts",
+            "line": 44
+          },
+          "line": 44,
+          "file": "sample-birth-service/src/residency/residency.store.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "api:POST /api/users/:userId/residency": {
+      "id": "api:POST /api/users/:userId/residency",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "dto",
+          "type": "ResidencyDeclarationDto"
+        }
+      ],
+      "returns": {
+        "type": "ResidencyView",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "current",
+            "type": "(ResidencyDeclarationDto & { status: ResidencyStatus; declaredAt: string; }) | null"
+          },
+          {
+            "name": "declarations",
+            "type": "number"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "ResidencyService.declare",
+          "line": 17,
+          "file": "sample-birth-service/src/residency/residency.controller.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId, dto"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "data"
+        }
+      ]
+    },
+    "ResidencyService.declare": {
+      "id": "ResidencyService.declare",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "dto",
+          "type": "ResidencyDeclarationDto"
+        }
+      ],
+      "returns": {
+        "type": "ResidencyView",
+        "fields": [
+          {
+            "name": "userId",
+            "type": "string"
+          },
+          {
+            "name": "current",
+            "type": "(ResidencyDeclarationDto & { status: ResidencyStatus; declaredAt: string; }) | null"
+          },
+          {
+            "name": "declarations",
+            "type": "number"
+          }
+        ]
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "call",
+          "target": "CountryPolicy.isRestricted",
+          "line": 43,
+          "file": "sample-birth-service/src/residency/residency.service.ts"
+        },
+        {
+          "id": "s2",
+          "kind": "call",
+          "target": "AddressCheckClient.verify",
+          "line": 46,
+          "file": "sample-birth-service/src/residency/residency.service.ts",
+          "condition": "unless (this.policy.isRestricted(address.countr…)"
+        },
+        {
+          "id": "s3",
+          "kind": "call",
+          "target": "ResidencyStore.add",
+          "line": 48,
+          "file": "sample-birth-service/src/residency/residency.service.ts",
+          "condition": "unless (this.policy.isRestricted(address.countr…)"
+        },
+        {
+          "id": "s4",
+          "kind": "effect",
+          "effect": {
+            "kind": "event",
+            "target": "kyc.residency.declared",
+            "file": "sample-birth-service/src/residency/residency.service.ts",
+            "line": 49
+          },
+          "line": 49,
+          "file": "sample-birth-service/src/residency/residency.service.ts",
+          "condition": "unless (this.policy.isRestricted(address.countr…)"
+        },
+        {
+          "id": "s5",
+          "kind": "call",
+          "target": "ResidencyService.get",
+          "line": 50,
+          "file": "sample-birth-service/src/residency/residency.service.ts",
+          "condition": "unless (this.policy.isRestricted(address.countr…)"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "address.countryOfResidence"
+        },
+        {
+          "from": "entry",
+          "to": "s2",
+          "kind": "data",
+          "label": "address"
+        },
+        {
+          "from": "s1",
+          "to": "s2",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "entry",
+          "to": "s3",
+          "kind": "data",
+          "label": "userId, address"
+        },
+        {
+          "from": "s2",
+          "to": "s3",
+          "kind": "data",
+          "label": "status"
+        },
+        {
+          "from": "s1",
+          "to": "s3",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "entry",
+          "to": "s4",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s2",
+          "to": "s4",
+          "kind": "data",
+          "label": "status, check"
+        },
+        {
+          "from": "s1",
+          "to": "s4",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "entry",
+          "to": "s5",
+          "kind": "data",
+          "label": "userId"
+        },
+        {
+          "from": "s1",
+          "to": "s5",
+          "kind": "control",
+          "label": "guards"
+        },
+        {
+          "from": "s5",
+          "to": "exit",
+          "kind": "data"
+        },
+        {
+          "from": "s3",
+          "to": "exit",
+          "kind": "control"
+        },
+        {
+          "from": "s4",
+          "to": "exit",
+          "kind": "control"
+        }
+      ],
+      "exits": [
+        {
+          "guard": "unless (this.policy.isRestricted(address.countr…)",
+          "kind": "throw",
+          "line": 44,
+          "file": "sample-birth-service/src/residency/residency.service.ts",
+          "what": "UnprocessableEntityException"
+        }
+      ]
+    },
+    "CountryPolicy.isRestricted": {
+      "id": "CountryPolicy.isRestricted",
+      "params": [
+        {
+          "name": "countryOfBirth",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "boolean [false | true]"
+      },
+      "steps": [],
+      "edges": []
+    },
+    "ResidencyStore.add": {
+      "id": "ResidencyStore.add",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string"
+        },
+        {
+          "name": "address",
+          "type": "ResidencyDeclarationDto"
+        },
+        {
+          "name": "status",
+          "type": "ResidencyStatus [\"verified\" | \"pending_review\"]"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "steps": [
+        {
+          "id": "s1",
+          "kind": "effect",
+          "effect": {
+            "kind": "db.write",
+            "target": "residency_declarations",
+            "file": "sample-birth-service/src/residency/residency.store.ts",
+            "line": 48
+          },
+          "line": 48,
+          "file": "sample-birth-service/src/residency/residency.store.ts"
+        }
+      ],
+      "edges": [
+        {
+          "from": "entry",
+          "to": "s1",
+          "kind": "data",
+          "label": "userId, address, status"
+        },
+        {
+          "from": "s1",
+          "to": "exit",
+          "kind": "control"
+        }
+      ]
+    }
+  },
+  "findings": [
+    {
+      "rule": "review-budget",
+      "severity": "warning",
+      "message": "Change exceeds the review budget: 6 contract changes (budget 5)",
+      "isNew": true,
+      "hint": "Split into a stack: one PR per contract change, each reviewable as its own graph diff."
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "info",
+      "message": "AddressCheckClient.verify now performs http `address-check.example.com` (new operation)",
+      "subject": {
+        "type": "operation",
+        "id": "AddressCheckClient.verify"
+      },
+      "isNew": true
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "info",
+      "message": "ResidencyStore.latest now performs db.read `residency_declarations` (new operation)",
+      "subject": {
+        "type": "operation",
+        "id": "ResidencyStore.latest"
+      },
+      "isNew": true
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "info",
+      "message": "ResidencyStore.count now performs db.read `residency_declarations` (new operation)",
+      "subject": {
+        "type": "operation",
+        "id": "ResidencyStore.count"
+      },
+      "isNew": true
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "warning",
+      "message": "Residency.declare now performs event `kyc.residency.declared` (new operation)",
+      "subject": {
+        "type": "operation",
+        "id": "ResidencyService.declare"
+      },
+      "isNew": true,
+      "hint": "A new write runs on every flow that reaches this module. Check the zoom-out view."
+    },
+    {
+      "rule": "new-side-effect",
+      "severity": "warning",
+      "message": "ResidencyStore.add now performs db.write `residency_declarations` (new operation)",
+      "subject": {
+        "type": "operation",
+        "id": "ResidencyStore.add"
+      },
+      "isNew": true,
+      "hint": "A new write runs on every flow that reaches this module. Check the zoom-out view."
+    },
+    {
+      "rule": "unattributed-change",
+      "severity": "info",
+      "message": "1 changed file outside any module: src/app.module.ts",
+      "related": [
+        {
+          "type": "file",
+          "id": "sample-birth-service/src/app.module.ts"
+        }
+      ],
+      "isNew": true,
+      "hint": "Wiring, shared types and dev tooling. Contract effects of shared types already show up as output-shape changes on the modules."
+    },
+    {
+      "rule": "undisclosed-effect",
+      "severity": "warning",
+      "message": "Change adds http `address-check.example.com`, which the PR description never mentions",
+      "isNew": true,
+      "hint": "Either the description is incomplete or the agent added a side effect nobody asked for."
+    }
+  ],
+  "review": {
+    "changedModules": [
+      "AddressCheckClient",
+      "ResidencyService",
+      "ResidencyStore"
+    ],
+    "changedOperations": [
+      "AddressCheckClient.verify",
+      "ResidencyService.get",
+      "ResidencyStore.latest",
+      "ResidencyStore.count",
+      "ResidencyService.declare",
+      "ResidencyStore.add"
+    ],
+    "changes": [
+      {
+        "root": "ResidencyService.get",
+        "parts": [
+          "ResidencyStore.latest",
+          "ResidencyStore.count"
+        ],
+        "risk": "high",
+        "reach": 2,
+        "alsoIn": [
+          "ResidencyService.declare"
+        ]
+      },
+      {
+        "root": "ResidencyService.declare",
+        "parts": [
+          "AddressCheckClient.verify",
+          "ResidencyStore.add"
+        ],
+        "risk": "high",
+        "reach": 1
+      }
+    ],
+    "queue": [
+      {
+        "operation": "ResidencyService.get",
+        "risk": "high",
+        "reason": "new operation; +db.read residency_declarations; now calls ResidencyStore.latest, ResidencyStore.count",
+        "reach": 2
+      },
+      {
+        "operation": "ResidencyStore.latest",
+        "risk": "high",
+        "reason": "new operation; +db.read residency_declarations",
+        "reach": 2
+      },
+      {
+        "operation": "ResidencyStore.count",
+        "risk": "high",
+        "reason": "new operation; +db.read residency_declarations",
+        "reach": 2
+      },
+      {
+        "operation": "AddressCheckClient.verify",
+        "risk": "high",
+        "reason": "new operation; +http address-check.example.com",
+        "reach": 1
+      },
+      {
+        "operation": "ResidencyService.declare",
+        "risk": "high",
+        "reason": "new operation; +event kyc.residency.declared, +http address-check.example.com, +db.write residency_declarations, +db.read residency_declarations; now calls CountryPolicy.isRestricted, AddressCheckClient.verify, ResidencyStore.add, Residency.get",
+        "reach": 1
+      },
+      {
+        "operation": "ResidencyStore.add",
+        "risk": "high",
+        "reason": "new operation; +db.write residency_declarations",
+        "reach": 1
+      }
+    ],
+    "reviewers": [
+      "team-kyc"
+    ],
+    "stats": {
+      "files": 6,
+      "linesAdded": 172,
+      "linesRemoved": 3,
+      "contractChanges": 6,
+      "entryPointsAffected": 2
+    }
+  },
+  "lazy": {
+    "seeds": [
+      {
+        "id": "api:POST /api/users/:userId/residency",
+        "reason": "added by this change; matches the PR: post, userid, residency; reaches 6 changed operations"
+      },
+      {
+        "id": "api:GET /api/users/:userId/residency",
+        "reason": "added by this change; matches the PR: userid, residency; reaches 3 changed operations"
+      }
+    ],
+    "stats": {
+      "entryPointsKnown": 5,
+      "entryPointsAnalyzed": 2,
+      "entryPointsReached": 0,
+      "operationsKnown": 14,
+      "operationsAnalyzed": 7,
+      "ms": 4480
+    },
+    "api": "/api"
+  }
+}

@@ -23,6 +23,31 @@
       "EligibilityService": {
         "name": "Eligibility"
       },
+      "ResidencyService": {
+        "name": "Residency",
+        "operations": {
+          "get": "The user's current home address (their latest declaration, with its verification status and date), or null if they never declared one, plus how many declarations they have made."
+        }
+      },
+      "ResidencyStore": {
+        "summary": "Owns residency_declarations. Every declaration is a new row; nothing is overwritten.",
+        "operations": {
+          "latest": "The user's most recent declaration, or null if they have none.",
+          "count": "How many declarations the user has made.",
+          "add": "Inserts a new declaration with the given status, stamped with the current time. Earlier ones stay."
+        }
+      },
+      "AddressCheckClient": {
+        "summary": "The external address verification service (address-check.example.com).",
+        "operations": {
+          "verify": "Asks the address service whether the address exists. Confirmed only on an exact match; a partial match, no match or an error answer is not confirmed, with the reason. A network failure is not caught: it fails the request."
+        }
+      },
+      "CountryPolicy": {
+        "operations": {
+          "isRestricted": "Whether a country (ISO alpha-3, any case) is on the sanctions list the product can't onboard: PRK, IRN, SYR, CUB."
+        }
+      },
       "BirthInfoVerifier": {
         "operations": {
           "verify": "Checks a KYC submission against the identity document: ok only if every part the document has (country, place) matches, ignoring case and surrounding spaces. A part the document lacks isn't checked; with no document at all, anything passes. Returns the mismatches for the error message."
@@ -33,13 +58,15 @@
   "owners": {
     "sample-birth-service/src/birth-info/**": "team-kyc",
     "sample-birth-service/src/documents/**": "team-documents",
-    "sample-birth-service/src/eligibility/**": "team-onboarding"
+    "sample-birth-service/src/eligibility/**": "team-onboarding",
+    "sample-birth-service/src/residency/**": "team-kyc"
   },
   "rules": {
     "fetchOnce": [],
     "tableOwners": {
       "document_birth_info": "DocumentBirthInfoService",
-      "kyc_birth_info": "KycBirthInfoStore"
+      "kyc_birth_info": "KycBirthInfoStore",
+      "residency_declarations": "ResidencyStore"
     }
   }
 }

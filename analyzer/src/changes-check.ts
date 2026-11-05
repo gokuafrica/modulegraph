@@ -10,7 +10,8 @@ import type { ReviewChange, Risk } from '../../schema/modulegraph.ts';
 import { typescript } from './analyzers/typescript/index.ts';
 import { compare, type Graphish } from './compare.ts';
 import { loadConfig } from './config.ts';
-import { filesAtRef, mergeBase, revParse } from './git.ts';
+import { diffBetween, filesAtRef, mergeBase, revParse } from './git.ts';
+import { LazySession } from './lazy.ts';
 import { changeGroups, reviewSummary } from './rules.ts';
 
 let failures = 0;
@@ -86,6 +87,28 @@ expect('one change, starting at updateKycBirthInfo, with the verifier and the st
   [{ root: 'BirthInfoService.updateKycBirthInfo', parts: ['BirthInfoVerifier.verify', 'KycBirthInfoStore.save'], risk: 'high' }]);
 expect('every changed operation is in exactly one change',
   review.changes.flatMap((c) => [c.root, ...c.parts]).sort(), review.queue.map((q) => q.operation).sort());
+
+// A new area with two new APIs: they fill the lazy seeds before the caller search runs, which must not stop the
+// store calls folding into the operations that use them.
+console.log('\nresidency: feature/residency-declaration vs feature/enforce-document-birth-info, full and lazy');
+const head = 'feature/residency-declaration';
+const prev = 'feature/enforce-document-birth-info';
+const want = [
+  { root: 'ResidencyService.get', parts: ['ResidencyStore.count', 'ResidencyStore.latest'], risk: 'high', alsoIn: ['ResidencyService.declare'] },
+  { root: 'ResidencyService.declare', parts: ['AddressCheckClient.verify', 'ResidencyStore.add'], risk: 'high' },
+];
+const sorted = (cs: ReviewChange[]) => shape(cs).map((c) => ({ ...c, parts: [...c.parts].sort() }));
+const mb = mergeBase(repo, prev, head);
+const headFiles = filesAtRef(repo, revParse(repo, head), projectRel);
+const baseFiles = filesAtRef(repo, mb, projectRel);
+const project = (files: Map<string, string>) => typescript.open({ repo, projectDir, config, files });
+expect('full: the read and the declaration, each with its store and service calls inside',
+  sorted(reviewSummary(compare(project(headFiles).run(), project(baseFiles).run()), undefined).changes), want);
+const diff = diffBetween(repo, mb, head, projectRel);
+const session = new LazySession(project(headFiles), project(baseFiles), repo, config, diff,
+  { mode: 'branch', repo, project: projectRel, base: prev, head, files: diff.files }, 'Residency');
+session.init({ seedCount: 2 });
+expect('lazy: the same two changes', sorted(session.graph().review.changes), want);
 
 console.log(failures ? `\n${failures} failure(s)` : '\nchanges fold as expected');
 process.exit(failures ? 1 : 0);
