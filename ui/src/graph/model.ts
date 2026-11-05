@@ -1,6 +1,6 @@
-import type { Effect, EntryPoint, ModuleGraph, Operation, Param, Scope, Step } from '../../../schema/modulegraph.ts';
+import type { Effect, EntryPoint, Exit, ModuleGraph, Operation, Param, Scope, Step } from '../../../schema/modulegraph.ts';
 
-export type NodeKind = 'module' | 'effect' | 'entry' | 'exit' | 'resource' | 'entrygroup' | 'code' | 'decision' | 'frontier';
+export type NodeKind = 'module' | 'effect' | 'entry' | 'exit' | 'resource' | 'entrygroup' | 'code' | 'decision' | 'stop' | 'frontier';
 export type EdgeKind = 'data' | 'control' | 'call' | 'read' | 'write' | 'branch' | 'removed';
 
 export interface VNode {
@@ -87,9 +87,10 @@ function scopeBefore(raw: Scope): Scope & { addedCount: number } {
     steps,
     edges: raw.before?.edges ?? raw.edges,
     returns: raw.before ? raw.before.returns : raw.returns,
+    exits: raw.before ? raw.before.exits : raw.exits,
     removedSteps: undefined,
     removedEdges: undefined,
-    addedCount: raw.steps.filter((s) => s.delta === 'added').length,
+    addedCount: raw.steps.filter((s) => s.delta === 'added').length + (raw.exits ?? []).filter((x) => x.delta).length,
   };
 }
 
@@ -231,8 +232,8 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
   const handedTo = rootEntry && scope.steps.length === 1 && scope.steps[0].kind === 'call' ? g.operations[scope.steps[0].target!] : undefined;
   const contractOp = innerOp ?? handedTo;
 
-  // Recorded examples are from the head revision: the "before" view doesn't show them.
-  const examples = before ? undefined : contractOp?.examples;
+  // Recorded examples are from the head revision: the "before" view shows them only where nothing changed.
+  const examples = before && !untouched(contractOp) ? undefined : contractOp?.examples;
   const exampleParams = contractOp && examples?.length ? contractOp.params.map((p) => p.name) : [];
   if (rootEntry) {
     const node = entryNode(g, rootEntry, '__entry', { via: via.join(' › ') || undefined, examples, exampleParams });
@@ -252,18 +253,38 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
   // branches read as yes/no instead of two parallel arrows.
   const branchOf = new Map<string, { dec: string; branch: 'yes' | 'no' }>();
   const decisions = new Map<string, string>();
-  for (const step of scope.steps) {
-    const m = /^(if|unless) \((.+)\)$/.exec(step.condition ?? '');
-    if (!m || step.condition!.includes(') and ')) continue;
+  const decide = (condition: string | undefined) => {
+    const m = /^(if|unless) \((.+)\)$/.exec(condition ?? '');
+    if (!m || condition!.includes(') and ')) return undefined;
     // `if (!x)` is the "no" branch of `x?`: one decision per test, not one per spelling
     const negated = /^!\s*([\w.$]+|\(.*\))$/.exec(m[2]);
     const test = negated ? negated[1].replace(/^\((.*)\)$/, '$1') : m[2];
     const yes = (m[1] === 'if') !== !!negated;
     if (!decisions.has(test)) decisions.set(test, `__dec${decisions.size}`);
-    branchOf.set(step.id, { dec: decisions.get(test)!, branch: yes ? 'yes' : 'no' });
+    return { dec: decisions.get(test)!, branch: (yes ? 'yes' : 'no') as 'yes' | 'no' };
+  };
+  for (const step of scope.steps) {
+    const b = decide(step.condition);
+    if (b) branchOf.set(step.id, b);
   }
+  // An early `throw` / `return` is the other side of the guard the later steps run under: `check.ok?` no → throws.
+  const stops: { id: string; dec: string; branch: 'yes' | 'no'; exit: Exit }[] = [];
+  (scope.exits ?? []).forEach((exit, i) => {
+    const b = decide(exit.guard);
+    if (b) stops.push({ id: `__stop${i}`, dec: b.dec, branch: b.branch === 'yes' ? 'no' : 'yes', exit });
+  });
   for (const [cond, id] of decisions) {
-    nodes.push({ id, type: 'decision', width: Math.max(130, cond.length * 7.5 + 40), height: 46, data: { label: `${cond}?` } });
+    const added = stops.some((x) => x.dec === id && x.exit.delta === 'added');
+    nodes.push({ id, type: 'decision', width: Math.max(added ? 190 : 130, cond.length * 7.5 + 40), height: added ? 58 : 46, data: { label: `${cond}?`, added } });
+  }
+  for (const { id, exit } of stops) {
+    // The HTTP status the recorded requests got from this exception, when one of them was rejected by it.
+    const status = exit.kind === 'throw' && exit.what ? contractOp?.examples?.find((e) => e.status && e.error?.includes(exit.what!))?.status : undefined;
+    const lines = 1 + (exit.message ? Math.ceil((exit.message.length + 2) / 34) : 0);
+    nodes.push({
+      id, type: 'stop', width: 260, height: 44 + lines * 16 + (exit.delta ? 18 : 0),
+      data: { exit, status, examples: examples },
+    });
   }
   for (const step of scope.steps) {
     nodes.push(stepNode(g, branchOf.has(step.id) ? { ...step, condition: undefined } : step, opts.focusOp, opts.focusPath, false, before));
@@ -275,7 +296,8 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
     const source = before && innerOp.diff?.length ? innerOp.diff.filter((l) => l.t !== '+').map((l) => l.text).join('\n') : innerOp.source;
     const lines = source.split('\n').length;
     const changes = before ? [] : innerOp.changes ?? [];
-    const height = changes.length ? Math.min(70 + changes.length * 22 + Math.min(changes[0].diff.length, 14) * 16, 420) : Math.min(60 + lines * 15, 340);
+    const diffLines = changes.reduce((n, c) => n + c.diff.reduce((k, l) => k + Math.max(1, Math.ceil(l.text.length / 62)), 0) + 2, 0);
+    const height = changes.length ? Math.min(56 + diffLines * 16, 460) : Math.min(60 + lines * 15, 340);
     nodes.push({ id: '__code', type: 'code', width: changes.length ? 560 : 440, height, data: { opId: innerOp.id, source, changes, before } });
     edges.push({ id: 'e:in-code', source: '__entry', target: '__code', kind: 'control' }, { id: 'e:code-out', source: '__code', target: '__exit', kind: 'control' });
   }
@@ -315,8 +337,36 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
   for (const [stepId, { dec, branch }] of branchOf) {
     edges.push({ id: `e:${dec}-${stepId}`, source: dec, target: stepId, kind: 'branch', label: branch });
   }
+  for (const { id, dec, branch } of stops) edges.push({ id: `e:${dec}-${id}`, source: dec, target: id, kind: 'branch', label: branch });
 
-  const reduced = reduceEdges(edges, new Set(nodes.filter((n) => n.type === 'effect' || n.type === 'decision').map((n) => n.id)));
+  // What a reviewer asks of a publish next to a DB write: are they in one transaction, and who listens?
+  const writes = scope.steps.flatMap((s) => {
+    const fx = s.effect ? [s.effect] : s.target ? g.operations[s.target]?.effects ?? [] : [];
+    return fx.filter((e) => e.kind === 'db.write').map((e) => ({ step: s, table: e.target }));
+  });
+  for (const node of nodes) {
+    const step = node.type === 'effect' ? scope.steps.find((s) => s.id === node.id) : undefined;
+    if (!step?.effect || !['event', 'kafka', 'queue', 'outbox'].includes(step.effect.kind)) continue;
+    const notes: string[] = [];
+    if (step.effect.kind === 'event') {
+      const listeners = Object.values(g.entryPoints).filter((e) => e.kind === 'event' && e.label.includes(step.effect!.target));
+      notes.push(listeners.length ? `handled by ${listeners.map((e) => e.label).join(', ')}` : 'no listener for it in this service');
+    }
+    const w = writes.find((x) => x.step.id !== step.id);
+    if (w && step.effect.kind !== 'outbox') {
+      const order = scope.steps.indexOf(w.step) < scope.steps.indexOf(step) ? 'after' : 'before';
+      notes.push(
+        w.step.transaction && w.step.transaction === step.transaction ? `same transaction as the ${w.table} write (${step.transaction})`
+          : step.transaction ? `in ${step.transaction}; the ${w.table} write is not`
+          : w.step.transaction ? `outside the ${w.table} write's transaction, ${order} it`
+          : `${order} the ${w.table} write, no transaction around both`,
+      );
+    }
+    node.data = { ...node.data, notes };
+    node.height += notes.reduce((n, t) => n + Math.ceil(t.length / 36), 0) * 15 + 6;
+  }
+
+  const reduced = reduceEdges(edges, new Set(nodes.filter((n) => n.type === 'effect' || n.type === 'decision' || n.type === 'stop').map((n) => n.id)));
   edges.length = 0;
   edges.push(...reduced);
 
@@ -373,15 +423,20 @@ function stepNode(g: ModuleGraph, step: Step, focusOp?: string, focusPath?: Set<
   const extra = { condition: step.condition, loop: step.loop, via: step.via, through, line: step.line, file: step.file, focus, onPath, delta: step.delta, conditionBefore: step.conditionBefore, ghost, beforeMark: marks.beforeMark, conditionNow: marks.conditionNow };
   if (step.kind === 'call') {
     // What the module got and returned in the request being followed: one extra line pair on the node.
-    const examples = ghost || before ? undefined : g.operations[step.target!]?.examples;
     const op = g.operations[step.target!];
+    const examples = ghost || (before && !untouched(op)) ? undefined : op?.examples;
     const node = moduleNode(g, step.id, step.target!, { ...extra, examples, ...(before && op ? { chipsOverride: chipsBefore(op), change: 'unchanged', containsChanges: false, hasDiff: false, beforeView: true } : {}) });
     if (examples?.length) node.height += 40;
     return node;
   }
   const deltaLine = step.delta || step.conditionBefore !== undefined || marks.beforeMark ? 18 : 0;
-  const nameLines = Math.max(1, Math.ceil((step.effect?.target.length ?? 0) / 24));
-  return { id: step.id, type: 'effect', width: 230, height: 50 + (nameLines - 1) * 17 + (step.condition ? 18 : 0) + deltaLine, data: { ...extra, effect: step.effect } };
+  const nameLines = Math.max(1, Math.ceil((step.effect?.target.length ?? 0) / 28));
+  return { id: step.id, type: 'effect', width: 250, height: 58 + (nameLines - 1) * 17 + (step.condition ? 18 : 0) + deltaLine, data: { ...extra, effect: step.effect } };
+}
+
+/** Same code and nothing below it changed: what was recorded on the new code holds for the old one too. */
+function untouched(op: Operation | undefined): boolean {
+  return !!op && op.change === 'unchanged' && !op.containsChanges;
 }
 
 export function resourceId(e: Effect): string {

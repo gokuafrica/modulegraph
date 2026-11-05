@@ -72,15 +72,20 @@ export function diffScope(head: Scope, base: Scope): void {
     matched.set(prev.id, s.id);
     if ((prev.condition ?? '') !== (s.condition ?? '')) s.conditionBefore = prev.condition ?? '';
   }
+  // Early exits: new ones are part of what the change does ("now rejects when …").
+  const exitKey = (x: { guard: string; kind: string; what?: string }) => `${x.kind} ${x.what ?? ''} ${x.guard}`;
+  const baseExits = new Set((base.exits ?? []).map(exitKey));
+  for (const x of head.exits ?? []) if (!baseExits.has(exitKey(x))) x.delta = 'added';
   const removed = base.steps.filter((s) => !matched.has(s.id));
   const map = (id: string) => (id === 'entry' || id === 'exit' ? id : matched.get(id) ?? `rm:${id}`);
   // The base revision's flow, for the "before" view: same step ids where a step survived, "rm:" where it is gone.
-  const changed = removed.length || head.steps.some((s) => s.delta === 'added' || s.conditionBefore !== undefined);
+  const changed = removed.length || head.steps.some((s) => s.delta === 'added' || s.conditionBefore !== undefined) || head.exits?.some((x) => x.delta);
   if (changed) {
     head.before = {
       steps: base.steps.map((s) => ({ ...s, id: map(s.id), ...(matched.has(s.id) ? {} : { delta: 'removed' as const }) })),
       edges: base.edges.map((e) => ({ ...e, from: map(e.from), to: map(e.to) })),
       ...(base.returns ? { returns: base.returns } : {}),
+      ...(base.exits ? { exits: base.exits } : {}),
     };
   }
   if (!removed.length) return;

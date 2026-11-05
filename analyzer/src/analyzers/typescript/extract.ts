@@ -16,7 +16,7 @@ import {
   type NewExpression,
   type Type,
 } from 'ts-morph';
-import type { Edge, Effect, EntryPoint, Param, Scope, Step, TypeShape } from '../../../../schema/modulegraph.ts';
+import type { Edge, Effect, EntryPoint, Exit, Param, Scope, Step, TypeShape } from '../../../../schema/modulegraph.ts';
 import type { CallMatch, Config, DecoratorEntryRule, EntryRule, ResponseRule, SinkRule } from '../../config.ts';
 import { dedupeEffects } from '../../effects.ts';
 import type { OperationTarget, Part, RevisionAnalysis, Snapshot } from '../types.ts';
@@ -556,6 +556,8 @@ export class Extractor implements RevisionAnalysis {
       steps: result.steps,
       edges: mergeEdges(edges),
     };
+    const exits = exitsOf(fn, this.rel(fn.getSourceFile().getFilePath()), result.steps);
+    if (exits.length) scope.exits = exits;
     this.snapshot.scopes[id] = scope;
     return { scope, result };
   }
@@ -617,6 +619,7 @@ export class Extractor implements RevisionAnalysis {
         return;
       }
       const { guardNodes, ...guard } = guardOf(call, fn);
+      const transaction = transactionOf(call, fn);
       const guards: Prod = new Map();
       for (const g of guardNodes) mergeInto(guards, strip(prodOf(g)));
       const inputs = new Map<string, Set<string>>();
@@ -629,6 +632,7 @@ export class Extractor implements RevisionAnalysis {
           line: call.getStartLineNumber(),
           file: this.rel(call.getSourceFile().getFilePath()),
           ...guard,
+          ...(transaction ? { transaction } : {}),
         };
         steps.push(step);
         for (const [producer, labels] of inputs) {
@@ -649,6 +653,7 @@ export class Extractor implements RevisionAnalysis {
             condition: [guard.condition, s.condition].filter(Boolean).join(' and ') || undefined,
             loop: guard.loop || s.loop || undefined,
             via: s.via ?? resolved.name,
+            ...(s.transaction ?? transaction ? { transaction: s.transaction ?? transaction } : {}),
           });
         }
         for (const e of sub.edges) {
@@ -1159,6 +1164,22 @@ function guardOf(call: Node, fn: Node): { condition?: string; loop?: boolean; gu
   return { condition: conditions.reverse().join(' and ') || undefined, loop: loop || undefined, guardNodes };
 }
 
+/**
+ * The transaction a call runs in: inside a callback given to `….transaction(…)` / `$transaction(…)` (TypeORM,
+ * Prisma, Sequelize, Knex), or in a method marked `@Transactional()`. Undefined when the code shows none.
+ */
+function transactionOf(call: Node, fn: Node): string | undefined {
+  let child: Node = call;
+  for (let node = call.getParent(); node && node !== fn; child = node, node = node.getParent()) {
+    if (Node.isCallExpression(node) && isFnNode(child) && node.getArguments().includes(child as never)) {
+      const callee = node.getExpression().getText();
+      if (/(^|\.)\$?transaction$/i.test(callee)) return short(callee.replace(/^this\./, ''), 40);
+    }
+  }
+  if (Node.isMethodDeclaration(fn) && fn.getDecorators().some((d) => /^Transactional$/i.test(d.getName()))) return '@Transactional';
+  return undefined;
+}
+
 /** `unless (x)`, but `if (x)` for `unless (!x)`: an early `if (!order) throw` means "only when order". */
 function unless(cond: string): string {
   const m = /^!([\w$.]+|\([^()]*\))$/.exec(cond);
@@ -1181,6 +1202,33 @@ function isAnonymous(fn: Node): boolean {
 
 function isTypeDecl(n: Node): boolean {
   return Node.isInterfaceDeclaration(n) || Node.isTypeAliasDeclaration(n) || Node.isEnumDeclaration(n);
+}
+
+/**
+ * The scope's own early exits, `if (!check.ok) throw new X('…')` or `if (!user) return null`, that come before at
+ * least one step: the other side of the guard the later steps run under.
+ */
+function exitsOf(fn: Fn, file: string, steps: Step[]): Exit[] {
+  const body = fn.getBody();
+  if (!body) return [];
+  const lastStep = Math.max(0, ...steps.map((s) => s.line));
+  const out: Exit[] = [];
+  for (const stmt of body.getDescendantsOfKind(SyntaxKind.IfStatement)) {
+    if (stmt.getFirstAncestor(isFnNode) !== fn || stmt.getElseStatement() || !exits(stmt.getThenStatement())) continue;
+    if (!Node.isBlock(stmt.getParent()) || stmt.getEndLineNumber() >= lastStep) continue;
+    const then = stmt.getThenStatement();
+    const last = Node.isBlock(then) ? then.getStatements().at(-1)! : then;
+    const exit: Exit = { guard: unless(short(stmt.getExpression().getText(), 40)), kind: Node.isThrowStatement(last) ? 'throw' : 'return', line: last.getStartLineNumber(), file };
+    const expr = Node.isThrowStatement(last) || Node.isReturnStatement(last) ? last.getExpression() : undefined;
+    if (expr && Node.isNewExpression(expr)) {
+      exit.what = expr.getExpression().getText();
+      const arg = expr.getArguments()[0];
+      const msg = arg && Node.isStringLiteral(arg) ? arg : arg && Node.isObjectLiteralExpression(arg) ? arg.getProperty('message')?.getLastChild() : undefined;
+      if (msg && (Node.isStringLiteral(msg) || Node.isNoSubstitutionTemplateLiteral(msg))) exit.message = msg.getLiteralText();
+    } else if (expr) exit.what = short(expr.getText(), 40);
+    out.push(exit);
+  }
+  return out;
 }
 
 function exits(stmt: Node): boolean {

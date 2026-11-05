@@ -168,6 +168,8 @@ export interface Example {
   input: Record<string, unknown>;
   output?: unknown;
   error?: string;
+  /** HTTP status the error maps to, when the framework says (NestJS `getStatus()`, `err.status`). */
+  status?: number;
 }
 
 export interface DiffLine {
@@ -238,7 +240,24 @@ export interface Scope {
    * The base revision's steps, when they differ (a call added, removed or guarded differently): the flow as it was,
    * for a before/after toggle. Steps that survived keep their head ids; the ones gone are "rm:" with delta removed.
    */
-  before?: { steps: Step[]; edges: Edge[]; returns?: TypeShape };
+  before?: { steps: Step[]; edges: Edge[]; returns?: TypeShape; exits?: Exit[] };
+  /** Early exits (`if (!check.ok) throw …`): what happens on the other side of a guard. */
+  exits?: Exit[];
+}
+
+/** An early `throw` or `return` that guards the rest of a scope: steps after it get `guard` as their condition. */
+export interface Exit {
+  /** The condition the code after this exit runs under, as steps spell it: `if (check.ok)` for `if (!check.ok) throw`. */
+  guard: string;
+  kind: 'throw' | 'return';
+  /** Exception class (`UnprocessableEntityException`) or the returned expression. */
+  what?: string;
+  /** The exception's message, when it is a literal. */
+  message?: string;
+  line: number;
+  file: string;
+  /** Set when comparing with a base: the exit is new in this scope. */
+  delta?: 'added';
 }
 
 export interface Step {
@@ -258,6 +277,8 @@ export interface Step {
   delta?: 'added' | 'removed';
   /** The step's guard on the base revision, when it changed ("" = had none). */
   conditionBefore?: string;
+  /** The transaction the step runs in, as the code opens it (`dataSource.transaction`, `@Transactional`). */
+  transaction?: string;
 }
 
 export interface Edge {

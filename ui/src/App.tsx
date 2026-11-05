@@ -559,7 +559,9 @@ export default function App() {
                       {n ? <button className="diff-crumb" onClick={() => setDiffFor(scopeId)} title="Code changes behind this flow, function by function">code changes ± ({n})</button> : null}
                       {view.before && (
                         <span className="before-note">
-                          as on {base}{canCompare ? `: ${steps}` : ''}{canvas?.addedCount ? ` · ${canvas.addedCount} step${canvas.addedCount > 1 ? 's' : ''} this change adds not shown` : ''} · examples hidden (recorded on the new code)
+                          {owner && owner.change === 'unchanged' && !owner.containsChanges
+                            ? `as on ${base}: this change doesn't touch it, so it is the same as now`
+                            : `as on ${base}${canCompare ? `: ${steps}` : ''}${canvas?.addedCount ? ` · ${canvas.addedCount} step${canvas.addedCount > 1 ? 's' : ''} this change adds not shown` : ''} · examples of changed modules hidden (recorded on the new code)`}
                         </span>
                       )}
                     </>

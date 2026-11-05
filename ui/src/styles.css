@@ -254,6 +254,23 @@ h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color:
 
 .decision { display: flex; align-items: center; justify-content: center; gap: 6px; border: 1.5px solid var(--cond-border); background: var(--cond-bg); color: var(--cond-fg); border-radius: 23px; padding: 4px 14px; font-family: ui-monospace, Consolas, monospace; font-size: 12px; font-weight: 600; }
 .decision-icon { font-size: 15px; }
+.decision { flex-direction: column; gap: 0; }
+.decision-row { display: flex; align-items: center; gap: 6px; }
+.decision.added { border-style: dashed; border-color: var(--add-border); }
+.decision .step-delta { font-family: system-ui, sans-serif; margin: 0 0 2px; }
+.node.stop { border-color: #b45309; background: rgba(180, 83, 9, 0.12); }
+.node.stop.step-added { border-style: dashed; border-color: var(--add-border); }
+.node.stop.hit { box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.55); }
+.stop .entry-kind { display: flex; justify-content: space-between; color: #f59e0b; font-weight: 700; }
+.stop .status { font-family: ui-monospace, Consolas, monospace; border: 1px solid #b45309; border-radius: 4px; padding: 0 4px; font-size: 10px; }
+.stop-what { font-family: ui-monospace, Consolas, monospace; font-weight: 600; font-size: 12px; overflow-wrap: anywhere; }
+.stop-msg { font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
+.stop-here { font-size: 10.5px; font-weight: 700; color: #f59e0b; margin-top: 2px; }
+.effect-who { font-size: 10.5px; color: var(--muted); margin-bottom: 4px; display: flex; gap: 6px; }
+.node.effect .chip { width: 100%; }
+.effect-note { font-size: 10.5px; color: var(--muted); margin-top: 4px; padding-left: 8px; border-left: 2px solid var(--line-strong); }
+.rejected { color: #f59e0b; }
+.bb-tag.rejected { border-color: #b45309; color: #f59e0b; }
 
 .chip { display: inline-flex; align-items: baseline; flex-wrap: wrap; gap: 2px 5px; border-radius: 5px; padding: 2px 7px; font-size: 11px; border: 1px solid; border-left-width: 4px; }
 .chips .chip { width: 100%; box-sizing: border-box; }
@@ -335,7 +352,10 @@ h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color:
 .example-json { margin: 0 0 6px; font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--text-2); white-space: pre; max-height: 220px; overflow: auto; }
 .inspector .example-block { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; margin-bottom: 8px; overflow-x: auto; }
 
-.code { width: 420px; }
+.node.code { width: 100%; }
+.code-scroll { overflow: auto; max-height: calc(100% - 26px); margin-top: 4px; }
+.code-scroll .fn-diff { margin-bottom: 6px; }
+.code-scroll .fn-diff-head { font-size: 11px; padding: 2px 0; }
 .code pre, .code-block { margin: 6px 0 0; font-family: ui-monospace, Consolas, monospace; font-size: 11px; background: var(--code-bg); color: var(--code-fg); border-radius: 6px; padding: 6px 0; overflow: auto; max-height: 280px; }
 .code-block { max-height: 420px; }
 .dl { padding: 0 8px; white-space: pre; }
@@ -444,7 +464,7 @@ h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color:
 .fn-diff-head .file { font-family: ui-monospace, Consolas, monospace; }
 .fn-diff-head .counts { margin-left: auto; }
 .hunks { background: var(--code-bg); color: var(--code-fg); border-radius: 6px; padding: 4px 0; font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; line-height: 17px; }
-.node.code .hunks { font-size: 11px; line-height: 16px; max-height: 260px; overflow: auto; }
+.node.code .hunks { font-size: 11px; line-height: 16px; }
 .hl { display: grid; grid-template-columns: 34px 34px 14px 1fr; }
 .hl .ln { color: #64748b; text-align: right; padding-right: 6px; user-select: none; font-size: 10px; }
 .hl .sign { color: #94a3b8; user-select: none; }

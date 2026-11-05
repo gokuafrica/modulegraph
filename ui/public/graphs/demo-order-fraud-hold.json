@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "order-service",
-  "generatedAt": "2026-11-04T13:58:31.890Z",
+  "generatedAt": "2026-11-05T11:59:53.619Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
@@ -5573,6 +5573,15 @@
           "to": "exit",
           "kind": "control"
         }
+      ],
+      "exits": [
+        {
+          "guard": "unless (!item || item.available < line.quantity)",
+          "kind": "throw",
+          "line": 25,
+          "file": "sample-nest-service/src/inventory/inventory.service.ts",
+          "what": "ConflictException"
+        }
       ]
     },
     "InventoryService.release": {
@@ -6358,6 +6367,16 @@
           "kind": "control"
         }
       ],
+      "exits": [
+        {
+          "guard": "unless (risk.hold)",
+          "kind": "return",
+          "line": 57,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "what": "order",
+          "delta": "added"
+        }
+      ],
       "before": {
         "steps": [
           {
@@ -6890,6 +6909,15 @@
           "from": "s8",
           "to": "exit",
           "kind": "control"
+        }
+      ],
+      "exits": [
+        {
+          "guard": "unless (order.status !== 'held')",
+          "kind": "throw",
+          "line": 67,
+          "file": "sample-nest-service/src/orders/orders.service.ts",
+          "what": "ConflictException"
         }
       ]
     },
@@ -8715,7 +8743,16 @@
               "type": "string | undefined"
             }
           ]
-        }
+        },
+        "exits": [
+          {
+            "guard": "if (shipment)",
+            "kind": "return",
+            "line": 65,
+            "file": "sample-nest-service/src/shipping/shipping.service.ts",
+            "what": "undefined"
+          }
+        ]
       },
       "removedSteps": [
         {

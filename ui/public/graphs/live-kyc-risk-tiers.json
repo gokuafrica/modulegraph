@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T14:00:03.500Z",
+  "generatedAt": "2026-11-05T11:59:46.277Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -943,7 +943,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T14:00:03.365Z"
+            "checkedAt": "2026-11-05T11:59:46.141Z"
           },
           "cases": [
             "c5",
@@ -959,7 +959,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-04T14:00:03.366Z"
+            "checkedAt": "2026-11-05T11:59:46.142Z"
           },
           "cases": [
             "c15"
@@ -1058,7 +1058,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T14:00:03.363Z"
+            "extractedAt": "2026-11-05T11:59:46.139Z"
           },
           "cases": [
             "c1",
@@ -1094,7 +1094,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T14:00:03.366Z"
+            "extractedAt": "2026-11-05T11:59:46.142Z"
           },
           "cases": [
             "c11",
@@ -1406,7 +1406,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T14:00:03.363Z"
+              "extractedAt": "2026-11-05T11:59:46.139Z"
             }
           },
           "output": {
@@ -1443,7 +1443,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T14:00:03.366Z"
+              "extractedAt": "2026-11-05T11:59:46.142Z"
             }
           },
           "output": {
@@ -1514,7 +1514,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T14:00:03.363Z"
+              "extractedAt": "2026-11-05T11:59:46.139Z"
             }
           },
           "output": {
@@ -1551,7 +1551,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T14:00:03.366Z"
+              "extractedAt": "2026-11-05T11:59:46.142Z"
             }
           },
           "output": {
@@ -1640,7 +1640,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T14:00:03.363Z"
+              "extractedAt": "2026-11-05T11:59:46.139Z"
             }
           },
           "output": {
@@ -1676,7 +1676,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T14:00:03.366Z"
+              "extractedAt": "2026-11-05T11:59:46.142Z"
             }
           },
           "output": {
@@ -2105,7 +2105,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T14:00:03.365Z"
+            "checkedAt": "2026-11-05T11:59:46.141Z"
           },
           "cases": [
             "c6",
@@ -2129,7 +2129,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-04T14:00:03.366Z"
+            "checkedAt": "2026-11-05T11:59:46.142Z"
           },
           "cases": [
             "c16"
@@ -4118,6 +4118,16 @@
           "to": "exit",
           "kind": "data"
         }
+      ],
+      "exits": [
+        {
+          "guard": "unless (documents.length === 0)",
+          "kind": "throw",
+          "line": 11,
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "what": "Error",
+          "message": "no identity documents on file"
+        }
       ]
     },
     "BirthInfoModule.resolve": {
@@ -4733,6 +4743,15 @@
           "to": "exit",
           "kind": "control"
         }
+      ],
+      "exits": [
+        {
+          "guard": "unless (kyc.status !== 'passed')",
+          "kind": "return",
+          "line": 17,
+          "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
+          "what": "{ userId, onboarded: false }"
+        }
       ]
     },
     "consumer:topic user.documents.uploaded": {
@@ -5121,8 +5140,7 @@
       "entryPointsReached": 5,
       "operationsKnown": 26,
       "operationsAnalyzed": 12,
-      "ms": 2371
-    },
-    "api": "/api"
+      "ms": 2835
+    }
   }
 }

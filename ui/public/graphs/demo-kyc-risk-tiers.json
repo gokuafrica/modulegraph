@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-04T13:58:11.670Z",
+  "generatedAt": "2026-11-05T11:59:32.239Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
@@ -504,7 +504,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T13:58:11.535Z"
+              "extractedAt": "2026-11-05T11:59:32.108Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -531,7 +531,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T13:58:11.537Z"
+              "extractedAt": "2026-11-05T11:59:32.109Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -592,7 +592,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T13:58:11.533Z"
+              "extractedAt": "2026-11-05T11:59:32.106Z"
             }
           },
           "output": {
@@ -629,7 +629,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T13:58:11.535Z"
+              "extractedAt": "2026-11-05T11:59:32.109Z"
             }
           },
           "output": {
@@ -696,7 +696,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T13:58:11.533Z"
+              "extractedAt": "2026-11-05T11:59:32.106Z"
             }
           },
           "output": {
@@ -733,7 +733,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T13:58:11.535Z"
+              "extractedAt": "2026-11-05T11:59:32.109Z"
             }
           },
           "output": {
@@ -1160,7 +1160,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-04T13:58:11.533Z"
+            "extractedAt": "2026-11-05T11:59:32.106Z"
           },
           "cases": [
             "c1",
@@ -1196,7 +1196,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-04T13:58:11.535Z"
+            "extractedAt": "2026-11-05T11:59:32.109Z"
           },
           "cases": [
             "c11",
@@ -1755,7 +1755,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T13:58:11.535Z"
+            "checkedAt": "2026-11-05T11:59:32.108Z"
           },
           "cases": [
             "c5",
@@ -1771,7 +1771,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-04T13:58:11.536Z"
+            "checkedAt": "2026-11-05T11:59:32.109Z"
           },
           "cases": [
             "c15"
@@ -1898,7 +1898,7 @@
             "userId": "u-1",
             "status": "passed",
             "riskTier": "low",
-            "checkedAt": "2026-11-04T13:58:11.535Z"
+            "checkedAt": "2026-11-05T11:59:32.108Z"
           },
           "cases": [
             "c6",
@@ -1922,7 +1922,7 @@
             "userId": "u-2",
             "status": "pending_review",
             "riskTier": "high",
-            "checkedAt": "2026-11-04T13:58:11.536Z"
+            "checkedAt": "2026-11-05T11:59:32.109Z"
           },
           "cases": [
             "c16"
@@ -2602,7 +2602,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T13:58:11.533Z"
+              "extractedAt": "2026-11-05T11:59:32.106Z"
             }
           },
           "output": {
@@ -2638,7 +2638,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T13:58:11.535Z"
+              "extractedAt": "2026-11-05T11:59:32.109Z"
             }
           },
           "output": {
@@ -2872,7 +2872,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-04T13:58:11.533Z"
+              "extractedAt": "2026-11-05T11:59:32.106Z"
             }
           },
           "output": {
@@ -2901,7 +2901,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-04T13:58:11.535Z"
+              "extractedAt": "2026-11-05T11:59:32.109Z"
             }
           },
           "output": {
@@ -5642,6 +5642,16 @@
           "to": "exit",
           "kind": "data"
         }
+      ],
+      "exits": [
+        {
+          "guard": "unless (documents.length === 0)",
+          "kind": "throw",
+          "line": 11,
+          "file": "sample-service/src/modules/identity/DocumentExtractor.ts",
+          "what": "Error",
+          "message": "no identity documents on file"
+        }
       ]
     },
     "DocumentStore.latestDocuments": {
@@ -6801,6 +6811,15 @@
           "from": "s3",
           "to": "exit",
           "kind": "control"
+        }
+      ],
+      "exits": [
+        {
+          "guard": "unless (kyc.status !== 'passed')",
+          "kind": "return",
+          "line": 17,
+          "file": "sample-service/src/modules/onboarding/OnboardingModule.ts",
+          "what": "{ userId, onboarded: false }"
         }
       ]
     },

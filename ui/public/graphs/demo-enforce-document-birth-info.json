@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "birth-info-service",
-  "generatedAt": "2026-11-04T13:58:47.853Z",
+  "generatedAt": "2026-11-05T12:00:11.554Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
@@ -702,7 +702,7 @@
             "kyc": {
               "countryOfBirth": "IND",
               "placeOfBirth": "Mumbai",
-              "updatedAt": "2026-11-04T13:58:47.696Z"
+              "updatedAt": "2026-11-05T12:00:11.400Z"
             }
           },
           "cases": [
@@ -720,7 +720,7 @@
             "kyc": {
               "countryOfBirth": "DEU",
               "placeOfBirth": "Berlin",
-              "updatedAt": "2026-11-04T13:58:47.696Z"
+              "updatedAt": "2026-11-05T12:00:11.400Z"
             }
           },
           "cases": [
@@ -740,7 +740,7 @@
             "kyc": {
               "countryOfBirth": "NGA",
               "placeOfBirth": "lagos",
-              "updatedAt": "2026-11-04T13:58:47.696Z"
+              "updatedAt": "2026-11-05T12:00:11.400Z"
             }
           },
           "cases": [
@@ -983,7 +983,7 @@
             "kyc": {
               "countryOfBirth": "PRT",
               "placeOfBirth": "Porto",
-              "updatedAt": "2026-11-04T13:58:47.695Z"
+              "updatedAt": "2026-11-05T12:00:11.399Z"
             }
           },
           "cases": [
@@ -999,6 +999,7 @@
             }
           },
           "error": "UnprocessableEntityException: Birth info does not match the identity document",
+          "status": 422,
           "cases": [
             "c10"
           ]
@@ -1019,7 +1020,7 @@
             "kyc": {
               "countryOfBirth": "IND",
               "placeOfBirth": "Mumbai",
-              "updatedAt": "2026-11-04T13:58:47.696Z"
+              "updatedAt": "2026-11-05T12:00:11.400Z"
             }
           },
           "cases": [
@@ -1035,6 +1036,7 @@
             }
           },
           "error": "UnprocessableEntityException: Birth info does not match the identity document",
+          "status": 422,
           "cases": [
             "c12"
           ]
@@ -1053,7 +1055,7 @@
             "kyc": {
               "countryOfBirth": "DEU",
               "placeOfBirth": "Berlin",
-              "updatedAt": "2026-11-04T13:58:47.696Z"
+              "updatedAt": "2026-11-05T12:00:11.400Z"
             }
           },
           "cases": [
@@ -1076,7 +1078,7 @@
             "kyc": {
               "countryOfBirth": "NGA",
               "placeOfBirth": "lagos",
-              "updatedAt": "2026-11-04T13:58:47.696Z"
+              "updatedAt": "2026-11-05T12:00:11.400Z"
             }
           },
           "cases": [
@@ -1092,6 +1094,7 @@
             }
           },
           "error": "UnprocessableEntityException: Birth info does not match the identity document",
+          "status": 422,
           "cases": [
             "c15"
           ]
@@ -1208,7 +1211,7 @@
             "userId": "u-2",
             "countryOfBirth": "IND",
             "placeOfBirth": "Mumbai",
-            "updatedAt": "2026-11-04T13:58:47.696Z"
+            "updatedAt": "2026-11-05T12:00:11.400Z"
           },
           "cases": [
             "c11",
@@ -1223,7 +1226,7 @@
             "userId": "u-3",
             "countryOfBirth": "DEU",
             "placeOfBirth": "Berlin",
-            "updatedAt": "2026-11-04T13:58:47.696Z"
+            "updatedAt": "2026-11-05T12:00:11.400Z"
           },
           "cases": [
             "c13",
@@ -1238,7 +1241,7 @@
             "userId": "u-4",
             "countryOfBirth": "NGA",
             "placeOfBirth": "lagos",
-            "updatedAt": "2026-11-04T13:58:47.696Z"
+            "updatedAt": "2026-11-05T12:00:11.400Z"
           },
           "cases": [
             "c14",
@@ -1318,7 +1321,7 @@
             "userId": "u-1",
             "countryOfBirth": "PRT",
             "placeOfBirth": "Porto",
-            "updatedAt": "2026-11-04T13:58:47.695Z"
+            "updatedAt": "2026-11-05T12:00:11.399Z"
           },
           "cases": [
             "c9"
@@ -1336,7 +1339,7 @@
             "userId": "u-2",
             "countryOfBirth": "IND",
             "placeOfBirth": "Mumbai",
-            "updatedAt": "2026-11-04T13:58:47.696Z"
+            "updatedAt": "2026-11-05T12:00:11.400Z"
           },
           "cases": [
             "c11"
@@ -1354,7 +1357,7 @@
             "userId": "u-3",
             "countryOfBirth": "DEU",
             "placeOfBirth": "Berlin",
-            "updatedAt": "2026-11-04T13:58:47.696Z"
+            "updatedAt": "2026-11-05T12:00:11.400Z"
           },
           "cases": [
             "c13"
@@ -1372,7 +1375,7 @@
             "userId": "u-4",
             "countryOfBirth": "NGA",
             "placeOfBirth": "lagos",
-            "updatedAt": "2026-11-04T13:58:47.696Z"
+            "updatedAt": "2026-11-05T12:00:11.400Z"
           },
           "cases": [
             "c14"
@@ -2081,6 +2084,17 @@
           "from": "s4",
           "to": "exit",
           "kind": "control"
+        }
+      ],
+      "exits": [
+        {
+          "guard": "if (check.ok)",
+          "kind": "throw",
+          "line": 36,
+          "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+          "what": "UnprocessableEntityException",
+          "message": "Birth info does not match the identity document",
+          "delta": "added"
         }
       ],
       "before": {

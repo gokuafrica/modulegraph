@@ -75,11 +75,18 @@ function argLabel(args: unknown[]): string {
   return text.length > 40 ? `${text.slice(0, 39)}…` : text;
 }
 
-function record(c: Case, target: Target, args: unknown[], result: { output?: unknown; error?: string }) {
+/** An error as the example shows it, with the HTTP status when the error carries one (NestJS, http-errors). */
+function failure(err: unknown): { error: string; status?: number } {
+  const e = err as { getStatus?: () => unknown; status?: unknown; statusCode?: unknown };
+  const status = typeof e?.getStatus === 'function' ? e.getStatus() : e?.status ?? e?.statusCode;
+  return { error: String(err), ...(typeof status === 'number' ? { status } : {}) };
+}
+
+function record(c: Case, target: Target, args: unknown[], result: { output?: unknown; error?: string; status?: number }) {
   // An operation called several times in one case (a loop) shows its first call.
   if (c.calls.has(target.opId)) return;
   const input = Object.fromEntries(target.params.map((name, i) => [name, snapshot(args[i])]));
-  c.calls.set(target.opId, { input, ...(result.error ? { error: result.error } : { output: snapshot(result.output) }) });
+  c.calls.set(target.opId, { input, ...(result.error ? { error: result.error, ...(result.status ? { status: result.status } : {}) } : { output: snapshot(result.output) }) });
 }
 
 for (const target of spec.targets) {
@@ -97,7 +104,7 @@ for (const target of spec.targets) {
           return out.then(
             (value: unknown) => (record(c, target, args, { output: value }), value),
             (err: unknown) => {
-              record(c, target, args, { error: String(err) });
+              record(c, target, args, failure(err));
               throw err;
             },
           );
@@ -105,7 +112,7 @@ for (const target of spec.targets) {
         record(c, target, args, { output: out });
         return out;
       } catch (err) {
-        record(c, target, args, { error: String(err) });
+        record(c, target, args, failure(err));
         throw err;
       }
     };

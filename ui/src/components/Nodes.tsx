@@ -1,6 +1,6 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { createContext, useContext } from 'react';
-import type { CodeChange, Effect, Example, Param } from '../../../schema/modulegraph.ts';
+import type { CodeChange, Effect, Example, Exit, Param } from '../../../schema/modulegraph.ts';
 import type { Chip } from '../graph/model.ts';
 import { FunctionDiff } from './DiffView.tsx';
 import { exampleLabels, ObjectTree } from './ObjectTree.tsx';
@@ -96,9 +96,14 @@ function ExampleLine({ examples }: { examples?: Example[] }) {
   return (
     <div className="node-example" title={`${name}\n\nin: ${JSON.stringify(ex.input, null, 2)}\n\n${ex.error ? `throws: ${ex.error}` : `out: ${JSON.stringify(ex.output, null, 2)}`}`}>
       <div><span className="ex-tag">in</span>{input}</div>
-      <div className={ex.error ? 'err' : ''}><span className="ex-tag">{ex.error ? 'throws' : 'out'}</span>{ex.error ? compact(ex.error, 40) : compact(ex.output, 40)}</div>
+      <div className={ex.error ? 'rejected' : ''}><span className="ex-tag">{ex.error ? (ex.status ? String(ex.status) : 'throws') : 'out'}</span>{ex.error ? compact(ex.error.replace(/^\w*Error: /, ''), 40) : compact(ex.output, 40)}</div>
     </div>
   );
+}
+
+/** "rejected · HTTP 422 · UnprocessableEntityException: …": what the caller got back. */
+export function rejection(e: Example): string {
+  return `${e.status ? `rejected · HTTP ${e.status} · ` : 'throws '}${e.error!.replace(/^Error: /, '')}`;
 }
 
 export const EFFECT_META: Record<Effect['kind'], { icon: string; label: string; cls: string }> = {
@@ -108,12 +113,7 @@ export const EFFECT_META: Record<Effect['kind'], { icon: string; label: string; 
   kafka: { icon: '⇶', label: 'Kafka', cls: 'fx-kafka' },
   http: { icon: '⇄', label: 'HTTP', cls: 'fx-http' },
   queue: { icon: '☰', label: 'queue', cls: 'fx-queue' },
-  event: { icon: '⚡', label: 'event', cls: 'fx-event' },
-};
-
-/** What an effect step is, in words: the table, topic or event name follows it. */
-const FX_NOUN: Record<Effect['kind'], string> = {
-  'db.read': 'reads table', 'db.write': 'writes table', outbox: 'outbox event', kafka: 'Kafka topic', http: 'HTTP call', queue: 'queue job', event: 'event',
+  event: { icon: '⚡', label: 'in-process event', cls: 'fx-event' },
 };
 
 const KIND_META: Record<string, { icon: string; label: string; cls: string }> = {
@@ -155,12 +155,17 @@ export function EffectChip({ chip }: { chip: Chip }) {
 function StepDelta({ delta, conditionBefore, ghost, beforeMark, conditionNow }: { delta?: string; conditionBefore?: string; ghost?: boolean; beforeMark?: string; conditionNow?: string }) {
   if (beforeMark === 'removed') return <div className="step-delta del">− this change removes it</div>;
   if (beforeMark === 'guard') {
-    return <div className="step-delta cond" title={conditionNow ? `now: ${conditionNow}` : 'now runs always'}>guard changes: {conditionNow ? `now ${conditionNow}` : 'now runs always'}</div>;
+    const now = conditionNow ? `only ${conditionNow.replace(/^if /, 'if ')}` : 'every time';
+    return <div className="step-delta cond" title={`Here it runs every time it is reached. After this change it runs ${now}.`}>this change: runs {now}</div>;
   }
   if (ghost) return <div className="step-delta del">− removed by this change</div>;
   if (delta === 'added') return <div className="step-delta add">+ new call in this change</div>;
   if (conditionBefore !== undefined) {
-    return <div className="step-delta cond" title={conditionBefore ? `was: ${conditionBefore}` : 'ran unconditionally before'}>guard {conditionBefore ? `changed (was ${conditionBefore})` : 'added: ran always before'}</div>;
+    return (
+      <div className="step-delta cond" title={conditionBefore ? `Before this change it ran only ${conditionBefore}` : 'Before this change it ran every time; now only on this branch'}>
+        {conditionBefore ? `condition changed · before: only ${conditionBefore}` : 'now conditional · before: always ran'}
+      </div>
+    );
   }
   return null;
 }
@@ -247,23 +252,24 @@ export function ModuleNode({ data, selected }: NodeProps) {
 }
 
 export function EffectNode({ data, selected }: NodeProps) {
-  const d = data as { effect: Effect; condition?: string; loop?: boolean; via?: string; delta?: string; conditionBefore?: string; ghost?: boolean; beforeMark?: string; conditionNow?: string };
+  const d = data as { effect: Effect; condition?: string; loop?: boolean; via?: string; delta?: string; conditionBefore?: string; ghost?: boolean; beforeMark?: string; conditionNow?: string; notes?: string[] };
   const meta = EFFECT_META[d.effect.kind];
   return (
     <div className={`node effect ${meta.cls} ${d.ghost ? 'ghost' : ''} ${d.delta === 'added' ? 'step-added' : ''} ${d.beforeMark === 'removed' ? 'step-removed' : ''} ${selected ? 'selected' : ''}`}>
       <Handles />
       {d.condition && <div className="cond">{d.condition}</div>}
       <StepDelta delta={d.delta} conditionBefore={d.conditionBefore} ghost={d.ghost} beforeMark={d.beforeMark} conditionNow={d.conditionNow} />
-      <div className="effect-body">
-        <span className="effect-icon">{meta.icon}</span>
-        <div>
-          <div className="effect-kind">{FX_NOUN[d.effect.kind]}{d.loop && <span className="loop">⟳ each</span>}</div>
-          <div className="effect-target">{d.effect.target}</div>
-        </div>
-      </div>
+      <div className="effect-who" title={`${d.effect.file ?? ''}:${d.effect.line ?? ''}`}>{FX_VERB[d.effect.kind]} directly, not through a module{d.loop && <span className="loop">⟳ each</span>}</div>
+      <EffectChip chip={{ kind: d.effect.kind, target: d.effect.target, direct: true }} />
+      {d.notes?.map((n) => <div key={n} className="effect-note">{n}</div>)}
     </div>
   );
 }
+
+/** What this module's own code does, for an effect step: "publishes" an event, "writes" a table. */
+const FX_VERB: Record<Effect['kind'], string> = {
+  'db.read': 'reads', 'db.write': 'writes', outbox: 'writes to the outbox', kafka: 'publishes', http: 'calls', queue: 'enqueues', event: 'emits',
+};
 
 export function EntryNode({ data, selected }: NodeProps) {
   const d = data as {
@@ -320,7 +326,7 @@ export function ExitNode({ data }: NodeProps) {
         <div className="example">
           <div className="example-head"><span>example · output</span></div>
           {example.error
-            ? <div className="example-line"><span className="v">throws {compact(example.error)}</span></div>
+            ? <div className="example-line rejected">{rejection(example)}</div>
             : <ObjectTree value={example.output} added={added} flat />}
         </div>
       )}
@@ -381,12 +387,36 @@ export function FrontierNode({ data }: NodeProps) {
 }
 
 export function DecisionNode({ data }: NodeProps) {
-  const d = data as { label: string };
+  const d = data as { label: string; added?: boolean };
   return (
-    <div className="node decision" title="Exclusive branch: exactly one side runs">
+    <div className={`node decision ${d.added ? 'added' : ''}`} title="A check in the code: what follows runs on one side only">
       <Handles />
-      <span className="decision-icon">◇</span>
-      <span className="decision-label">{d.label}</span>
+      {d.added && <div className="step-delta add">+ new check in this change</div>}
+      <div className="decision-row">
+        <span className="decision-icon">◇</span>
+        <span className="decision-label">{d.label}</span>
+      </div>
+    </div>
+  );
+}
+
+/** Where an early `throw` / `return` ends the flow: the other side of a check. */
+export function StopNode({ data }: NodeProps) {
+  const d = data as { exit: Exit; status?: number; examples?: Example[] };
+  const { caseId } = useContext(ExampleContext);
+  // Following a request that ended here: say so.
+  const ex = exampleFor(d.examples, caseId);
+  const here = !!ex?.error && (!d.exit.what || ex.error.includes(d.exit.what));
+  const throws = d.exit.kind === 'throw';
+  return (
+    <div className={`node stop ${throws ? 'throws' : 'returns'} ${d.exit.delta ? 'step-added' : ''} ${here ? 'hit' : ''}`}
+      title={`${d.exit.file}:${d.exit.line}${here ? '\nThe request being followed ends here.' : ''}`}>
+      <Handle type="target" position={Position.Left} />
+      {d.exit.delta && <div className="step-delta add">+ new in this change</div>}
+      <div className="entry-kind">{throws ? '⛔ rejects the request' : '↩ returns early'}{d.status ? <span className="status">HTTP {d.status}</span> : null}</div>
+      <div className="stop-what">{throws ? `throws ${d.exit.what ?? 'an error'}` : `returns ${d.exit.what ?? 'nothing'}`}</div>
+      {d.exit.message && <div className="stop-msg">“{d.exit.message}”</div>}
+      {here && <div className="stop-here">this request ends here</div>}
     </div>
   );
 }
@@ -405,19 +435,18 @@ export function CodeNode({ data }: NodeProps) {
     );
   }
   const files = new Set(d.changes.map((c) => c.file)).size;
+  const n = `${d.changes.length} function${d.changes.length > 1 ? 's' : ''}${files > 1 ? ` in ${files} files` : ''}`;
+  const allNew = d.changes.every((c) => c.status === 'added');
   return (
     <div className="node code nowheel">
       <Handles />
       <div className="entry-kind code-head">
-        <span>internal logic changed: {d.changes.length} function{d.changes.length > 1 ? 's' : ''}{files > 1 ? ` in ${files} files` : ''}</span>
+        <span title={allNew ? 'All of this code is new: every line is an added line' : undefined}>{allNew ? `new code: ${n}, every line new` : `internal logic changed: ${n}`}</span>
         <button className="link nodrag" onClick={(e) => { e.stopPropagation(); actions.showDiff(d.opId); }}>open diff ▸</button>
       </div>
-      <div className="code-fns">
-        {d.changes.map((c) => (
-          <div key={c.name} className="code-fn"><span className={`st st-${c.status}`}>{c.status[0].toUpperCase()}</span> {c.name} <span className="muted">{c.file.split('/').pop()}</span> <span className="plus">+{c.added}</span> <span className="minus">−{c.removed}</span></div>
-        ))}
+      <div className="code-scroll">
+        {d.changes.map((c) => <FunctionDiff key={`${c.file}:${c.name}`} change={c} compact />)}
       </div>
-      <FunctionDiff change={d.changes[0]} compact />
     </div>
   );
 }
@@ -431,5 +460,6 @@ export const nodeTypes = {
   entrygroup: GroupNode,
   code: CodeNode,
   decision: DecisionNode,
+  stop: StopNode,
   frontier: FrontierNode,
 };

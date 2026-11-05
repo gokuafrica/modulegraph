@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "birth-info-service",
-  "generatedAt": "2026-11-04T14:00:21.040Z",
+  "generatedAt": "2026-11-05T12:00:21.658Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -801,7 +801,7 @@
             "kyc": {
               "countryOfBirth": "PRT",
               "placeOfBirth": "Porto",
-              "updatedAt": "2026-11-04T14:00:20.858Z"
+              "updatedAt": "2026-11-05T12:00:21.508Z"
             }
           },
           "cases": [
@@ -817,6 +817,7 @@
             }
           },
           "error": "UnprocessableEntityException: Birth info does not match the identity document",
+          "status": 422,
           "cases": [
             "c10"
           ]
@@ -837,7 +838,7 @@
             "kyc": {
               "countryOfBirth": "IND",
               "placeOfBirth": "Mumbai",
-              "updatedAt": "2026-11-04T14:00:20.859Z"
+              "updatedAt": "2026-11-05T12:00:21.509Z"
             }
           },
           "cases": [
@@ -853,6 +854,7 @@
             }
           },
           "error": "UnprocessableEntityException: Birth info does not match the identity document",
+          "status": 422,
           "cases": [
             "c12"
           ]
@@ -871,7 +873,7 @@
             "kyc": {
               "countryOfBirth": "DEU",
               "placeOfBirth": "Berlin",
-              "updatedAt": "2026-11-04T14:00:20.859Z"
+              "updatedAt": "2026-11-05T12:00:21.509Z"
             }
           },
           "cases": [
@@ -894,7 +896,7 @@
             "kyc": {
               "countryOfBirth": "NGA",
               "placeOfBirth": "lagos",
-              "updatedAt": "2026-11-04T14:00:20.859Z"
+              "updatedAt": "2026-11-05T12:00:21.509Z"
             }
           },
           "cases": [
@@ -910,6 +912,7 @@
             }
           },
           "error": "UnprocessableEntityException: Birth info does not match the identity document",
+          "status": 422,
           "cases": [
             "c15"
           ]
@@ -1102,7 +1105,7 @@
             "userId": "u-1",
             "countryOfBirth": "PRT",
             "placeOfBirth": "Porto",
-            "updatedAt": "2026-11-04T14:00:20.858Z"
+            "updatedAt": "2026-11-05T12:00:21.508Z"
           },
           "cases": [
             "c9"
@@ -1120,7 +1123,7 @@
             "userId": "u-2",
             "countryOfBirth": "IND",
             "placeOfBirth": "Mumbai",
-            "updatedAt": "2026-11-04T14:00:20.859Z"
+            "updatedAt": "2026-11-05T12:00:21.509Z"
           },
           "cases": [
             "c11"
@@ -1138,7 +1141,7 @@
             "userId": "u-3",
             "countryOfBirth": "DEU",
             "placeOfBirth": "Berlin",
-            "updatedAt": "2026-11-04T14:00:20.859Z"
+            "updatedAt": "2026-11-05T12:00:21.509Z"
           },
           "cases": [
             "c13"
@@ -1156,7 +1159,7 @@
             "userId": "u-4",
             "countryOfBirth": "NGA",
             "placeOfBirth": "lagos",
-            "updatedAt": "2026-11-04T14:00:20.859Z"
+            "updatedAt": "2026-11-05T12:00:21.509Z"
           },
           "cases": [
             "c14"
@@ -1302,7 +1305,7 @@
             "kyc": {
               "countryOfBirth": "IND",
               "placeOfBirth": "Mumbai",
-              "updatedAt": "2026-11-04T14:00:20.859Z"
+              "updatedAt": "2026-11-05T12:00:21.509Z"
             }
           },
           "cases": [
@@ -1320,7 +1323,7 @@
             "kyc": {
               "countryOfBirth": "DEU",
               "placeOfBirth": "Berlin",
-              "updatedAt": "2026-11-04T14:00:20.859Z"
+              "updatedAt": "2026-11-05T12:00:21.509Z"
             }
           },
           "cases": [
@@ -1340,7 +1343,7 @@
             "kyc": {
               "countryOfBirth": "NGA",
               "placeOfBirth": "lagos",
-              "updatedAt": "2026-11-04T14:00:20.859Z"
+              "updatedAt": "2026-11-05T12:00:21.509Z"
             }
           },
           "cases": [
@@ -1464,7 +1467,7 @@
             "userId": "u-2",
             "countryOfBirth": "IND",
             "placeOfBirth": "Mumbai",
-            "updatedAt": "2026-11-04T14:00:20.859Z"
+            "updatedAt": "2026-11-05T12:00:21.509Z"
           },
           "cases": [
             "c11",
@@ -1479,7 +1482,7 @@
             "userId": "u-3",
             "countryOfBirth": "DEU",
             "placeOfBirth": "Berlin",
-            "updatedAt": "2026-11-04T14:00:20.859Z"
+            "updatedAt": "2026-11-05T12:00:21.509Z"
           },
           "cases": [
             "c13",
@@ -1494,7 +1497,7 @@
             "userId": "u-4",
             "countryOfBirth": "NGA",
             "placeOfBirth": "lagos",
-            "updatedAt": "2026-11-04T14:00:20.859Z"
+            "updatedAt": "2026-11-05T12:00:21.509Z"
           },
           "cases": [
             "c14",
@@ -1758,6 +1761,17 @@
           "from": "s4",
           "to": "exit",
           "kind": "control"
+        }
+      ],
+      "exits": [
+        {
+          "guard": "if (check.ok)",
+          "kind": "throw",
+          "line": 36,
+          "file": "sample-birth-service/src/birth-info/birth-info.service.ts",
+          "what": "UnprocessableEntityException",
+          "message": "Birth info does not match the identity document",
+          "delta": "added"
         }
       ],
       "before": {
@@ -2194,8 +2208,7 @@
       "entryPointsReached": 0,
       "operationsKnown": 8,
       "operationsAnalyzed": 6,
-      "ms": 3979
-    },
-    "api": "/api"
+      "ms": 4700
+    }
   }
 }

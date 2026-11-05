@@ -64,7 +64,7 @@ export function FunctionDiff({ change, id, compact }: { change: CodeChange; id?:
         <span className="muted small file">{change.file}:{change.line}</span>
         <span className="counts small"><span className="plus">+{change.added}</span> <span className="minus">−{change.removed}</span></span>
       </div>
-      <Hunks lines={change.diff} max={compact ? 14 : undefined} />
+      <Hunks lines={change.diff} max={compact ? 30 : undefined} />
     </section>
   );
 }

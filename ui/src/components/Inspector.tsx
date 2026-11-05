@@ -98,8 +98,8 @@ function OpCard({ g, op }: { g: ModuleGraph; op: Operation }) {
                 {names.length > 0 && <div className="bb-requests">{on && caseId ? cases[caseId] : names[0]}{names.length > 1 ? <span className="muted"> and {names.length - 1} more request{names.length > 2 ? 's' : ''}</span> : null}</div>}
               </div>
               <div className="bb-side"><span className="bb-tag">in</span><ObjectTree value={e.input} flat /></div>
-              <div className="bb-side"><span className={`bb-tag ${e.error ? 'err' : ''}`}>{e.error ? 'throws' : 'out'}</span>
-                {e.error ? <span className="err">{e.error}</span> : <ObjectTree value={e.output} flat added={addedFields} />}
+              <div className="bb-side"><span className={`bb-tag ${e.error ? 'rejected' : ''}`} title={e.error ? 'This request was answered with an error: what the code does on purpose when the check fails' : undefined}>{e.error ? (e.status ? `HTTP ${e.status}` : 'throws') : 'out'}</span>
+                {e.error ? <span className="rejected">{e.status ? 'rejected: ' : ''}{e.error}</span> : <ObjectTree value={e.output} flat added={addedFields} />}
               </div>
             </div>
             );

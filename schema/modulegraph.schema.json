@@ -625,6 +625,10 @@
         "output": {},
         "error": {
           "type": "string"
+        },
+        "status": {
+          "type": "number",
+          "description": "HTTP status the error maps to, when the framework says (NestJS `getStatus()`, `err.status`)."
         }
       },
       "required": [
@@ -933,6 +937,12 @@
             },
             "returns": {
               "$ref": "#/definitions/TypeShape"
+            },
+            "exits": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Exit"
+              }
             }
           },
           "required": [
@@ -941,6 +951,13 @@
           ],
           "additionalProperties": false,
           "description": "The base revision's steps, when they differ (a call added, removed or guarded differently): the flow as it was,\nfor a before/after toggle. Steps that survived keep their head ids; the ones gone are \"rm:\" with delta removed."
+        },
+        "exits": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Exit"
+          },
+          "description": "Early exits (`if (!check.ok) throw …`): what happens on the other side of a guard."
         }
       },
       "required": [
@@ -948,6 +965,47 @@
         "params",
         "steps",
         "edges"
+      ],
+      "additionalProperties": false
+    },
+    "Exit": {
+      "type": "object",
+      "properties": {
+        "guard": {
+          "type": "string",
+          "description": "The condition the code after this exit runs under, as steps spell it: `if (check.ok)` for `if (!check.ok) throw`."
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "throw",
+            "return"
+          ]
+        },
+        "what": {
+          "type": "string",
+          "description": "Exception class (`UnprocessableEntityException`) or the returned expression."
+        },
+        "message": {
+          "type": "string",
+          "description": "The exception's message, when it is a literal."
+        },
+        "line": {
+          "type": "number"
+        },
+        "file": {
+          "type": "string"
+        },
+        "delta": {
+          "const": "added",
+          "description": "Set when comparing with a base: the exit is new in this scope."
+        }
+      },
+      "required": [
+        "guard",
+        "kind",
+        "line",
+        "file"
       ],
       "additionalProperties": false
     },
@@ -999,6 +1057,10 @@
         "conditionBefore": {
           "type": "string",
           "description": "The step's guard on the base revision, when it changed (\"\" = had none)."
+        },
+        "transaction": {
+          "type": "string",
+          "description": "The transaction the step runs in, as the code opens it (`dataSource.transaction`, `@Transactional`)."
         }
       },
       "required": [
