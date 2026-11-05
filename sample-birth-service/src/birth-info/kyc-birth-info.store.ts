@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Column, Entity, PrimaryColumn, Repository } from 'typeorm';
+import { Column, Entity, type EntityManager, PrimaryColumn, Repository } from 'typeorm';
 import type { KycBirthInfoDto } from './birth-info.types.ts';
 
 /** Birth info the user provided during KYC. One row per user; a new submission overwrites it. */
@@ -28,8 +28,9 @@ export class KycBirthInfoStore {
     return this.rows.findOneBy({ userId });
   }
 
-  /** Overwrites whatever the user submitted before. */
-  async save(userId: string, info: KycBirthInfoDto): Promise<KycBirthInfo> {
-    return this.rows.save({ userId, countryOfBirth: info.countryOfBirth, placeOfBirth: info.placeOfBirth, updatedAt: new Date().toISOString() });
+  /** Overwrites whatever the user submitted before. Pass the transaction's manager to write inside it. */
+  async save(userId: string, info: KycBirthInfoDto, manager?: EntityManager): Promise<KycBirthInfo> {
+    const rows: Repository<KycBirthInfo> = manager ? manager.getRepository(KycBirthInfo) : this.rows;
+    return rows.save({ userId, countryOfBirth: info.countryOfBirth, placeOfBirth: info.placeOfBirth, updatedAt: new Date().toISOString() });
   }
 }
