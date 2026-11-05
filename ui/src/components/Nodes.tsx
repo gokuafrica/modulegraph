@@ -451,7 +451,18 @@ export function CodeNode({ data }: NodeProps) {
   );
 }
 
+/** A transaction the code opens: everything drawn inside commits together or not at all. */
+export function TxGroupNode({ data }: NodeProps) {
+  const d = data as { label: string; count: number };
+  return (
+    <div className="txgroup" title={`The code opens ${d.label} here: the ${d.count} steps inside commit together or roll back together`}>
+      <span className="tx-label">⛓ one transaction</span> <span className="tx-what">{d.label}</span>
+    </div>
+  );
+}
+
 export const nodeTypes = {
+  txgroup: TxGroupNode,
   module: ModuleNode,
   effect: EffectNode,
   entry: EntryNode,
