@@ -10,7 +10,6 @@ import type { OperationTarget, RevisionAnalysis } from './analyzers/types.ts';
 import { compare } from './compare.ts';
 import { findProfile, loadConfig } from './config.ts';
 import { brief } from './brief.ts';
-import { describe, descriptionsKey } from './describe.ts';
 import { LazySession } from './lazy.ts';
 import { type RefreshResult, serve } from './server.ts';
 import { commitMessages, currentBranch, diffBetween, fetchPullRequest, filesAtRef, git, hasLocalChanges, mergeBase, repoRootOf, revParse, workingStateKey, type RawDiff } from './git.ts';
@@ -278,8 +277,6 @@ if (args.lazy) {
   };
 }
 
-describe(output, config);
-
 // ---------- write ----------
 const briefFile = outFile.replace(/\.json$/, '') + '.brief.md';
 function write(graph: ModuleGraph): void {
@@ -350,17 +347,7 @@ if (args.serve && session) {
       g.lazy!.api = '/api';
       return g;
     };
-    // Descriptions the agent wrote into the profile since: re-read them (the rest of the profile needs a restart).
-    const fresh = configFile ? loadConfig(projectDir, configFile) : undefined;
-    const described = !!fresh && descriptionsKey(fresh) !== descriptionsKey(config);
-    if (fresh) for (const [cls, o] of Object.entries(fresh.modules.overrides)) config.modules.overrides[cls] = { ...config.modules.overrides[cls], summary: o.summary, operations: o.operations };
-    if (!files.length && same) {
-      if (!described) return { changed: false, files: [], ms: Math.round(performance.now() - t), graph: served() };
-      const graph = served();
-      write(graph);
-      console.log('refresh: descriptions re-read from the profile');
-      return { changed: true, files: [relative(repo, configFile!).replace(/\\/g, '/')], baseKept: true, ms: Math.round(performance.now() - t), graph };
-    }
+    if (!files.length && same) return { changed: false, files: [], ms: Math.round(performance.now() - t), graph: served() };
     revisions = next;
     next.source.examples = source.examples;
     source = next.source;
@@ -391,10 +378,7 @@ function currentStateKey(): string {
   } catch {
     checkedOut = false;
   }
-  // The profile's descriptions count too: the agent writes them while the reviewer has the UI open.
-  const profileText = configFile && existsSync(configFile) ? readFileSync(configFile, 'utf8') : '';
-  return `${workingStateKey(repo, refs, projectRel, checkedOut || args.snapshot === true)}
-${profileText}`;
+  return workingStateKey(repo, refs, projectRel, checkedOut || args.snapshot === true);
 }
 
 if (args.check && findings.some((f) => f.isNew && f.severity === 'error')) {

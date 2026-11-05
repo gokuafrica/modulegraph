@@ -14,7 +14,7 @@
     "validate": "tsx src/validate.ts",
     "live": "tsx src/live-demo.ts",
     "lazy-check": "tsx src/lazy-check.ts",
-    "test": "tsx src/mentions-check.ts && tsx src/rules-check.ts && tsx src/framework-check.ts && tsx src/lazy-check.ts",
+    "test": "tsx src/mentions-check.ts && tsx src/framework-check.ts && tsx src/lazy-check.ts",
     "framework-check": "tsx src/framework-check.ts"
   },
   "dependencies": {

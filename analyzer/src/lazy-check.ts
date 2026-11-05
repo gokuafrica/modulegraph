@@ -39,7 +39,7 @@ for (const [projectRel, profile, branch, intent, fix] of [
     ['sample-nest-service/src/orders/orders.service.ts', '    await this.inventory.release(order.lines);', "    if (order.status !== 'held') await this.inventory.release(order.lines);"]],
   ['sample-birth-service', 'birth-info-service', 'feature/enforce-document-birth-info', 'BirthInfo: enforce document birth info on KYC submissions.',
     // a new event after a verified submission
-    ['sample-birth-service/src/birth-info/birth-info.service.ts', '      const row = await this.kyc.save(userId, submitted, manager);', "      const row = await this.kyc.save(userId, submitted, manager);\n      this.events.emit('kyc.birth_info.verified', { userId, enforced: check.enforced });"]],
+    ['sample-birth-service/src/birth-info/birth-info.service.ts', '    await this.kyc.save(userId, submitted);', "    await this.kyc.save(userId, submitted);\n    this.events.emit('kyc.birth_info.verified', { userId, enforced: check.enforced });"]],
 ] as const satisfies readonly (readonly [string, string, string, string, Fix])[]) {
   console.log(`\n${projectRel} ${branch}`);
   const projectDir = join(repo, projectRel).replace(/\\/g, '/');

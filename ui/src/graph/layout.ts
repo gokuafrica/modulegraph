@@ -1,6 +1,6 @@
 import ELK from 'elkjs/lib/elk.bundled.js';
 import type { Edge, Node } from '@xyflow/react';
-import type { ElkExtendedEdge, ElkNode } from 'elkjs';
+import type { ElkExtendedEdge } from 'elkjs';
 import type { Model, VEdge } from './model.ts';
 
 const elk = new ELK();
@@ -18,10 +18,6 @@ const WIDTH: Record<VEdge['kind'], number> = { data: 1.6, control: 1.2, call: 1.
 
 /** Layered left→right layout with ELK-routed orthogonal edges (they go around nodes) and placed labels. */
 export async function layout(model: Model, theme: Theme): Promise<{ nodes: Node[]; edges: Edge[] }> {
-  // Boxes (transactions) are ELK compound nodes sized around their members; coordinates all come back absolute.
-  const elkNode = (n: Model['nodes'][number]): ElkNode => n.type === 'txgroup'
-    ? { id: n.id, layoutOptions: { 'elk.padding': '[top=34,left=18,bottom=16,right=18]', 'elk.spacing.nodeNode': '24' }, children: model.nodes.filter((c) => c.parent === n.id).map(elkNode) }
-    : { id: n.id, width: n.width, height: n.height };
   const graph = await elk.layout({
     id: 'root',
     layoutOptions: {
@@ -38,11 +34,8 @@ export async function layout(model: Model, theme: Theme): Promise<{ nodes: Node[
       'elk.layered.considerModelOrder.strategy': 'NODES_AND_EDGES',
       'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
       'elk.layered.nodePlacement.bk.fixedAlignment': 'BALANCED',
-      'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
-      'elk.json.shapeCoords': 'ROOT',
-      'elk.json.edgeCoords': 'ROOT',
     },
-    children: model.nodes.filter((n) => !n.parent).map(elkNode),
+    children: model.nodes.map((n) => ({ id: n.id, width: n.width, height: n.height })),
     edges: model.edges.map((e) => ({
       id: e.id,
       sources: [e.source],
@@ -50,10 +43,7 @@ export async function layout(model: Model, theme: Theme): Promise<{ nodes: Node[
       labels: e.label ? [{ id: `${e.id}:label`, text: e.label, width: e.label.length * 6.6 + 12, height: 17 }] : [],
     })),
   });
-  const placed = new Map<string, ElkNode>();
-  const collect = (list?: ElkNode[]) => list?.forEach((c) => (placed.set(c.id, c), collect(c.children)));
-  collect(graph.children);
-  const pos = new Map([...placed].map(([id, c]) => [id, { x: c.x ?? 0, y: c.y ?? 0 }]));
+  const pos = new Map(graph.children?.map((c) => [c.id, { x: c.x ?? 0, y: c.y ?? 0 }]));
   const routes = new Map((graph.edges as ElkExtendedEdge[] | undefined)?.map((e) => [e.id, e]));
   const colors = PALETTE[theme];
   const nodes: Node[] = model.nodes.map((n) => ({
@@ -62,9 +52,7 @@ export async function layout(model: Model, theme: Theme): Promise<{ nodes: Node[
     position: pos.get(n.id) ?? { x: 0, y: 0 },
     data: n.data,
     // Rendered size = the size ELK routed against, so edges meet the node borders.
-    ...(n.type === 'txgroup'
-      ? { style: { width: placed.get(n.id)?.width, height: placed.get(n.id)?.height, pointerEvents: 'none' as const }, zIndex: -1, selectable: false, draggable: false }
-      : { style: { width: n.width, height: n.height } }),
+    style: { width: n.width, height: n.height },
   }));
   const edges: Edge[] = model.edges.map((e) => {
     const route = routes.get(e.id);

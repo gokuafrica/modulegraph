@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "order-service",
-  "generatedAt": "2026-11-05T12:56:19.995Z",
+  "generatedAt": "2026-11-05T12:00:01.984Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -135,7 +135,6 @@
       "file": "sample-nest-service/src/audit/audit.service.ts",
       "line": 24,
       "summary": "Audit trail for money and status changes (compliance reads it, nobody edits it).",
-      "summarySource": "code",
       "owner": "team-platform",
       "declaredEffects": [],
       "operations": [
@@ -150,7 +149,6 @@
       "file": "sample-nest-service/src/customers/customers.service.ts",
       "line": 33,
       "summary": "who is ordering, their loyalty tier, and whether they may order at all.",
-      "summarySource": "code",
       "owner": "team-crm",
       "declaredEffects": [],
       "operations": [
@@ -165,7 +163,6 @@
       "file": "sample-nest-service/src/fraud/fraud.service.ts",
       "line": 40,
       "summary": "scores an order with the risk provider and keeps every score for the fraud desk.",
-      "summarySource": "code",
       "owner": "team-risk",
       "declaredEffects": [],
       "operations": [
@@ -195,7 +192,6 @@
       "file": "sample-nest-service/src/notifications/notifications.service.ts",
       "line": 10,
       "summary": "queues customer emails; the email worker sends them through the mail provider.",
-      "summarySource": "code",
       "owner": "team-crm",
       "declaredEffects": [],
       "operations": [],
@@ -220,7 +216,6 @@
       "file": "sample-nest-service/src/orders/orders.service.ts",
       "line": 16,
       "summary": "Places, cancels and tracks orders. Owns the orders and order_lines tables and the orders.* topics.",
-      "summarySource": "profile",
       "owner": "team-checkout",
       "declaredEffects": [],
       "operations": [
@@ -240,7 +235,6 @@
       "file": "sample-nest-service/src/payments/payments.service.ts",
       "line": 33,
       "summary": "talks to the payment provider and keeps the payments table.",
-      "summarySource": "code",
       "owner": "team-payments",
       "declaredEffects": [],
       "operations": [
@@ -256,7 +250,6 @@
       "file": "sample-nest-service/src/pricing/pricing.service.ts",
       "line": 35,
       "summary": "Tax rates come from the finance team's tax API.",
-      "summarySource": "code",
       "owner": "team-checkout",
       "declaredEffects": [],
       "operations": [
@@ -271,7 +264,6 @@
       "file": "sample-nest-service/src/pricing/pricing.service.ts",
       "line": 46,
       "summary": "product prices, running promotions and tax for a basket.",
-      "summarySource": "code",
       "owner": "team-checkout",
       "declaredEffects": [],
       "operations": [
@@ -287,7 +279,6 @@
       "file": "sample-nest-service/src/pricing/promotions.service.ts",
       "line": 36,
       "summary": "running product discounts, and who used them (marketing reports on redemptions).",
-      "summarySource": "code",
       "owner": "team-checkout",
       "declaredEffects": [],
       "operations": [
@@ -303,7 +294,6 @@
       "file": "sample-nest-service/src/shipping/shipping.service.ts",
       "line": 44,
       "summary": "The carrier's API: shipping rates. Parcel status arrives as events (see ShippingService.updateStatus).",
-      "summarySource": "code",
       "owner": "team-fulfilment",
       "declaredEffects": [],
       "operations": [
@@ -318,7 +308,6 @@
       "file": "sample-nest-service/src/shipping/shipping.service.ts",
       "line": 56,
       "summary": "what delivery costs, and where a dispatched order is. Owns the shipments table.",
-      "summarySource": "code",
       "owner": "team-fulfilment",
       "declaredEffects": [],
       "operations": [
@@ -539,8 +528,6 @@
       "file": "sample-nest-service/src/orders/orders.service.ts",
       "line": 34,
       "endLine": 41,
-      "summary": "Price a basket without placing it (the checkout page calls this on every change).",
-      "summarySource": "code",
       "params": [
         {
           "name": "dto",
@@ -1511,8 +1498,6 @@
       "file": "sample-nest-service/src/orders/orders.service.ts",
       "line": 65,
       "endLine": 75,
-      "summary": "A fraud reviewer let a held order through: reserve its stock and place it.",
-      "summarySource": "code",
       "params": [
         {
           "name": "id",
@@ -1909,8 +1894,7 @@
         },
         {
           "name": "details",
-          "type": "Record<string, string>",
-          "optional": true
+          "type": "Record<string, string>"
         }
       ],
       "returns": {
@@ -2046,8 +2030,6 @@
       "file": "sample-nest-service/src/orders/orders.service.ts",
       "line": 78,
       "endLine": 81,
-      "summary": "The fraud desk's verdict on a held order.",
-      "summarySource": "code",
       "params": [
         {
           "name": "orderId",
@@ -3111,8 +3093,6 @@
       "file": "sample-nest-service/src/pricing/pricing.service.ts",
       "line": 76,
       "endLine": 78,
-      "summary": "Records that an order used the quote's promotions.",
-      "summarySource": "code",
       "params": [
         {
           "name": "orderId",
@@ -5779,8 +5759,7 @@
         },
         {
           "name": "details",
-          "type": "Record<string, string>",
-          "optional": true
+          "type": "Record<string, string>"
         }
       ],
       "returns": {
@@ -8033,7 +8012,7 @@
       "entryPointsReached": 0,
       "operationsKnown": 33,
       "operationsAnalyzed": 23,
-      "ms": 6279
+      "ms": 6400
     }
   }
 }

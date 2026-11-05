@@ -21,8 +21,6 @@ export interface Effect {
 export interface Param {
   name: string;
   type: string;
-  /** Callers may leave it out (`x?: T`, or a default value). */
-  optional?: boolean;
 }
 
 export interface TypeShape {
@@ -115,8 +113,6 @@ export interface ModuleInfo {
   file: string;
   line: number;
   summary: string;
-  /** Where the summary came from: the code's doc comment, or the service profile (often written by the review agent). */
-  summarySource?: 'code' | 'profile';
   owner?: string;
   /** Side effects declared for the module (external config, or opt-in `@effect` tags). Empty when none are declared. */
   declaredEffects: Effect[];
@@ -133,10 +129,6 @@ export interface Operation {
   file: string;
   line: number;
   endLine: number;
-  /** What the operation does, in a sentence or two. */
-  summary?: string;
-  /** `code`: the method's doc comment. `profile`: written in the service profile, usually by the review agent. */
-  summarySource?: 'code' | 'profile';
   params: Param[];
   returns: TypeShape;
   /** Effects performed by this operation itself (incl. inlined non-module helpers). */
@@ -205,8 +197,7 @@ export interface CodeChange {
 
 export interface ContractDelta {
   risk: Risk;
-  /** `compatible`: only optional parameters were added at the end, so every existing call still type-checks. */
-  params?: { before: Param[]; after: Param[]; compatible?: boolean };
+  params?: { before: Param[]; after: Param[] };
   returns?: { before: TypeShape; after: TypeShape };
   effectsAdded: Effect[];
   effectsRemoved: Effect[];

@@ -1,4 +1,4 @@
-import type { Effect, Finding, Operation, ReviewSummary, Risk, Step } from '../../schema/modulegraph.ts';
+import type { Effect, Finding, ReviewSummary, Risk } from '../../schema/modulegraph.ts';
 import type { Graphish } from './compare.ts';
 import type { Config } from './config.ts';
 import { dedupeEffects, effectKey } from './effects.ts';
@@ -143,14 +143,6 @@ export function architectureFindings(g: Graphish, config: Config): Finding[] {
       }
     }
   }
-
-  // The same table read again, with the same input and no write to it in between: `forUser(userId)` reads
-  // document_birth_info, then `get(userId)` reads it again to build the answer. Facts it relies on, all from the
-  // type-checked AST: which tables each module reads and writes (framework adapters), the data flow into each call
-  // (same producer, same value), source order, and exclusive branches. What it can't know: whether the module
-  // filters the table by that input (it may read another row), or whether the second read must see a write made
-  // by something outside this flow. Hence a warning for the reviewer, never an error.
-  findings.push(...repeatReads(g, live));
 
   // Shared expensive fetches must happen once per flow (e.g. Identity is fetched by the orchestrator and passed down).
   for (const entry of Object.values(g.entryPoints)) {
@@ -318,44 +310,6 @@ function originatedAt(g: Graphish, op: Graphish['operations'][string]): Effect[]
 }
 
 /** Guards of a step as `{ test, holds }`: `if (a) and unless (b)` → a holds, b does not. */
-/** Exported for the rule tests (rules-check.ts). */
-export function repeatReads(g: Graphish, ops: Operation[] = Object.values(g.operations)): Finding[] {
-  const out: Finding[] = [];
-  for (const op of ops) {
-    const scope = g.scopes[op.id];
-    if (!scope) continue;
-    const fx = (step: Step) => step.effect ? [step.effect] : step.target ? g.operations[step.target]?.effects ?? [] : [];
-    const tablesOf = (step: Step, kind: 'db.read' | 'db.write') => new Set(fx(step).filter((e) => e.kind === kind).map((e) => e.target));
-    // What a call gets: every data edge into it, by producer and value ("entry:userId", "s2:document").
-    const inputs = (step: Step) => scope.edges.filter((e) => e.to === step.id && e.kind === 'data').map((e) => `${e.from}:${e.label ?? ''}`).sort().join('|');
-    const steps = scope.steps;
-    const reported = new Set<string>();
-    for (let i = 0; i < steps.length; i++) {
-      for (let j = i + 1; j < steps.length; j++) {
-        const [a, b] = [steps[i], steps[j]];
-        if (a.loop || b.loop || (!a.target && !b.target)) continue; // two direct reads: duplicate-read covers them
-        for (const table of tablesOf(a, 'db.read')) {
-          if (reported.has(table) || !tablesOf(b, 'db.read').has(table)) continue;
-          if (inputs(a) !== inputs(b) || mostTogether([a.condition, b.condition]) < 2) continue;
-          if (steps.slice(i, j).some((s) => tablesOf(s, 'db.write').has(table))) continue; // re-read after a write: fresh data
-          reported.add(table);
-          const who = (s: Step) => (s.target ? opLabel(g, s.target) : 'directly');
-          const given = inputs(a).split('|').map((x) => x.split(':')[1]).filter(Boolean).join(', ');
-          out.push({
-            rule: 'repeat-read',
-            severity: 'warning',
-            message: `${opLabel(g, op.id)} reads ${table} twice with the same input${given ? ` (${given})` : ''} and no write in between: ${who(a)}, then ${who(b)}`,
-            subject: { type: 'operation', id: op.id },
-            isNew: false,
-            hint: 'Use the value already read, or say why it must be read again.',
-          });
-        }
-      }
-    }
-  }
-  return out;
-}
-
 function guards(condition: string | undefined): { test: string; holds: boolean }[] {
   return (condition ?? '').split(/\) and (?=(?:if|unless) \()/).map((part) => /^(if|unless) \((.+?)\)?$/.exec(part.trim())).filter(Boolean)
     .map((m) => ({ test: m![2], holds: m![1] === 'if' }));
@@ -416,7 +370,7 @@ export function reviewSummary(g: Graphish, diff: RawDiff | undefined): ReviewSum
       const reasons = [
         op.change === 'added' && 'new operation',
         op.change === 'removed' && 'removed operation',
-        d?.params && (d.params.compatible ? 'optional parameter added (existing callers unaffected)' : 'signature changed'),
+        d?.params && 'signature changed',
         d?.returns && 'output shape changed',
         d?.effectsAdded.length && `+${d.effectsAdded.map((e) => `${e.kind} ${e.target}`).join(', +')}`,
         d?.effectsRemoved.length && `−${d.effectsRemoved.map((e) => `${e.kind} ${e.target}`).join(', −')}`,

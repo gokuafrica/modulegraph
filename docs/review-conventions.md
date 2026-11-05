@@ -75,7 +75,6 @@ caller, so internals stay hidden until you drill in.
 | Shared expensive fetch happens once per flow (Identity) | `fetch-once` | error | R6 |
 | Read-only endpoints (GET, gRPC Get*) don't write | `read-path-writes` | warning | R5/R6 |
 | Same read twice in one operation | `duplicate-read` | warning | R8 |
-| Same table read again through a module, same input, no write in between | `repeat-read` | warning | R8 |
 | Tests deleted/skipped, `@ts-ignore`, `eslint-disable`, `\|\| true`, `as any` | `guardrail-weakened` | error / warning | R8 (CI weakening is a hard stop) |
 | Changes outside any module | `unattributed-change` | info | R2 |
 | Oversized change | `review-budget` | warning | R4 |
@@ -83,31 +82,6 @@ caller, so internals stay hidden until you drill in.
 `modulegraph --check` exits non-zero only for **new** error-level findings. Pre-existing ones are shown
 separately, so teams can adopt the tool on a legacy codebase and ratchet down. Typecheck, lint, unit tests and
 SAST stay in their usual CI jobs. Keep any checker below ~10% effective false positives, or demote it (Google).
-
-## How far to trust a finding
-
-modulegraph is not an AI and not a compiler. Its output comes in three kinds, and each says what it rests on:
-
-1. **Facts** (compiler-grade). Types, signatures, output shapes, the call graph and who reaches what come from the
-   TypeScript compiler (ts-morph, type-resolved, not text matching). Side effects come from framework adapters that
-   match library APIs by declared type (`Repository<Entity>.save` is a write to the entity's table). These are as
-   exact as the compiler, with one known gap: calls the compiler can't resolve (dynamic dispatch, `any`, raw SQL
-   strings, platform code no adapter knows) are missing rather than guessed. The brief says which adapters ran.
-2. **Rules** (deterministic checks over the facts). Same input, same answer, every time, like a linter. Each
-   rule states what it checks and what it can't know, and has positive *and* negative cases in
-   `analyzer/src/rules-check.ts`. They differ from compiler errors in one way: a rule can be right about the code
-   and still wrong about intent (a re-read that is on purpose). So only rules that have no such class are
-   errors (table ownership, cycles, deleted tests); the rest are warnings or info, and `--check` never fails on them.
-3. **Judgment**. Whether a change is the right one is left to the review agent and the human.
-
-When a rule fires wrongly on real code, add the case to `rules-check.ts` and tighten the rule, or demote it.
-Rules are added for a class of defect seen across services, never to make one sample look right.
-
-| Rule | Proves | Can't know (false-positive classes) |
-|---|---|---|
-| `repeat-read` | two calls in one operation reach reads of the same table, get the same value from the same source, can both run, and nothing writes the table between them | whether each module filters by that value (it may read a different row); whether the second read must see a write made outside this flow |
-| `duplicate-read` | the same direct read twice in one operation, on branches that can both run | same as above, for direct reads |
-| `fetch-once` | an operation the profile marks fetch-once runs more than once in one flow | nothing: the profile states the policy |
 
 ## Recommendation coverage
 

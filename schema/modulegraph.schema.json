@@ -77,10 +77,6 @@
         },
         "type": {
           "type": "string"
-        },
-        "optional": {
-          "type": "boolean",
-          "description": "Callers may leave it out (`x?: T`, or a default value)."
         }
       },
       "required": [
@@ -433,14 +429,6 @@
         "summary": {
           "type": "string"
         },
-        "summarySource": {
-          "type": "string",
-          "enum": [
-            "code",
-            "profile"
-          ],
-          "description": "Where the summary came from: the code's doc comment, or the service profile (often written by the review agent)."
-        },
         "owner": {
           "type": "string"
         },
@@ -502,18 +490,6 @@
         },
         "endLine": {
           "type": "number"
-        },
-        "summary": {
-          "type": "string",
-          "description": "What the operation does, in a sentence or two."
-        },
-        "summarySource": {
-          "type": "string",
-          "enum": [
-            "code",
-            "profile"
-          ],
-          "description": "`code`: the method's doc comment. `profile`: written in the service profile, usually by the review agent."
         },
         "params": {
           "type": "array",
@@ -764,17 +740,13 @@
               "items": {
                 "$ref": "#/definitions/Param"
               }
-            },
-            "compatible": {
-              "type": "boolean"
             }
           },
           "required": [
             "before",
             "after"
           ],
-          "additionalProperties": false,
-          "description": "`compatible`: only optional parameters were added at the end, so every existing call still type-checks."
+          "additionalProperties": false
         },
         "returns": {
           "type": "object",

@@ -6,28 +6,10 @@
     "include": [],
     "exclude": [],
     "overrides": {
-      "BirthInfoService": {
-        "name": "BirthInfo",
-        "summary": "A user's birth info: what their identity document says and what they told us in KYC.",
-        "operations": {
-          "get": "The user's birth info as one answer: what the identity document says and what they last submitted in KYC (with when), either of which may be missing. Reads both tables."
-        }
-      },
-      "DocumentBirthInfoService": {
-        "name": "DocumentBirthInfo",
-        "summary": "Birth data the document pipeline extracted from the identity document. Parts may be missing."
-      },
-      "KycBirthInfoStore": {
-        "summary": "The user-provided (KYC) birth info. A submission overwrites the previous one."
-      },
-      "EligibilityService": {
-        "name": "Eligibility"
-      },
-      "BirthInfoVerifier": {
-        "operations": {
-          "verify": "Checks a KYC submission against the identity document: ok only if every part the document has (country, place) matches, ignoring case and surrounding spaces. A part the document lacks isn't checked; with no document at all, anything passes. Returns the mismatches for the error message."
-        }
-      }
+      "BirthInfoService": { "name": "BirthInfo", "summary": "A user's birth info: what their identity document says and what they told us in KYC." },
+      "DocumentBirthInfoService": { "name": "DocumentBirthInfo", "summary": "Birth data the document pipeline extracted from the identity document. Parts may be missing." },
+      "KycBirthInfoStore": { "summary": "The user-provided (KYC) birth info. A submission overwrites the previous one." },
+      "EligibilityService": { "name": "Eligibility" }
     }
   },
   "owners": {

@@ -149,13 +149,24 @@ export function EffectChip({ chip }: { chip: Chip }) {
 }
 
 /**
- * What the change did to this step of the flow: a new call, or a removed one (a ghost now; "removes it" in the
- * before view). A changed condition isn't repeated here: the check node and its yes/no branches already show it.
+ * What the change did to this step of the flow: new call, removed call (ghost), or a changed guard. In the
+ * "before" view the same marks read the other way: this step goes away, or its guard becomes something else.
  */
 function StepDelta({ delta, conditionBefore, ghost, beforeMark, conditionNow }: { delta?: string; conditionBefore?: string; ghost?: boolean; beforeMark?: string; conditionNow?: string }) {
   if (beforeMark === 'removed') return <div className="step-delta del">− this change removes it</div>;
+  if (beforeMark === 'guard') {
+    const now = conditionNow ? `only ${conditionNow.replace(/^if /, 'if ')}` : 'every time';
+    return <div className="step-delta cond" title={`Here it runs every time it is reached. After this change it runs ${now}.`}>this change: runs {now}</div>;
+  }
   if (ghost) return <div className="step-delta del">− removed by this change</div>;
   if (delta === 'added') return <div className="step-delta add">+ new call in this change</div>;
+  if (conditionBefore !== undefined) {
+    return (
+      <div className="step-delta cond" title={conditionBefore ? `Before this change it ran only ${conditionBefore}` : 'Before this change it ran every time; now only on this branch'}>
+        {conditionBefore ? `condition changed · before: only ${conditionBefore}` : 'now conditional · before: always ran'}
+      </div>
+    );
+  }
   return null;
 }
 
@@ -173,7 +184,7 @@ export function ModuleNode({ data, selected }: NodeProps) {
     condition?: string; loop?: boolean; via?: string; through?: string; uses?: { opId: string; module: string; changed: boolean }[]; focus?: boolean; onPath?: boolean; hasInternals: boolean; reach?: number;
     compact?: boolean; inImpact?: boolean; totalEffects: number; ops?: string[]; opIds?: string[];
     delta?: string; conditionBefore?: string; ghost?: boolean; hasDiff?: boolean; stub?: boolean; partial?: boolean; reachPartial?: boolean;
-    examples?: Example[]; transaction?: string;
+    examples?: Example[];
     /** Impact view of a whole module: references go one level further up for the module, not one operation. */
     zoomTarget?: string;
     beforeMark?: string; conditionNow?: string;
@@ -241,7 +252,7 @@ export function ModuleNode({ data, selected }: NodeProps) {
 }
 
 export function EffectNode({ data, selected }: NodeProps) {
-  const d = data as { effect: Effect; condition?: string; loop?: boolean; via?: string; delta?: string; conditionBefore?: string; ghost?: boolean; beforeMark?: string; conditionNow?: string; notes?: string[]; transaction?: string };
+  const d = data as { effect: Effect; condition?: string; loop?: boolean; via?: string; delta?: string; conditionBefore?: string; ghost?: boolean; beforeMark?: string; conditionNow?: string; notes?: string[] };
   const meta = EFFECT_META[d.effect.kind];
   return (
     <div className={`node effect ${meta.cls} ${d.ghost ? 'ghost' : ''} ${d.delta === 'added' ? 'step-added' : ''} ${d.beforeMark === 'removed' ? 'step-removed' : ''} ${selected ? 'selected' : ''}`}>
@@ -440,18 +451,7 @@ export function CodeNode({ data }: NodeProps) {
   );
 }
 
-/** A transaction the code opens: everything drawn inside commits together or not at all. */
-export function TxGroupNode({ data }: NodeProps) {
-  const d = data as { label: string; count: number };
-  return (
-    <div className="txgroup" title={`The code opens ${d.label} here: the ${d.count} steps inside commit together or roll back together`}>
-      <span className="tx-label">⛓ one transaction</span> <span className="tx-what">{d.label}</span>
-    </div>
-  );
-}
-
 export const nodeTypes = {
-  txgroup: TxGroupNode,
   module: ModuleNode,
   effect: EffectNode,
   entry: EntryNode,

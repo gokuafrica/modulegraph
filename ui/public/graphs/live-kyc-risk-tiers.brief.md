@@ -69,17 +69,6 @@ Lazy analysis: 2 of 28 flows analyzed (`topic kyc.recheck_requested`, `cron kyc-
 - **INFO unattributed-change** ×1 (Wiring, shared types and dev tooling. Contract effects of shared types already show up as output-shape changes on the modules.)
   - 1 changed file outside any module: dev/seed.ts
 
-## Needs a description
-
-No doc comment: read each and write one or two sentences (what it does, not how) into the profile, `configs/identity-profile-service/modulegraph.config.json` → `modules.overrides.<Class>.operations.<method>`. Then refresh.
-
-- `KycModule.runCheck` (sample-service/src/modules/kyc/KycModule.ts:31), modified
-- `IdentityModule.fetchIdentity` (sample-service/src/modules/identity/IdentityModule.ts:15)
-- `BirthInfoModule.resolve` (sample-service/src/modules/birth-info/BirthInfoModule.ts:11)
-- `NationalityModule.resolve` (sample-service/src/modules/nationality/NationalityModule.ts:16)
-- `SanctionsScreening.screen` (sample-service/src/modules/kyc/SanctionsScreening.ts:16), modified
-- `KycModule.getStatus` (sample-service/src/modules/kyc/KycModule.ts:53)
-
 ## Request review from
 
 team-compliance

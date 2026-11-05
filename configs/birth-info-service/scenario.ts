@@ -43,14 +43,11 @@ export default async function scenario(projectRoot: string, { step }: { step: St
     { userId: 'u-3', countryOfBirth: null, placeOfBirth: null, documentId: 'id-card-u-3' },
     { userId: 'u-4', countryOfBirth: null, placeOfBirth: 'Lagos', documentId: 'passport-u-4' },
   ]));
-  const kycRows = table([
+  const kyc = new KycBirthInfoStore(table([
     { userId: 'u-1', countryOfBirth: 'PRT', placeOfBirth: 'Porto', updatedAt: '2026-10-01T09:00:00.000Z' },
-  ]);
-  const kyc = new KycBirthInfoStore(kycRows);
-  // In-memory "transaction": the callback runs with a manager whose repositories are the same tables.
-  const dataSource = { transaction: async <T>(work: (manager: { getRepository: () => typeof kycRows }) => Promise<T>) => work({ getRepository: () => kycRows }) };
+  ]));
   const birthInfo = verifier
-    ? new BirthInfoService(documents, kyc, verifier, new EventEmitter2(), dataSource)
+    ? new BirthInfoService(documents, kyc, verifier, new EventEmitter2())
     : new BirthInfoService(documents, kyc, new EventEmitter2());
   const birthApi = new BirthInfoController(birthInfo);
   const eligibilityApi = new EligibilityController(new EligibilityService(birthInfo, new CountryPolicy()));
