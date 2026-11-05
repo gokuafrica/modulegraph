@@ -3,16 +3,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { DataSource } from 'typeorm';
 import { DocumentBirthInfoService } from '../documents/document-birth-info.service.ts';
 import { BirthInfoVerifier } from './birth-info-verifier.ts';
-import type { BirthInfoView, BirthPlace, KycBirthInfoDto } from './birth-info.types.ts';
-import { type KycBirthInfo, KycBirthInfoStore } from './kyc-birth-info.store.ts';
-
-function view(userId: string, document: BirthPlace | null, kyc: KycBirthInfo | null): BirthInfoView {
-  return {
-    userId,
-    document,
-    kyc: kyc ? { countryOfBirth: kyc.countryOfBirth, placeOfBirth: kyc.placeOfBirth, updatedAt: kyc.updatedAt } : null,
-  };
-}
+import type { BirthInfoView, KycBirthInfoDto } from './birth-info.types.ts';
+import { KycBirthInfoStore } from './kyc-birth-info.store.ts';
 
 /** A user's birth info: the document's version and the user's own (KYC) version, side by side. */
 @Injectable()
@@ -27,7 +19,11 @@ export class BirthInfoService {
 
   async get(userId: string): Promise<BirthInfoView> {
     const [document, kyc] = await Promise.all([this.documents.forUser(userId), this.kyc.find(userId)]);
-    return view(userId, document, kyc);
+    return {
+      userId,
+      document,
+      kyc: kyc ? { countryOfBirth: kyc.countryOfBirth, placeOfBirth: kyc.placeOfBirth, updatedAt: kyc.updatedAt } : null,
+    };
   }
 
   /**
@@ -48,6 +44,10 @@ export class BirthInfoService {
       return row;
     });
     // The answer is the document already read and the row just saved: no need to read either again.
-    return view(userId, document, saved);
+    return {
+      userId,
+      document,
+      kyc: { countryOfBirth: saved.countryOfBirth, placeOfBirth: saved.placeOfBirth, updatedAt: saved.updatedAt },
+    };
   }
 }
