@@ -140,8 +140,8 @@ On a large service, analyzing every flow up front wastes time and buries the cha
    to the JSON file, so the file always holds what has been explored.
 
 ```bash
-npm run live            # live lazy analysis of all demos (BirthInfo, KYC, NestJS orders, NestJS birth info); open http://localhost:5173
-npm run live -- birth   # just one of them: birthinfo | kyc | orders | birth
+npm run live            # live review of the birth-info demo (sample-birth-service, the small one); open http://localhost:5173
+npm run live -- all     # every live demo; or just one: birth | birthinfo | kyc | orders
 npm run review -- --project <dir> --head <branch>   # = analyze --lazy --serve
 npm run lazy-check --workspace analyzer   # proves lazy == full on everything lazy analyzed
 ```
@@ -184,7 +184,7 @@ Things to try:
    `orders.created`), a release endpoint and a fraud-desk consumer, a loyalty discount, tracking from carrier events
    instead of the carrier API, and two writes nobody mentioned (`order_views` on `GET /api/orders/:id`,
    `fraud_checks` on the read-only quote preview). Code map: [sample-nest-service/README.md](sample-nest-service/README.md).
-5. **Enforcing document data, with examples** (`sample-birth-service`, `npm run live -- birth`): a NestJS
+5. **Enforcing document data, with examples** (`sample-birth-service`, `npm run live`): a NestJS
    service with document birth info (extracted, parts may be missing) and KYC birth info (what the user said).
    The change makes `POST /api/users/:userId/birth-info` reject a submission that contradicts the document.
    Drill into *BirthInfo.updateKycBirthInfo* and pick request 2 on the input: *u-1 submits ESP/Madrid*. The

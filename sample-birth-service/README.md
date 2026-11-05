@@ -29,5 +29,5 @@ document (u-1), country only (u-2), nothing extracted (u-3) and place only (u-4)
 The demo change is on branch `feature/enforce-document-birth-info`:
 
 ```bash
-npm run live -- birth
+npm run live
 ```

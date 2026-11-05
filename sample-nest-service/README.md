@@ -51,5 +51,5 @@ Branch `feature/order-fraud-hold`, against `main` (9 files, about +180/−25, 6 
 
 ```bash
 npm run analyze -- --project sample-nest-service --head feature/order-fraud-hold --base main
-npm run live               # lazy, expandable in the UI (all live demos; `-- orders` for just this one)
+npm run live               # lazy, expandable in the UI (`-- orders` for this one, `-- all` for every demo)
 ```

@@ -189,7 +189,7 @@ export default function App() {
       // The server may have started after this page loaded: look again before giving up.
       const fresh = await fetchLive(cur, graphIdRef.current!);
       if (!fresh) {
-        setToast('This part is not analyzed in the saved file, and the live server is not answering. Run `npm run live` (all live demos), then try again.');
+        setToast('This part is not analyzed in the saved file, and the live server is not answering. Run `npm run live` (or `npm run live -- all` for every demo), then try again.');
         return false;
       }
       liveRef.current = true;

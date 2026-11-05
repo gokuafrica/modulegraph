@@ -1,7 +1,8 @@
 /**
  * Starts live lazy analysis of the demo branches for the UI (http://localhost:5173 proxies /api to :5174).
- * usage: npm run live                      all live demos (BirthInfo, KYC, NestJS orders, NestJS birth info) at once
- *        npm run live -- birthinfo|kyc|orders|birth   just one
+ * usage: npm run live                      the birth-info demo (sample-birth-service): the small one to start with
+ *        npm run live -- all               every live demo at once (adds the identity-profile and order services)
+ *        npm run live -- birthinfo|kyc|orders|birth   just that one
  * With several demos, each runs its own analysis server (one TypeScript program each) on 5175, 5176, …, and
  * :5174 routes every /api/graphs/<id> request to the server that owns <id>.
  */
@@ -59,12 +60,12 @@ const demos: Record<string, Demo> = {
   },
 };
 
-const wanted = process.argv[2];
-if (wanted && !demos[wanted]) {
-  console.error(`unknown demo "${wanted}": use one of ${Object.keys(demos).join(', ')}, or nothing for all`);
+const wanted = process.argv[2] ?? 'birth';
+if (wanted !== 'all' && !demos[wanted]) {
+  console.error(`unknown demo "${wanted}": use one of ${Object.keys(demos).join(', ')}, or all`);
   process.exit(2);
 }
-const picked = wanted ? [demos[wanted]] : Object.values(demos);
+const picked = wanted === 'all' ? [demos.birth, demos.birthinfo, demos.kyc, demos.orders] : [demos[wanted]];
 
 const children = picked.map((demo, i) => ({ ...demo, port: picked.length === 1 ? PORT : PORT + 1 + i, child: undefined as ChildProcess | undefined }));
 const healthy = (port: number) => fetch(`http://localhost:${port}/api/health`).then((r) => r.ok, () => false);

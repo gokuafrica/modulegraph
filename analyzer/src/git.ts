@@ -14,7 +14,11 @@ export function git(repo: string, args: string[]): string {
   try {
     return run(gitBin);
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+      // Say what git said: "Command failed" alone doesn't tell a reviewer why a refresh failed.
+      const stderr = String((err as { stderr?: string }).stderr ?? '').trim();
+      throw new Error(`git ${args.join(' ')} failed${stderr ? `: ${stderr.split('\n').slice(0, 3).join(' ')}` : ` (exit ${(err as { status?: number }).status ?? '?'})`}`);
+    }
     const candidates = [
       'C:\\Program Files\\Git\\cmd\\git.exe',
       'C:\\Program Files\\Git\\mingw64\\bin\\git.exe',

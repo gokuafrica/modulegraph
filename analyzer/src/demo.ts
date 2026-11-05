@@ -34,7 +34,7 @@ run([
   '--intent', 'KYC: add risk tiers from sanctions score, birth country and nationality; send high-risk users to manual review (outbox kyc.manual_review_requested); make the nightly rescreen asynchronous via kyc.recheck_requested.',
 ]);
 // Lazy versions of both: only the changed code and the 2 best-matching entry points analyzed.
-// `npm run live` serves them live (all three; `-- kyc` etc. for one) so the UI can expand the rest.
+// `npm run live` serves the birth-info one live (`-- all` for every one) so the UI can expand the rest.
 for (const [head, title, intent] of [
   ['feature/birthinfo-consent', 'Live (lazy): BirthInfo consented data wins over documents', 'BirthInfo: prefer user-consented birth data (birth_info_consents) over document data; add consent endpoint.'],
   ['feature/kyc-risk-tiers', 'Live (lazy): KYC risk tiers, manual review, async rescreen', 'KYC: add risk tiers from sanctions score, birth country and nationality; send high-risk users to manual review (outbox kyc.manual_review_requested); make the nightly rescreen asynchronous via kyc.recheck_requested.'],
