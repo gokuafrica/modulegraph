@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "order-service",
-  "generatedAt": "2026-11-05T12:47:40.877Z",
+  "generatedAt": "2026-11-05T12:56:11.824Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph)",
   "source": {
     "mode": "branch",
@@ -360,7 +360,8 @@
         },
         {
           "name": "details",
-          "type": "Record<string, string>"
+          "type": "Record<string, string>",
+          "optional": true
         }
       ],
       "returns": {
@@ -5361,7 +5362,8 @@
         },
         {
           "name": "details",
-          "type": "Record<string, string>"
+          "type": "Record<string, string>",
+          "optional": true
         }
       ],
       "returns": {

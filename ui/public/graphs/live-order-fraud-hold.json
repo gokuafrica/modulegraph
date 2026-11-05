@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "order-service",
-  "generatedAt": "2026-11-05T12:47:48.850Z",
+  "generatedAt": "2026-11-05T12:56:19.995Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -1909,7 +1909,8 @@
         },
         {
           "name": "details",
-          "type": "Record<string, string>"
+          "type": "Record<string, string>",
+          "optional": true
         }
       ],
       "returns": {
@@ -5778,7 +5779,8 @@
         },
         {
           "name": "details",
-          "type": "Record<string, string>"
+          "type": "Record<string, string>",
+          "optional": true
         }
       ],
       "returns": {
@@ -8031,7 +8033,7 @@
       "entryPointsReached": 0,
       "operationsKnown": 33,
       "operationsAnalyzed": 23,
-      "ms": 5952
+      "ms": 6279
     }
   }
 }

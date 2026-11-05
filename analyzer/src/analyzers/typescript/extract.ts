@@ -1004,7 +1004,7 @@ export class Extractor implements RevisionAnalysis {
   }
 
   private params(fn: Fn): Param[] {
-    return fn.getParameters().map((p) => ({ name: p.getName(), type: typeText(p.getType(), fn) }));
+    return fn.getParameters().map((p) => ({ name: p.getName(), type: typeText(p.getType(), fn), ...(p.isOptional() || p.hasInitializer() ? { optional: true } : {}) }));
   }
 
   private shape(type: Type, at: Node): TypeShape {

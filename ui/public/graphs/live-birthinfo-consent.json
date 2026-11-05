@@ -1,7 +1,7 @@
 {
   "schema": "modulegraph/v1",
   "service": "identity-profile-service",
-  "generatedAt": "2026-11-05T12:47:27.572Z",
+  "generatedAt": "2026-11-05T12:55:57.733Z",
   "generator": "modulegraph-analyzer/0.3 (typescript: ts-morph), lazy",
   "source": {
     "mode": "branch",
@@ -1120,7 +1120,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T12:47:27.434Z"
+              "extractedAt": "2026-11-05T12:55:57.597Z"
             }
           },
           "output": {
@@ -1158,7 +1158,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T12:47:27.436Z"
+              "extractedAt": "2026-11-05T12:55:57.600Z"
             }
           },
           "output": {
@@ -1327,7 +1327,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T12:47:27.434Z"
+              "extractedAt": "2026-11-05T12:55:57.597Z"
             }
           },
           "output": {
@@ -1879,7 +1879,7 @@
               "documentIds": [
                 "doc-u-1"
               ],
-              "extractedAt": "2026-11-05T12:47:27.436Z"
+              "extractedAt": "2026-11-05T12:55:57.600Z"
             },
             "birth": {
               "countryOfBirth": "PRT",
@@ -1907,7 +1907,7 @@
               "documentIds": [
                 "doc-u-2"
               ],
-              "extractedAt": "2026-11-05T12:47:27.438Z"
+              "extractedAt": "2026-11-05T12:55:57.601Z"
             },
             "birth": {
               "countryOfBirth": "IND",
@@ -2046,7 +2046,7 @@
           "output": {
             "userId": "u-1",
             "status": "passed",
-            "checkedAt": "2026-11-05T12:47:27.435Z"
+            "checkedAt": "2026-11-05T12:55:57.599Z"
           },
           "cases": [
             "c5",
@@ -2061,7 +2061,7 @@
           "output": {
             "userId": "u-2",
             "status": "passed",
-            "checkedAt": "2026-11-05T12:47:27.436Z"
+            "checkedAt": "2026-11-05T12:55:57.600Z"
           },
           "cases": [
             "c15"
@@ -3331,7 +3331,7 @@
             "documentIds": [
               "doc-u-1"
             ],
-            "extractedAt": "2026-11-05T12:47:27.434Z"
+            "extractedAt": "2026-11-05T12:55:57.597Z"
           },
           "cases": [
             "c1",
@@ -3367,7 +3367,7 @@
             "documentIds": [
               "doc-u-2"
             ],
-            "extractedAt": "2026-11-05T12:47:27.436Z"
+            "extractedAt": "2026-11-05T12:55:57.600Z"
           },
           "cases": [
             "c11",
@@ -7863,7 +7863,7 @@
       "entryPointsReached": 18,
       "operationsKnown": 29,
       "operationsAnalyzed": 21,
-      "ms": 2586
+      "ms": 2888
     }
   }
 }

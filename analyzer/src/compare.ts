@@ -103,24 +103,28 @@ export function contractDelta(before: Operation | undefined, after: Operation | 
   const callsAdded = (after?.calls ?? []).filter((c) => !(before?.calls ?? []).includes(c));
   const callsRemoved = (before?.calls ?? []).filter((c) => !(after?.calls ?? []).includes(c));
   const paramsChanged = !!before && !!after && paramSig(before.params) !== paramSig(after.params);
+  // Same parameters first, then only optional ones: every existing call still compiles and means the same.
+  const compatible = paramsChanged && before!.params.length < after!.params.length &&
+    before!.params.every((p, i) => p.type === after!.params[i].type && !!p.optional === !!after!.params[i].optional) &&
+    after!.params.slice(before!.params.length).every((p) => p.optional);
   const returnsChanged = !!before && !!after && shapeSig(before.returns) !== shapeSig(after.returns);
   const bodyChanged = !before || !after || before.source !== after.source;
 
   const writes = (es: Effect[]) => es.some((e) => e.kind !== 'db.read');
   let risk: Risk = 'none';
-  if (writes(effectsAdded) || writes(effectsRemoved) || paramsChanged || !before || !after) risk = 'high';
+  if (writes(effectsAdded) || writes(effectsRemoved) || (paramsChanged && !compatible) || !before || !after) risk = 'high';
   else if (effectsAdded.length || effectsRemoved.length || returnsChanged || callsAdded.length || callsRemoved.length) risk = 'medium';
   else if (bodyChanged) risk = 'low';
 
   return {
     risk,
-    ...(paramsChanged ? { params: { before: before!.params, after: after!.params } } : {}),
+    ...(paramsChanged ? { params: { before: before!.params, after: after!.params, ...(compatible ? { compatible } : {}) } } : {}),
     ...(returnsChanged ? { returns: { before: before!.returns, after: after!.returns } } : {}),
     effectsAdded,
     effectsRemoved,
     callsAdded,
     callsRemoved,
-    implementationOnly: risk === 'low',
+    implementationOnly: risk === 'low' && !paramsChanged,
   };
 }
 

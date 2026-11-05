@@ -21,6 +21,8 @@ export interface Effect {
 export interface Param {
   name: string;
   type: string;
+  /** Callers may leave it out (`x?: T`, or a default value). */
+  optional?: boolean;
 }
 
 export interface TypeShape {
@@ -203,7 +205,8 @@ export interface CodeChange {
 
 export interface ContractDelta {
   risk: Risk;
-  params?: { before: Param[]; after: Param[] };
+  /** `compatible`: only optional parameters were added at the end, so every existing call still type-checks. */
+  params?: { before: Param[]; after: Param[]; compatible?: boolean };
   returns?: { before: TypeShape; after: TypeShape };
   effectsAdded: Effect[];
   effectsRemoved: Effect[];

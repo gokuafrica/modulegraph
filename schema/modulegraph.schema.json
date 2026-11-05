@@ -77,6 +77,10 @@
         },
         "type": {
           "type": "string"
+        },
+        "optional": {
+          "type": "boolean",
+          "description": "Callers may leave it out (`x?: T`, or a default value)."
         }
       },
       "required": [
@@ -760,13 +764,17 @@
               "items": {
                 "$ref": "#/definitions/Param"
               }
+            },
+            "compatible": {
+              "type": "boolean"
             }
           },
           "required": [
             "before",
             "after"
           ],
-          "additionalProperties": false
+          "additionalProperties": false,
+          "description": "`compatible`: only optional parameters were added at the end, so every existing call still type-checks."
         },
         "returns": {
           "type": "object",

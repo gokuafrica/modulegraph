@@ -416,7 +416,7 @@ export function reviewSummary(g: Graphish, diff: RawDiff | undefined): ReviewSum
       const reasons = [
         op.change === 'added' && 'new operation',
         op.change === 'removed' && 'removed operation',
-        d?.params && 'signature changed',
+        d?.params && (d.params.compatible ? 'optional parameter added (existing callers unaffected)' : 'signature changed'),
         d?.returns && 'output shape changed',
         d?.effectsAdded.length && `+${d.effectsAdded.map((e) => `${e.kind} ${e.target}`).join(', +')}`,
         d?.effectsRemoved.length && `−${d.effectsRemoved.map((e) => `${e.kind} ${e.target}`).join(', −')}`,
