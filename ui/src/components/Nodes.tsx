@@ -203,7 +203,6 @@ export function ModuleNode({ data, selected }: NodeProps) {
       </div>
       {d.via && <div className="via">inlined from {d.via}</div>}
       {d.through && <div className="via" title="Same-module wrapper, skipped (untick “skip pass-through wrappers” to see it)">through {d.through}()</div>}
-      {d.transaction && <div className="tx" title="This call runs inside a transaction the code opens here">⛓ in a transaction · {d.transaction}</div>}
       {!!d.uses?.length && (
         <div className="uses" title="Modules this one calls. Drill in to see how.">
           uses{' '}
@@ -251,7 +250,6 @@ export function EffectNode({ data, selected }: NodeProps) {
       <StepDelta delta={d.delta} conditionBefore={d.conditionBefore} ghost={d.ghost} beforeMark={d.beforeMark} conditionNow={d.conditionNow} />
       <div className="effect-who" title={`${d.effect.file ?? ''}:${d.effect.line ?? ''}`}>{FX_VERB[d.effect.kind]} directly, not through a module{d.loop && <span className="loop">⟳ each</span>}</div>
       <EffectChip chip={{ kind: d.effect.kind, target: d.effect.target, direct: true }} />
-      {d.transaction && <div className="tx" title="This runs inside a transaction the code opens here">⛓ in a transaction · {d.transaction}</div>}
       {d.notes?.map((n) => <div key={n} className="effect-note">{n}</div>)}
     </div>
   );
@@ -442,7 +440,18 @@ export function CodeNode({ data }: NodeProps) {
   );
 }
 
+/** A transaction the code opens: everything drawn inside commits together or not at all. */
+export function TxGroupNode({ data }: NodeProps) {
+  const d = data as { label: string; count: number };
+  return (
+    <div className="txgroup" title={`The code opens ${d.label} here: the ${d.count} steps inside commit together or roll back together`}>
+      <span className="tx-label">⛓ one transaction</span> <span className="tx-what">{d.label}</span>
+    </div>
+  );
+}
+
 export const nodeTypes = {
+  txgroup: TxGroupNode,
   module: ModuleNode,
   effect: EffectNode,
   entry: EntryNode,

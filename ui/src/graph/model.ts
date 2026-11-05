@@ -1,6 +1,6 @@
 import type { Effect, EntryPoint, Exit, ModuleGraph, Operation, Param, Scope, Step } from '../../../schema/modulegraph.ts';
 
-export type NodeKind = 'module' | 'effect' | 'entry' | 'exit' | 'resource' | 'entrygroup' | 'code' | 'decision' | 'stop' | 'frontier';
+export type NodeKind = 'module' | 'effect' | 'entry' | 'exit' | 'resource' | 'entrygroup' | 'code' | 'decision' | 'stop' | 'frontier' | 'txgroup';
 export type EdgeKind = 'data' | 'control' | 'call' | 'read' | 'write' | 'branch' | 'removed';
 
 export interface VNode {
@@ -9,6 +9,8 @@ export interface VNode {
   width: number;
   height: number;
   data: Record<string, unknown>;
+  /** A box this node is drawn inside (a transaction); the layout sizes the box around its members. */
+  parent?: string;
 }
 
 export interface VEdge {
@@ -107,7 +109,7 @@ function moduleNode(g: ModuleGraph, id: string, opId: string, extra: Record<stri
   const opsLines = Array.isArray(extra.ops) ? Math.ceil((extra.ops as string[]).length / 2) : 0;
   const deltaLine = extra.delta || extra.beforeMark === 'removed' ? 18 : 0;
   const uses = extra.compact ? [] : usesOf(g, opId);
-  const height = (extra.compact ? 56 : 62) + chipLines * 19 + shown * 5 + (chips.length > 6 ? 22 : 0) + (extra.condition ? 20 : 0) + (extra.via ? 16 : 0) + (extra.through ? 16 : 0) + (extra.transaction ? 18 : 0) + (uses.length ? 18 : 0) + opsLines * 16 + deltaLine;
+  const height = (extra.compact ? 56 : 62) + chipLines * 19 + shown * 5 + (chips.length > 6 ? 22 : 0) + (extra.condition ? 20 : 0) + (extra.via ? 16 : 0) + (extra.through ? 16 : 0) + (uses.length ? 18 : 0) + opsLines * 16 + deltaLine;
   return {
     id,
     type: 'module',
@@ -353,11 +355,12 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
       notes.push(listeners.length ? `handled by ${listeners.map((e) => e.label).join(', ')}` : 'no listener for it in this service');
     }
     const w = writes.find((x) => x.step.id !== step.id);
-    if (w && step.effect.kind !== 'outbox') {
+    // Inside a DB transaction, a message goes out before the commit, and a rollback can't take it back.
+    if (step.transaction && step.effect.kind !== 'outbox') notes.push(`sent before the commit: a rollback doesn't undo it`);
+    if (w && step.effect.kind !== 'outbox' && !(w.step.transaction && w.step.transaction === step.transaction)) {
       const order = scope.steps.indexOf(w.step) < scope.steps.indexOf(step) ? 'after' : 'before';
       notes.push(
-        w.step.transaction && w.step.transaction === step.transaction ? `same transaction as the ${w.table} write (${step.transaction})`
-          : step.transaction ? `in ${step.transaction}; the ${w.table} write is not`
+        step.transaction ? `in ${step.transaction}; the ${w.table} write is not`
           : w.step.transaction ? `outside the ${w.table} write's transaction, ${order} it`
           : `${order} the ${w.table} write, no transaction around both`,
       );
@@ -365,6 +368,15 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
     node.data = { ...node.data, notes };
     node.height += notes.reduce((n, t) => n + Math.ceil(t.length / 36), 0) * 15 + 6;
   }
+
+  // Steps that commit or roll back together are drawn inside one box per transaction.
+  const txs = new Map<string, Set<string>>();
+  for (const step of scope.steps) if (step.transaction) txs.set(step.transaction, new Set([...(txs.get(step.transaction) ?? []), step.id]));
+  [...txs].forEach(([tx, ids], i) => {
+    const id = `__tx${i}`;
+    for (const n of nodes) if (ids.has(n.id)) n.parent = id;
+    nodes.unshift({ id, type: 'txgroup', width: 0, height: 0, data: { label: tx, count: ids.size } });
+  });
 
   const reduced = reduceEdges(edges, new Set(nodes.filter((n) => n.type === 'effect' || n.type === 'decision' || n.type === 'stop').map((n) => n.id)));
   edges.length = 0;
@@ -431,7 +443,7 @@ function stepNode(g: ModuleGraph, step: Step, focusOp?: string, focusPath?: Set<
   }
   const deltaLine = step.delta || marks.beforeMark === 'removed' ? 18 : 0;
   const nameLines = Math.max(1, Math.ceil((step.effect?.target.length ?? 0) / 28));
-  return { id: step.id, type: 'effect', width: 250, height: 58 + (nameLines - 1) * 17 + (step.condition ? 18 : 0) + (step.transaction ? 18 : 0) + deltaLine, data: { ...extra, effect: step.effect } };
+  return { id: step.id, type: 'effect', width: 250, height: 58 + (nameLines - 1) * 17 + (step.condition ? 18 : 0) + deltaLine, data: { ...extra, effect: step.effect } };
 }
 
 /** Same code and nothing below it changed: what was recorded on the new code holds for the old one too. */
