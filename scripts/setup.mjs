@@ -39,8 +39,9 @@ const fail = (text) => {
   console.error(`\nsetup failed: ${text}`);
   process.exit(1);
 };
-const run = (cmd, args, opts = {}) =>
-  spawnSync(cmd, args, { cwd: root, stdio: opts.quiet ? 'pipe' : 'inherit', encoding: 'utf8', shell: process.platform === 'win32' && cmd === 'npm', ...opts });
+const run = (cmd, args, opts = {}) => spawnSync(cmd, args, { cwd: root, stdio: opts.quiet ? 'pipe' : 'inherit', encoding: 'utf8', ...opts });
+// npm is a script on Windows (npm.cmd), which needs a shell; the arguments here are fixed, so one command line is safe.
+const npm = (line) => spawnSync(`npm ${line}`, { cwd: root, stdio: 'inherit', shell: true });
 
 // 1. Node and git
 step(1, 'checking Node and git');
@@ -52,8 +53,8 @@ console.log(`  Node ${process.versions.node}, ${gitVersion.stdout.trim()}`);
 
 // 2. dependencies and the UI
 step(2, 'installing dependencies and building the review UI (a minute or two the first time)');
-if (run('npm', ['install', '--no-audit', '--no-fund']).status !== 0) fail('npm install failed (output above).');
-if (run('npm', ['run', 'build', '--workspace', 'ui']).status !== 0) fail('building the UI failed (output above).');
+if (npm('install --no-audit --no-fund').status !== 0) fail('npm install failed (output above).');
+if (npm('run build --workspace ui').status !== 0) fail('building the UI failed (output above).');
 
 // 3. demo branches
 step(3, 'making the demo changes available');
