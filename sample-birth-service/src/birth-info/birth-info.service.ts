@@ -1,5 +1,6 @@
 import { Injectable, UnprocessableEntityException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { DataSource } from 'typeorm';
 import { DocumentBirthInfoService } from '../documents/document-birth-info.service.ts';
 import { BirthInfoVerifier } from './birth-info-verifier.ts';
 import type { BirthInfoView, KycBirthInfoDto } from './birth-info.types.ts';
@@ -13,6 +14,7 @@ export class BirthInfoService {
     private readonly kyc: KycBirthInfoStore,
     private readonly verifier: BirthInfoVerifier,
     private readonly events: EventEmitter2,
+    private readonly dataSource: DataSource,
   ) {}
 
   async get(userId: string): Promise<BirthInfoView> {
@@ -35,8 +37,11 @@ export class BirthInfoService {
     if (!check.ok) {
       throw new UnprocessableEntityException({ message: 'Birth info does not match the identity document', mismatches: check.mismatches });
     }
-    await this.kyc.save(userId, submitted);
-    this.events.emit('kyc.birth_info.updated', { userId });
+    // The new answer and its event go together: if either fails, neither happens.
+    await this.dataSource.transaction(async (manager) => {
+      await this.kyc.save(userId, submitted, manager);
+      this.events.emit('kyc.birth_info.updated', { userId });
+    });
     return this.get(userId);
   }
 }
