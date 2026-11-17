@@ -1,12 +1,17 @@
-# Types and the analyzer's checks (intent matching, framework adapters, change grouping, lazy == full) on every
-# push and pull request. The checks analyze the demo branches, so the whole history is fetched.
+# Types and the analyzer's checks (intent matching, framework adapters, change grouping, lazy == full, review
+# lifecycle) on every push and pull request, on Linux, macOS and Windows: the install path (setup) runs too, from a
+# fresh checkout. The checks analyze the demo branches, so the whole history is fetched.
 name: check
 on:
   push:
   pull_request:
 jobs:
   check:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -15,7 +20,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: git config --global user.email ci@example.com && git config --global user.name ci
+      - run: git config --global user.email ci@example.com
+      - run: git config --global user.name ci
       - run: node scripts/setup.mjs --no-skill
       - run: npm run check
       - run: npm test
