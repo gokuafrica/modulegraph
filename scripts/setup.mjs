@@ -46,9 +46,18 @@ const npm = (line) => spawnSync(`npm ${line}`, { cwd: root, stdio: 'inherit', sh
 // 1. Node and git
 step(1, 'checking Node and git');
 const [major, minor] = process.versions.node.split('.').map(Number);
-if (major < 20 || (major === 20 && minor < 6)) fail(`Node ${process.versions.node} is too old: modulegraph needs Node 20.6 or newer (22 LTS recommended).`);
+// Vite 7 (the review UI's build) needs Node 20.19+ or 22.12+; Node 21 and 22.0-22.11 are not enough.
+if (major < 20 || (major === 20 && minor < 19) || major === 21 || (major === 22 && minor < 12)) {
+  fail(`Node ${process.versions.node} is too old: modulegraph needs Node 20.19+ or 22.12+ (22 LTS or newer recommended).`);
+}
 const gitVersion = run('git', ['--version'], { quiet: true });
-if (gitVersion.status !== 0) fail('git was not found on PATH. Install git and run setup again.');
+if (gitVersion.error?.code === 'ENOENT') fail('git was not found on PATH. Install git and run setup again.');
+if (gitVersion.status !== 0) {
+  // macOS without the Command Line Tools has a /usr/bin/git that only offers to install them.
+  const mac = process.platform === 'darwin' ? ' On macOS, install the Command Line Tools first: xcode-select --install' : '';
+  const said = (gitVersion.stderr ?? '').trim().split('\n')[0];
+  fail(`git did not run (${said || `exit ${gitVersion.status}`}).${mac}`);
+}
 console.log(`  Node ${process.versions.node}, ${gitVersion.stdout.trim()}`);
 
 // 2. dependencies and the UI

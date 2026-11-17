@@ -3,8 +3,9 @@
 Written so a coding agent can do it end to end; a person can follow the same steps. If you are an agent that was
 pointed at this file: do steps 1–4, then tell the user what step 5 says.
 
-**Needs:** Node.js 20.6 or newer (22 LTS recommended), git, and npm (comes with Node). `gh` (GitHub CLI) only for
-reviewing PRs by number. Windows, macOS and Linux.
+**Needs:** Node.js 20.19+ or 22.12+ (22 LTS or newer recommended), git, and npm (comes with Node). `gh` (GitHub CLI)
+only for reviewing PRs by number. Windows, macOS and Linux. On macOS, git comes with the Command Line Tools
+(`xcode-select --install`) or Homebrew (`brew install git`).
 
 ## 1. Get the code
 

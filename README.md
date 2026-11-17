@@ -59,7 +59,7 @@ Tell your coding agent (Claude Code, Codex, Cursor, …):
 
 > Install modulegraph by following https://github.com/gokuafrica/modulegraph/blob/main/INSTALL.md
 
-Or by hand (Node 20.6+ and git):
+Or by hand (Node 20.19+ or 22.12+, and git):
 
 ```bash
 git clone https://github.com/gokuafrica/modulegraph ~/modulegraph
