@@ -1,0 +1,12 @@
+{
+  "name": "@acme/nestjs-logging",
+  "version": "4.0.2",
+  "description": "Acme's structured JSON logger for NestJS services.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "license": "UNLICENSED",
+  "peerDependencies": {
+    "@nestjs/common": "^10.0.0"
+  }
+}

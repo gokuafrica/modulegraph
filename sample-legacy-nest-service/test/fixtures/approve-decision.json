@@ -1,0 +1,5 @@
+{
+  "data": { "firstName": "Ana", "countryOfBirth": "prt" },
+  "checklist": { "documentChecked": true, "identityConfirmed": true, "notes": "passport matches selfie" },
+  "reason": "verified against passport"
+}

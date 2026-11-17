@@ -1,0 +1,13 @@
+{
+  "name": "@acme/typeorm-outbox-writer",
+  "version": "1.8.0",
+  "description": "Writes domain events to the outbox table inside the caller's TypeORM transaction.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "license": "UNLICENSED",
+  "peerDependencies": {
+    "@nestjs/common": "^10.0.0",
+    "typeorm": "^0.3.0"
+  }
+}

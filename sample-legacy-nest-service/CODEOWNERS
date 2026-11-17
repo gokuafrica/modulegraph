@@ -1,0 +1,7 @@
+# Default owners for everything in the service
+*                       @acme/records-platform
+
+# Manual review is shared with the review-tools squad
+/src/manual-review/     @acme/manual-review-squad @acme/records-platform
+/src/escalations/       @acme/manual-review-squad
+/src/consumers/         @acme/records-platform @acme/streaming

@@ -1,0 +1,37 @@
+{
+  "records": [
+    {
+      "id": 4101,
+      "guid": "6f1c2b8e-1d2a-4c55-9a7e-3b0d1f2c9a10",
+      "userGuid": "0b9e7c52-3a41-4d8e-b2f6-58c1e4a9d7f0",
+      "recordType": "identity",
+      "data": { "firstName": "Ana ", "lastName": "Ferreira", "countryOfBirth": "prt", "dateOfBirth": "1990-04-03" },
+      "manualData": null,
+      "statusCode": "PENDING_REVIEW",
+      "createdAt": "2026-02-27T08:12:44.000Z",
+      "updatedAt": "2026-02-27T08:12:44.000Z"
+    },
+    {
+      "id": 4102,
+      "guid": "9d4b1a7e-2c3f-4e5a-8b9c-0d1e2f3a4b5c",
+      "userGuid": "0b9e7c52-3a41-4d8e-b2f6-58c1e4a9d7f0",
+      "recordType": "address",
+      "data": { "addressLine1": "Rua das Flores 12", "city": "Porto", "country": "prt" },
+      "manualData": null,
+      "statusCode": "PENDING_REVIEW",
+      "createdAt": "2026-02-27T08:13:02.000Z",
+      "updatedAt": "2026-02-27T08:13:02.000Z"
+    },
+    {
+      "id": 4377,
+      "guid": "c2a9e4d1-7b3f-4f0a-8e2d-91b6c5a4f3e2",
+      "userGuid": "7e2d4c19-8f60-4b1a-a3c5-d9e8f7a6b5c4",
+      "recordType": "employment",
+      "data": { "employerName": "Acme Logistics", "position": "Driver", "since": "2019-09-01" },
+      "manualData": null,
+      "statusCode": "PENDING_REVIEW",
+      "createdAt": "2026-03-01T17:40:09.000Z",
+      "updatedAt": "2026-03-01T17:40:09.000Z"
+    }
+  ]
+}
