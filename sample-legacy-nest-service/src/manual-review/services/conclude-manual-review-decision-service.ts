@@ -115,7 +115,6 @@ export class ConcludeManualReviewDecisionService {
     return transactionContexts.find((context) => context.name === name).queryRunner;
   }
 
-  // Copies the reviewed record's data onto every row of the user, so all of them show what the agent approved.
   private async setUserRecordManualData(transactionContexts: TransactionContext[], userRecords: UserRecord[], agentData: Record<string, unknown>): Promise<void> {
     const repository = this.runnerFor(transactionContexts, 'legacy').manager.getRepository(UserRecord);
     for (const userRecord of userRecords) {
