@@ -4,33 +4,56 @@ import { join } from 'node:path';
 import type { FileChange } from '../../schema/modulegraph.ts';
 
 let gitBin = process.env.MODULEGRAPH_GIT ?? 'git';
+let ghBin = process.env.MODULEGRAPH_GH ?? 'gh';
 
 /**
- * Runs git. On Windows, shells such as Git Bash can hand child processes a PATH that native programs can't read
- * (npm scripts started from an agent's shell hit this), so fall back to the usual install locations.
+ * Where git and gh are usually installed, for when PATH doesn't reach them: on Windows, shells such as Git Bash can
+ * hand child processes a PATH that native programs can't read (npm scripts started from an agent's shell hit this);
+ * on macOS, a process started from the GUI gets launchd's short PATH, without Homebrew's folders.
  */
+const INSTALLED: Record<'git' | 'gh', string[]> = {
+  git: [
+    'C:\\Program Files\\Git\\cmd\\git.exe',
+    'C:\\Program Files\\Git\\mingw64\\bin\\git.exe',
+    'C:\\Program Files (x86)\\Git\\cmd\\git.exe',
+    '/opt/homebrew/bin/git',
+    '/usr/local/bin/git',
+    '/usr/bin/git',
+  ],
+  gh: ['C:\\Program Files\\GitHub CLI\\gh.exe', 'C:\\Program Files (x86)\\GitHub CLI\\gh.exe', '/opt/homebrew/bin/gh', '/usr/local/bin/gh', '/usr/bin/gh'],
+};
+
+/**
+ * The binary to run for `tool`: `bin` when it is on PATH, else the first installed copy. `run` is only called again
+ * when `bin` was not found (ENOENT); every other error is the tool's own and is thrown as it is.
+ */
+function withTool(tool: 'git' | 'gh', bin: string, run: (bin: string) => string): { out: string; bin: string } {
+  try {
+    return { out: run(bin), bin };
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+  }
+  const found = INSTALLED[tool].find((c) => existsSync(c));
+  if (!found) {
+    const what = tool === 'git' ? 'git' : 'the GitHub CLI (gh)';
+    throw new ToolNotFound(`${tool} not found on PATH. Install ${what} or set ${tool === 'git' ? 'MODULEGRAPH_GIT' : 'MODULEGRAPH_GH'} to its full path.`);
+  }
+  return { out: run(found), bin: found };
+}
+class ToolNotFound extends Error {}
+
+/** Runs git in `repo` (see INSTALLED for where it looks when git isn't on PATH). */
 export function git(repo: string, args: string[]): string {
   const run = (bin: string) => execFileSync(bin, args, { cwd: repo, encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
   try {
-    return run(gitBin);
+    const r = withTool('git', gitBin, run);
+    gitBin = r.bin;
+    return r.out;
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
-      // Say what git said: "Command failed" alone doesn't tell a reviewer why a refresh failed.
-      const stderr = String((err as { stderr?: string }).stderr ?? '').trim();
-      throw new Error(`git ${args.join(' ')} failed${stderr ? `: ${stderr.split('\n').slice(0, 3).join(' ')}` : ` (exit ${(err as { status?: number }).status ?? '?'})`}`);
-    }
-    const candidates = [
-      'C:\\Program Files\\Git\\cmd\\git.exe',
-      'C:\\Program Files\\Git\\mingw64\\bin\\git.exe',
-      'C:\\Program Files (x86)\\Git\\cmd\\git.exe',
-      '/usr/bin/git',
-      '/usr/local/bin/git',
-      '/opt/homebrew/bin/git',
-    ];
-    const found = candidates.find((c) => existsSync(c));
-    if (!found) throw new Error('git not found on PATH. Install git or set MODULEGRAPH_GIT to its full path.');
-    gitBin = found;
-    return run(gitBin);
+    if (err instanceof ToolNotFound) throw err;
+    // Say what git said: "Command failed" alone doesn't tell a reviewer why a refresh failed.
+    const stderr = String((err as { stderr?: string }).stderr ?? '').trim();
+    throw new Error(`git ${args.join(' ')} failed${stderr ? `: ${stderr.split('\n').slice(0, 3).join(' ')}` : ` (exit ${(err as { status?: number }).status ?? '?'})`}`);
   }
 }
 
@@ -204,9 +227,11 @@ export interface PullRequest {
 
 /** Fetches a GitHub PR's head into a local ref via `gh` + git, returns its metadata. */
 export function fetchPullRequest(repo: string, number: number): PullRequest & { headRef: string; baseRef: string } {
-  const pr = JSON.parse(
-    execFileSync('gh', ['pr', 'view', String(number), '--json', 'number,title,body,baseRefName,headRefName'], { cwd: repo, encoding: 'utf8' }),
-  ) as PullRequest;
+  const view = withTool('gh', ghBin, (bin) =>
+    execFileSync(bin, ['pr', 'view', String(number), '--json', 'number,title,body,baseRefName,headRefName'], { cwd: repo, encoding: 'utf8' }),
+  );
+  ghBin = view.bin;
+  const pr = JSON.parse(view.out) as PullRequest;
   const headRef = `refs/modulegraph/pr-${number}`;
   git(repo, ['fetch', 'origin', `pull/${number}/head:${headRef}`, '--force']);
   git(repo, ['fetch', 'origin', pr.baseRefName]);

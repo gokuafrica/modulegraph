@@ -32,8 +32,9 @@ function userReviews(): Plugin {
   };
 }
 
-// File events are unreliable in synced folders (OneDrive, Dropbox): poll there, or when MODULEGRAPH_POLL is set.
-const poll = !!process.env.MODULEGRAPH_POLL || /onedrive|dropbox/i.test(__dirname);
+// File events are unreliable in synced folders: poll there, or when MODULEGRAPH_POLL is set. On macOS the sync apps
+// (OneDrive, Dropbox, Google Drive) live in ~/Library/CloudStorage/ and iCloud Drive in ~/Library/Mobile Documents/.
+const poll = !!process.env.MODULEGRAPH_POLL || /onedrive|dropbox|google ?drive|[\\/]CloudStorage[\\/]|[\\/]Mobile Documents[\\/]/i.test(__dirname);
 
 export default defineConfig({
   plugins: [react(), userReviews()],

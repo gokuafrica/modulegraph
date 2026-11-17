@@ -13,7 +13,9 @@ let options = {};
 let esm = true;
 
 export function initialize(data) {
-  root = data.root.replace(/\\/g, '/').toLowerCase();
+  // Lower case: Windows and macOS file systems usually ignore case. The trailing / keeps a sibling folder whose name
+  // only starts with the service's (sample-service-2) out.
+  root = `${data.root.replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase()}/`;
   esm = data.esm;
   options = {
     ...data.options,
