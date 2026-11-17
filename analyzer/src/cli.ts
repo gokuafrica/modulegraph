@@ -48,8 +48,9 @@ options
                            kafkajs, bullmq, node-cron, typeorm, prisma, mongoose, axios, fetch)
   --title <text>           label shown in the UI
   --name <id>              output id (default derived from mode)
-  --out <file>             output path (default: ~/.modulegraph/reviews/<id>.json, also updates index.json;
-                           the demo services write to ui/public/graphs/)
+  --out <file>             output path (default: ~/.modulegraph/reviews/<id>.json, also updates index.json)
+  --demo                   write to the shipped demo graphs (ui/public/graphs/, kept in git) instead: only for
+                           a demo service inside the modulegraph folder (npm run demo uses it)
   --check                  exit 1 when the change introduces new error-level findings (CI gate), or when the
                            analysis is incomplete (packages not installed, changed code in no known flow)
   --allow-incomplete       with --check: don't fail only because the analysis is incomplete
@@ -85,6 +86,7 @@ const { values: args } = parseArgs({
     title: { type: 'string' },
     name: { type: 'string' },
     out: { type: 'string' },
+    demo: { type: 'boolean' },
     check: { type: 'boolean' },
     'allow-incomplete': { type: 'boolean' },
     'no-examples': { type: 'boolean' },
@@ -261,7 +263,8 @@ let diff = revisions.diff;
 let headProject: RevisionAnalysis = open(headSha ? filesOf(headSha) : undefined);
 let baseProject: RevisionAnalysis | undefined = revisions.baseSha ? open(filesOf(revisions.baseSha)) : undefined;
 
-const graphsDir = graphsDirFor(projectDir);
+const graphsDir = graphsDirFor(projectDir, !!args.demo);
+if (args.demo && !insideApp(projectDir)) console.log('--demo: only demo services inside the modulegraph folder write the shipped graphs; this one goes to your reviews.');
 const id = args.name ?? slug(source.mode === 'snapshot' ? `snapshot-${config.service}` : `${source.mode}-${source.head}`);
 const outFile = args.out ? fromUser(args.out) : join(graphsDir, `${id}.json`);
 

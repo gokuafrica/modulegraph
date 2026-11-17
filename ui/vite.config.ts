@@ -17,9 +17,11 @@ function userReviews(): Plugin {
         if (!name) return next();
         const read = (dir: string) => (existsSync(join(dir, name)) ? readFileSync(join(dir, name), 'utf8') : undefined);
         if (name === 'index.json') {
-          const lists = [read(reviewsDir), read(join(__dirname, 'public/graphs'))].map((t) => (t ? (JSON.parse(t) as unknown[]) : []));
+          const lists = [read(reviewsDir), read(join(__dirname, 'public/graphs'))].map((t) => (t ? (JSON.parse(t) as { id: string }[]) : []));
+          // A demo explored live (npm run live) has a copy in your reviews too: list it once, yours first.
+          const entries = lists.flat().filter((e, i, all) => all.findIndex((x) => x.id === e.id) === i);
           res.setHeader('content-type', 'application/json');
-          return res.end(JSON.stringify(lists.flat()));
+          return res.end(JSON.stringify(entries));
         }
         const own = name.includes('..') ? undefined : read(reviewsDir);
         if (own === undefined) return next();

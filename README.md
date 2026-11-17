@@ -87,7 +87,7 @@ through git, the review server accepts connections from this machine only, and o
 ```bash
 npm run setup       # once
 npm run live        # the birth-info demo, served live: open http://127.0.0.1:5174
-npm run demo        # regenerate the saved demo graphs from this repo's git history, then start the UI dev server
+npm run demo        # regenerate the shipped demo graphs (ui/public/graphs) from this repo's git history, then start the UI dev server
 ```
 
 `npm run dev` starts only the UI dev server (http://localhost:5173), for working on the UI.
@@ -174,8 +174,8 @@ npm run analyze -- --project sample-service --config $C/modulegraph.config.json 
 npm run analyze -- --project sample-service --config $C/modulegraph.config.json --head my-branch --examples $C/scenario.ts
 ```
 
-Each run writes `~/.modulegraph/reviews/<id>.json` (the demo services write to `ui/public/graphs/`); `modulegraph
-open <id>` shows it. It also writes `<id>.brief.md`, the **review facts** as plain Markdown:
+Each run writes `~/.modulegraph/reviews/<id>.json`, also for the demo services and `npm run live` (only `npm run demo`
+rewrites the shipped graphs in `ui/public/graphs/`, which are kept in git); `modulegraph open <id>` shows it. It also writes `<id>.brief.md`, the **review facts** as plain Markdown:
 - the verdict: blocking, not blocked, or **incomplete** (what the analysis could not see, and what to do about it);
 - access-control changes: guards, middleware or auth metadata added, removed or edited, with every entry point
   behind them;

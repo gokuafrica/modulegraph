@@ -28,9 +28,12 @@ export function insideApp(path: string): boolean {
   return !rel.startsWith('..') && !isAbsolute(rel);
 }
 
-/** Demo services write next to the shipped demo graphs; any other service writes to your modulegraph home. */
-export function graphsDirFor(projectDir: string): string {
-  return insideApp(projectDir) ? demoGraphsDir : userReviewsDir;
+/**
+ * Reviews go to your modulegraph home. Only `npm run demo` (cli.ts --demo) writes the shipped demo graphs, which are
+ * kept in git: an ad-hoc review of a demo service, or a live demo saving what was explored, must not change them.
+ */
+export function graphsDirFor(projectDir: string, demo = false): string {
+  return demo && insideApp(projectDir) ? demoGraphsDir : userReviewsDir;
 }
 
 /** Profile folders to search, yours first. */

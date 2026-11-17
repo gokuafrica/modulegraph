@@ -12,7 +12,8 @@ const profile = resolve(here, '../../configs/identity-profile-service');
 const config = resolve(profile, 'modulegraph.config.json');
 const scenario = resolve(profile, 'scenario.ts');
 
-const analyze = (args: string[]) => execFileSync(process.execPath, ['--import', 'tsx', cli, ...args], { stdio: 'inherit' });
+// --demo: these are the shipped graphs in ui/public/graphs (kept in git). Every other run writes to ~/.modulegraph/reviews.
+const analyze = (args: string[]) => execFileSync(process.execPath, ['--import', 'tsx', cli, ...args, '--demo'], { stdio: 'inherit' });
 const run = (args: string[]) => analyze(['--project', identity, '--config', config, ...args]);
 
 run(['--snapshot', '--examples', scenario, '--name', 'snapshot-main', '--title', 'Snapshot: identity-profile-service (main)']);
@@ -51,3 +52,5 @@ analyze(['--project', orders, '--head', 'feature/order-fraud-hold', '--base', 'm
 const birth = resolve(here, '../../sample-birth-service');
 analyze(['--project', birth, '--head', 'feature/enforce-document-birth-info', '--base', 'main', '--name', 'demo-enforce-document-birth-info', '--title', 'BirthInfo (NestJS): KYC birth info must match the identity document']);
 analyze(['--project', birth, '--head', 'feature/enforce-document-birth-info', '--base', 'main', '--lazy', '--name', 'live-enforce-document-birth-info', '--title', 'Live (lazy, NestJS): KYC birth info must match the identity document']);
+// The next change on top of that one, as if it had shipped: a new area (residency). `npm run live -- residency` serves it.
+analyze(['--project', birth, '--head', 'feature/residency-declaration', '--base', 'feature/enforce-document-birth-info', '--lazy', '--name', 'live-residency-declaration', '--title', 'Live (lazy, NestJS): users declare their home address during KYC']);

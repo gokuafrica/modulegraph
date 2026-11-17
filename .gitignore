@@ -5,8 +5,8 @@ dist/
 .playwright-mcp/
 .worktrees/
 
-# Review graphs. Reviews of a project inside this folder are written next to the shipped demo graphs; only the
-# demos (npm run demo / npm run live) are kept in git. Anything else there is a local review.
+# Shipped demo graphs: only `npm run demo` writes them (reviews and `npm run live` go to ~/.modulegraph/reviews).
+# Anything else that lands here is a local review.
 ui/public/graphs/*
 !ui/public/graphs/index.json
 !ui/public/graphs/demo-*

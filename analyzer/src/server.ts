@@ -197,8 +197,10 @@ function sendFile(res: ServerResponse, pathname: string, opts: StaticOptions): v
   if (rel.startsWith('graphs/')) {
     const name = rel.slice('graphs/'.length);
     if (name === 'index.json') {
-      const lists = opts.graphsDirs.map((d) => join(d, 'index.json')).filter((f) => existsSync(f)).map((f) => JSON.parse(readFileSync(f, 'utf8')) as unknown[]);
-      return void res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' }).end(JSON.stringify(lists.flat()));
+      const lists = opts.graphsDirs.map((d) => join(d, 'index.json')).filter((f) => existsSync(f)).map((f) => JSON.parse(readFileSync(f, 'utf8')) as { id: string }[]);
+      // A demo explored live has a copy in your reviews too: list it once, as the file served for it (the first folder's).
+      const entries = lists.flat().filter((e, i, all) => all.findIndex((x) => x.id === e.id) === i);
+      return void res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' }).end(JSON.stringify(entries));
     }
     const file = opts.graphsDirs.map((d) => resolve(d, name)).find((f, i) => inside(opts.graphsDirs[i], f) && existsSync(f) && statSync(f).isFile());
     if (!file) return notFound('not found');
