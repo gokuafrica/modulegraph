@@ -139,13 +139,14 @@ export function serve(session: LazySession, opts: ServeOptions): void {
     })
     .listen(port, HOST, () => {
       const actual = (server.address() as { port: number }).port;
-      registerServer({ port: actual, ids: [graphId], kind: 'review', repo: opts.repo, idleMinutes });
       const ui = !!opts.uiDir && existsSync(join(opts.uiDir, 'index.html'));
       const link = ui ? `http://${HOST}:${actual}/#g=${graphId}` : `http://localhost:5173/#g=${graphId}`;
       console.log(`\nmodulegraph is serving the review of ${graphId} on port ${actual}; only this machine can connect.`);
       console.log(`It stops ${stopsWhen(idleMinutes)}, on Ctrl+C, or with \`modulegraph stop ${graphId}\` (\`modulegraph done ${graphId}\` also deletes the review).`);
       console.log(`open the review: ${link}`);
       if (!ui) console.log('(the UI is not built: run `npm run setup` in the modulegraph folder, or start it with `npm run dev`)');
+      // Registered after the startup lines, so whoever finds the registry entry can also find what it printed.
+      registerServer({ port: actual, ids: [graphId], kind: 'review', repo: opts.repo, idleMinutes });
       if (opts.open) openBrowser(link);
     });
 }
@@ -180,10 +181,10 @@ export function serveStatic(opts: StaticOptions & { port: number; open?: string 
     })
     .listen(opts.port, HOST, () => {
       const actual = (server.address() as { port: number }).port;
-      registerServer({ port: actual, ids: [], kind: 'open', idleMinutes });
       const link = `http://${HOST}:${actual}/${opts.open ? `#g=${opts.open}` : ''}`;
       console.log(`modulegraph is showing saved reviews on ${link} (only this machine can connect)`);
       console.log(`It stops ${stopsWhen(idleMinutes)}, on Ctrl+C, or with \`modulegraph stop\`.`);
+      registerServer({ port: actual, ids: [], kind: 'open', idleMinutes });
       openBrowser(link);
     });
 }

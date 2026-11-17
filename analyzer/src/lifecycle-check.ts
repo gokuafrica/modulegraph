@@ -73,7 +73,8 @@ function serveReview(id: string, extra: string[], viaLauncher = false): { child:
   child.stderr!.on('data', (d) => (text += d));
   return { child, out: () => text };
 }
-const exited = (c: ChildProcess) => new Promise<number | null>((r) => (c.exitCode !== null ? r(c.exitCode) : c.on('exit', (code) => r(code))));
+// 'close', not 'exit': output can still be arriving through the pipes after the process exits.
+const exited = (c: ChildProcess) => new Promise<number | null>((r) => (c.exitCode !== null && c.stdout!.closed ? r(c.exitCode) : c.on('close', (code) => r(code))));
 
 try {
   console.log('idle shutdown');
@@ -81,7 +82,8 @@ try {
     const s = serveReview('idle-test', ['--idle', '0.04']);
     const up = await until(() => !!serverOf('idle-test'), 60_000);
     expect('the server registers itself while it runs', up, s.out());
-    expect('its startup line says when it stops', /stops after 2 s with no requests/.test(s.out()), s.out());
+    // The registry file can appear before the startup line has come through the pipe: wait for the line itself.
+    expect('its startup line says when it stops', await until(() => /stops after 2 s with no requests/.test(s.out()), 10_000), s.out());
     const code = await Promise.race([exited(s.child), sleep(20_000).then(() => 'timeout' as const)]);
     expect('with no requests it stops by itself, exit 0', code === 0, `exit ${code}\n${s.out()}`);
     expect('and says why', /stopped: no requests for 2 s/.test(s.out()), s.out());
