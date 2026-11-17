@@ -30,6 +30,5 @@ export class RecordStatusBackfillService implements OnApplicationBootstrap {
       migrated += records.length;
     }
     this.logger.info('record status backfill finished', { migrated });
-    process.exit(0);
   }
 }

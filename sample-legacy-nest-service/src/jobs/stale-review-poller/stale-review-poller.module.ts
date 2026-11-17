@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AcmeLoggerModule } from '@acme/nestjs-logging';
 import { configuration } from '../../config/configuration';
@@ -11,18 +11,23 @@ import { EscalationsModule } from '../../escalations/escalations.module';
 import { NotificationsModule } from '../../notifications/notifications.module';
 import { StaleReviewPollerService } from './services/stale-review-poller.service';
 
-@Module({
-  imports: [
-    ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
-    AcmeLoggerModule.forRoot({ service: 'user-records-service/stale-review-poller' }),
-    DatabaseModule,
-    MessagingModule,
-    DateModule,
-    RequestContextModule,
-    AssignmentsModule,
-    EscalationsModule,
-    NotificationsModule,
-  ],
-  providers: [StaleReviewPollerService],
-})
-export class StaleReviewPollerModule {}
+@Module({})
+export class StaleReviewPollerModule {
+  static register(): DynamicModule {
+    return {
+      module: StaleReviewPollerModule,
+      imports: [
+        ConfigModule.forRoot({ isGlobal: true, load: [configuration] }),
+        AcmeLoggerModule.forRoot({ service: 'user-records-service/stale-review-poller' }),
+        DatabaseModule,
+        MessagingModule,
+        DateModule,
+        RequestContextModule,
+        AssignmentsModule,
+        EscalationsModule,
+        NotificationsModule,
+      ],
+      providers: [StaleReviewPollerService],
+    };
+  }
+}

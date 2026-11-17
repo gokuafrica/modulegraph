@@ -29,7 +29,7 @@ export class ManualReviewController {
   @ApiResponse({ status: 200, type: ManualReviewResultDto, description: 'The record was approved' })
   @ApiResponse({ status: 404, description: 'No user record with this guid' })
   approveUserRecord(@Param('guid') guid: string, @Body() decision: ApproveDecisionDto, @AgentGuid() agentGuid: string): Promise<ManualReviewResultDto> {
-    return this.manualReviewService.approve(agentGuid, guid, decision);
+    return this.manualReviewService.approveUserRecord(agentGuid, guid, decision);
   }
 
   @Put('update/:guid')
@@ -47,6 +47,6 @@ export class ManualReviewController {
   @ApiOperation({ summary: 'Reject a user record', description: 'Rejects a user record; the reason is shown to the user.' })
   @ApiResponse({ status: 200, type: ManualReviewResultDto })
   rejectUserRecord(@Param('guid') guid: string, @Body() dto: RejectDecisionDto, @AgentGuid() agentGuid: string): Promise<ManualReviewResultDto> {
-    return this.manualReviewService.reject(agentGuid, guid, dto);
+    return this.manualReviewService.rejectUserRecord(agentGuid, guid, dto);
   }
 }

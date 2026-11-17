@@ -1,6 +1,6 @@
 {
   "name": "@acme/nestjs-kafkajs",
-  "version": "2.3.1",
+  "version": "3.0.0",
   "description": "Acme's NestJS wrapper around kafkajs: Avro producer, consumer manager, base consumer handler.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

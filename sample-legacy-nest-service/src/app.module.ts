@@ -22,6 +22,7 @@ import { ReportsModule } from './reports/reports.module';
 import { TagsModule } from './tags/tags.module';
 import { DocumentsModule } from './documents/documents.module';
 import { ConsumersModule } from './consumers/consumers.module';
+import { DuplicatesModule } from './duplicates/duplicates.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { ConsumersModule } from './consumers/consumers.module';
     ReportsModule,
     TagsModule,
     DocumentsModule,
+    DuplicatesModule,
     ConsumersModule,
   ],
 })

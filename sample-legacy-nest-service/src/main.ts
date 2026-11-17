@@ -1,31 +1,44 @@
-import { NestFactory } from '@nestjs/core';
-import { Type, ValidationPipe } from '@nestjs/common';
+import { NestFactory, NestApplication } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as minimist from 'minimist';
 import { AcmeLogger } from '@acme/nestjs-logging';
 import { AppModule } from './app.module';
+import { ConsumerHandlerMap } from './consumers/consumer-handler.map';
+import { ConsumersManagerService } from './consumers/services/consumers-manager.service';
 import { StaleReviewPollerModule } from './jobs/stale-review-poller/stale-review-poller.module';
 import { RecordStatusBackfillModule } from './jobs/record-status-backfill/record-status-backfill.module';
-
-const JOBS: Record<string, Type<unknown>> = {
-  'stale-review-poller': StaleReviewPollerModule,
-  'record-status-backfill': RecordStatusBackfillModule,
-};
+import { DuplicateScanModule } from './jobs/duplicate-scan/duplicate-scan.module';
+import { AuditLogRetentionModule } from './jobs/audit-log-retention/audit-log-retention.module';
+import { ManualDataReencryptModule } from './jobs/manual-data-reencrypt/manual-data-reencrypt.module';
+import { EscalationDigestModule } from './jobs/escalation-digest/escalation-digest.module';
+import { TagCleanupModule } from './jobs/tag-cleanup/tag-cleanup.module';
 
 async function bootstrap() {
-  const argv = minimist(process.argv.slice(2));
-  const jobName = argv._[0];
+  const args = minimist(process.argv.slice(2));
+  const command = args['_'][0];
 
-  if (jobName) {
-    const jobModule = JOBS[jobName];
-    if (!jobModule) {
-      throw new Error(`Unknown job "${jobName}". Known jobs: ${Object.keys(JOBS).join(', ')}`);
-    }
-    const app = await NestFactory.createApplicationContext(jobModule, { bufferLogs: true });
-    app.useLogger(app.get(AcmeLogger));
+  if (['stale-review-poller', 'record-status-backfill', 'duplicate-scan', 'audit-log-retention', 'manual-data-reencrypt', 'escalation-digest', 'tag-cleanup'].includes(command)) {
+    const modules = {
+      'stale-review-poller': StaleReviewPollerModule,
+      'record-status-backfill': RecordStatusBackfillModule,
+      'duplicate-scan': DuplicateScanModule,
+      'audit-log-retention': AuditLogRetentionModule,
+      'manual-data-reencrypt': ManualDataReencryptModule,
+      'escalation-digest': EscalationDigestModule,
+      'tag-cleanup': TagCleanupModule,
+    };
+    const app: NestApplication = await NestFactory.create(modules[command].register());
     app.enableShutdownHooks();
+    try {
+      await app.init();
+    } finally {
+      await app.close();
+    }
     return;
   }
+
+  const consumers = command?.split(',').map((arg) => ConsumerHandlerMap.get(arg));
 
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(AcmeLogger));
@@ -42,6 +55,7 @@ async function bootstrap() {
   SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swaggerConfig));
 
   await app.listen(process.env.PORT ?? 3000);
+  await app.get(ConsumersManagerService).start(consumers?.filter(Boolean) ?? []);
 }
 
 bootstrap();

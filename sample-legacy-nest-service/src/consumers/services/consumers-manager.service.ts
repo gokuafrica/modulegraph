@@ -1,49 +1,50 @@
-import { Injectable, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
+import { Injectable, OnApplicationShutdown, Type } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ModuleRef } from '@nestjs/core';
-import { KafkaJsService } from '@acme/nestjs-kafkajs';
+import { AvroKafkaMessage, KafkaJsService } from '@acme/nestjs-kafkajs';
 import { AcmeLogger } from '@acme/nestjs-logging';
 import { ConsumerConfig } from '../../config/configuration';
 import { MetricsService } from '../../metrics/services/metrics.service';
-import { ConsumerHandlerMap } from '../consumer-handler.map';
+import type { BaseConsumerHandler } from '../base/base-consumer.handler';
 
 @Injectable()
-export class ConsumersManagerService implements OnApplicationBootstrap, OnApplicationShutdown {
+export class ConsumersManagerService implements OnApplicationShutdown {
+  private readonly handlers = new Map<Function, BaseConsumerHandler<unknown, unknown>>();
+
   constructor(
     private readonly kafkaJsService: KafkaJsService,
-    private readonly moduleRef: ModuleRef,
     private readonly configService: ConfigService,
     private readonly metricsService: MetricsService,
     private readonly logger: AcmeLogger,
   ) {}
 
-  async onApplicationBootstrap() {
+  addHandler(handler: BaseConsumerHandler<any, any>) {
+    this.handlers.set(handler.constructor, handler);
+  }
+
+  /** Starts the consumers of these handler classes (main.ts picks them from the command line). */
+  async start(handlerTypes: Type<BaseConsumerHandler<any, any>>[]) {
     const consumers = this.configService.get<ConsumerConfig[]>('kafka.consumers') ?? [];
-    for (const consumer of consumers.filter((c) => c.enabled)) {
-      await this.startConsumer(consumer);
+    for (const handlerType of handlerTypes) {
+      const consumer = consumers.find((c) => c.handler === handlerType.name);
+      const handler = this.handlers.get(handlerType);
+      if (!consumer || !handler) {
+        this.logger.warn(`No consumer configured for ${handlerType.name}`);
+        continue;
+      }
+      await this.kafkaJsService.consumeBatch(consumer.name, consumer.topic, consumer.groupId, async (messages: AvroKafkaMessage<unknown>[]) => {
+        try {
+          await handler.handleMessages(messages);
+          this.metricsService.recordKafkaMessage(consumer.name, 'ok');
+        } catch (error) {
+          this.metricsService.recordKafkaMessage(consumer.name, 'failed');
+          this.logger.error(`Consumer ${consumer.name} failed`, error);
+          throw error;
+        }
+      });
     }
   }
 
   async onApplicationShutdown() {
     await this.kafkaJsService.disconnect();
-  }
-
-  private async startConsumer(consumer: ConsumerConfig) {
-    const handlerType = ConsumerHandlerMap.get(consumer.name);
-    if (!handlerType) {
-      this.logger.warn(`No handler registered for consumer ${consumer.name}`);
-      return;
-    }
-    const handler = this.moduleRef.get(handlerType, { strict: false });
-    await this.kafkaJsService.consume(consumer.name, consumer.topic, consumer.groupId, async (message) => {
-      try {
-        await handler.handle(message);
-        this.metricsService.recordKafkaMessage(consumer.name, 'ok');
-      } catch (error) {
-        this.metricsService.recordKafkaMessage(consumer.name, 'failed');
-        this.logger.error(`Consumer ${consumer.name} failed`, error);
-        throw error;
-      }
-    });
   }
 }

@@ -29,7 +29,7 @@ export class EscalationsService {
       throw new NotFoundException(`Escalation ${escalationId} not found`);
     }
     if (dto.outcome === 'APPROVE') {
-      await this.manualReviewService.approve(seniorAgentGuid, escalation.recordGuid, dto.decision);
+      await this.manualReviewService.approveUserRecord(seniorAgentGuid, escalation.recordGuid, dto.decision);
     }
     await this.escalationRepository.update({ id: escalationId }, { state: 'RESOLVED', resolvedBy: seniorAgentGuid });
     return { ...escalation, state: 'RESOLVED', resolvedBy: seniorAgentGuid };

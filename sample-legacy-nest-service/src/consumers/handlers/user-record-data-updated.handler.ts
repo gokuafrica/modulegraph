@@ -1,16 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import { BaseConsumerHandler, KafkaMessage } from '@acme/nestjs-kafkajs';
+import { AvroKafkaMessage } from '@acme/nestjs-kafkajs';
 import { ManualReviewService } from '../../manual-review/services/manual-review.service';
+import { BaseConsumerHandler } from '../base/base-consumer.handler';
+import { ConsumersManagerService } from '../services/consumers-manager.service';
 import { UserRecordDataUpdatedMessage } from '../dto/consumer-messages.dto';
 
 @Injectable()
-export class UserRecordDataUpdatedHandler extends BaseConsumerHandler<UserRecordDataUpdatedMessage, void> {
-  constructor(private readonly manualReviewService: ManualReviewService) {
-    super();
+export class UserRecordDataUpdatedHandler extends BaseConsumerHandler<UserRecordDataUpdatedMessage> {
+  constructor(
+    consumersManager: ConsumersManagerService,
+    private readonly manualReviewService: ManualReviewService,
+  ) {
+    super(consumersManager);
   }
 
-  async handle(message: KafkaMessage<UserRecordDataUpdatedMessage>): Promise<void> {
-    const { guid, agentGuid, data, reason } = message.value;
-    await this.manualReviewService.updateUserRecordData(agentGuid, guid, { data, reason: reason ?? 'updated by review-tools' });
+  async handleMessages(messages: AvroKafkaMessage<UserRecordDataUpdatedMessage>[]): Promise<void> {
+    for (const { value } of messages) {
+      await this.manualReviewService.updateUserRecordData(value.agentGuid, value.guid, { data: value.data, reason: value.reason ?? 'updated by review-tools' });
+    }
   }
 }

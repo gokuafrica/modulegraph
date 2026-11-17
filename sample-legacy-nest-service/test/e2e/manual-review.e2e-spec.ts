@@ -11,7 +11,7 @@ const approveDecision = JSON.parse(readFileSync(join(__dirname, '../fixtures/app
 
 describe('Manual review (e2e)', () => {
   let app: INestApplication;
-  const manualReviewService = { approve: jest.fn(async (agentGuid: string, guid: string) => ({ guid, status: 'APPROVED', reviewedBy: agentGuid, recordsUpdated: 2 })) };
+  const manualReviewService = { approveUserRecord: jest.fn(async (agentGuid: string, guid: string) => ({ guid, status: 'APPROVED', reviewedBy: agentGuid, recordsUpdated: 2 })) };
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({

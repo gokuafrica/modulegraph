@@ -1,7 +1,7 @@
 {
   "name": "modulegraph",
   "version": "0.4.0",
-  "description": "Module-level code review: turns a PR, branch or uncommitted change into an interactive graph of entry point → modules → exit, plus a brief for agents.",
+  "description": "Module-level code review: turns a PR, branch or uncommitted change into an interactive graph of entry point \u2192 modules \u2192 exit, plus a brief for agents.",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -15,7 +15,6 @@
     "sample-service",
     "sample-nest-service",
     "sample-birth-service",
-    "sample-legacy-nest-service",
     "fixtures/frameworks",
     "fixtures/frameworks/nest",
     "analyzer",

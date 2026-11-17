@@ -4,5 +4,5 @@ import { TagsController } from './controllers/tags.controller';
 import { RecordTag } from './entity/record-tag.entity';
 import { TagsService } from './services/tags.service';
 
-@Module({ imports: [TypeOrmModule.forFeature([RecordTag], 'admin')], controllers: [TagsController], providers: [TagsService] })
+@Module({ imports: [TypeOrmModule.forFeature([RecordTag], 'admin')], controllers: [TagsController], providers: [TagsService], exports: [TagsService] })
 export class TagsModule {}
