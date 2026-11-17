@@ -4,3 +4,23 @@ dist/
 *.log
 .playwright-mcp/
 .worktrees/
+
+# Review graphs. Reviews of a project inside this folder are written next to the shipped demo graphs; only the
+# demos (npm run demo / npm run live) are kept in git. Anything else there is a local review.
+ui/public/graphs/*
+!ui/public/graphs/index.json
+!ui/public/graphs/demo-*
+!ui/public/graphs/live-*
+!ui/public/graphs/snapshot-main.json
+!ui/public/graphs/snapshot-main.brief.md
+
+# Local settings, secrets and editor/OS files
+.env
+.env.*
+*.tsbuildinfo
+coverage/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
