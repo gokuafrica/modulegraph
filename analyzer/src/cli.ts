@@ -1,6 +1,6 @@
 #!/usr/bin/env -S npx tsx
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -110,12 +110,15 @@ const started = Date.now();
 // `npm run analyze` runs in analyzer/; INIT_CWD is where the command was typed. Relative paths mean that folder.
 const userCwd = process.env.INIT_CWD ?? process.cwd();
 const fromUser = (p: string) => resolve(userCwd, p);
-const projectDir = fromUser(args.project!).replace(/\\/g, '/');
+// The real path: git prints the repo root in long form, so a Windows short name (C:/Users/ABCDEF~1/…) or a
+// symlinked folder would otherwise look like it lies outside the repo.
+const realFolder = (p: string) => (existsSync(p) ? realpathSync.native(p) : p).replace(/\\/g, '/');
+const projectDir = realFolder(fromUser(args.project!));
 if (!existsSync(projectDir)) {
   console.error(`project folder not found: ${projectDir} (paths are relative to ${userCwd})`);
   process.exit(2);
 }
-const repo = (args.repo ? fromUser(args.repo) : repoRootOf(projectDir)).replace(/\\/g, '/');
+const repo = args.repo ? realFolder(fromUser(args.repo)) : repoRootOf(projectDir).replace(/\\/g, '/');
 const projectRel = relative(repo, projectDir).replace(/\\/g, '/') || '.';
 // So `modulegraph clean` can find this repo's leftovers (PR refs, scenario temp folders) after its reviews are gone.
 recordRepo(repo);
