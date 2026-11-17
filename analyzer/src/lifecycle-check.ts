@@ -124,6 +124,28 @@ try {
     expect('killing the launcher hard stops the server too (even with --idle 0)', await until(() => !alive(pid), 15_000), s.out());
   }
 
+  console.log('\na scenario run leaves nothing in the reviewed repo');
+  {
+    // The scenario lives outside the repo, like a profile's scenario.ts; it runs against feature/save in a worktree.
+    const scenario = join(scratch, 'scenario.ts');
+    writeFileSync(scenario, [
+      "import { join } from 'node:path';",
+      "import { pathToFileURL } from 'node:url';",
+      'export default async (root: string, { step }: { step: (label: string, fn: () => unknown) => Promise<unknown> }) => {',
+      "  const { Store } = await import(pathToFileURL(join(root, 'src/store.ts')).href);",
+      "  const { Service } = await import(pathToFileURL(join(root, 'src/service.ts')).href);",
+      "  await step('handle a name', () => new Service(new Store()).handle(' ada '));",
+      '};',
+      '',
+    ].join('\n'));
+    const r = spawnSync(process.execPath, [...tsx, join(here, 'cli.ts'), '--project', repo, '--head', 'feature/save', '--base', 'main', '--name', 'examples-test', '--examples', scenario], { cwd: resolve(here, '..'), env, encoding: 'utf8' });
+    const out = `${r.stdout}${r.stderr}`;
+    expect('the scenario ran in a worktree of the branch and recorded calls', r.status === 0 && /examples: [1-9]\d* operations, 1 cases/.test(out), out);
+    expect('and left no .modulegraph-tmp folder, empty or not', !existsSync(join(repo, '.modulegraph-tmp')), readdirSync(repo).join(', '));
+    expect('and no git worktree', g('worktree', 'list', '--porcelain').split('\n').filter((l) => l.startsWith('worktree ')).length === 1, g('worktree', 'list'));
+    end('done', 'examples-test');
+  }
+
   console.log('\nclean and done remove modulegraph leftovers, and nothing else');
   {
     const day = 86_400_000;

@@ -1,6 +1,6 @@
 #!/usr/bin/env -S npx tsx
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -509,5 +509,12 @@ function recordExamples(scenarioRel: string, targets: OperationTarget[]): Record
   } finally {
     if (worktree) git(repo, ['worktree', 'remove', '--force', worktree]);
     rmSync(tmp, { recursive: true, force: true });
+    // Leave no empty .modulegraph-tmp/ in the reviewed repo. rmdir only removes an empty folder: another run's
+    // <pid> folder (npm run live records several at once) keeps it.
+    try {
+      rmdirSync(dirname(tmp));
+    } catch {
+      // not empty, or already gone
+    }
   }
 }
