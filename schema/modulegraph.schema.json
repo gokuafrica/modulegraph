@@ -253,10 +253,18 @@
           "description": "Where it is applied: app-wide, on the controller class, or on the handler method."
         },
         "file": {
-          "type": "string"
+          "type": "string",
+          "description": "Where it is applied (the decorator, the `useGlobalGuards` call, the provider, the middleware chain)."
         },
         "line": {
           "type": "number"
+        },
+        "functions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The service's own functions it runs (`AuthGuard.canActivate` and helpers it calls), when the flow was analyzed."
         }
       },
       "required": [

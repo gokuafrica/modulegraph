@@ -237,6 +237,42 @@ export function changeFindings(g: Graphish, diff: RawDiff, config: Config, inten
     }
   }
 
+  // Access control: guards, middleware and auth metadata decide who may call an entry point; interceptors, pipes and
+  // filters run around it. One finding per change, listing every entry point it applies to.
+  const groups = new Map<string, { how: 'added' | 'removed' | 'changed'; item: string; entries: string[]; functions: Set<string> }>();
+  for (const e of Object.values(g.entryPoints)) {
+    const d = e.pipelineDelta;
+    if (!d || e.change === 'added' || e.change === 'removed') continue;
+    for (const [how, items] of [['removed', d.removed], ['added', d.added], ['changed', d.changed]] as const) {
+      for (const item of items) {
+        const key = `${how}|${item}`;
+        const slot = groups.get(key) ?? { how, item, entries: [], functions: new Set<string>() };
+        slot.entries.push(e.id);
+        for (const fn of e.pipeline?.find((p) => `${p.kind} ${p.name} (${p.scope})` === item)?.functions ?? []) slot.functions.add(fn);
+        groups.set(key, slot);
+      }
+    }
+  }
+  for (const { how, item, entries, functions } of groups.values()) {
+    const kind = item.split(' ')[0];
+    const access = kind === 'guard' || kind === 'middleware' || kind === 'metadata';
+    // Removing or editing a guard can open an endpoint; so can adding or changing auth metadata (`@Public()`).
+    const severity = access && (how !== 'added' || kind === 'metadata') ? 'error' : 'warning';
+    const labels = entries.map((id) => g.entryPoints[id].label);
+    const what = how === 'changed' ? `changed (${[...functions].slice(0, 3).join(', ') || 'its code'})` : how;
+    findings.push({
+      rule: access ? 'access-control-changed' : 'request-pipeline-changed',
+      severity,
+      message: `${item} ${what}${how === 'removed' ? ' from' : how === 'added' ? ' on' : ', in front of'} ${entries.length} entry point${entries.length > 1 ? 's' : ''}: ${labels.slice(0, 4).join(', ')}${labels.length > 4 ? ', …' : ''}`,
+      subject: { type: 'entry', id: entries[0] },
+      related: entries.map((id) => ({ type: 'entry' as const, id })),
+      isNew: true,
+      hint: access
+        ? 'Who may call these entry points may have changed. Read the change and check every route listed: a removed or weakened guard, or a new @Public(), opens them.'
+        : 'What runs around these handlers changed (logging, transformation, error handling, side effects in interceptors).',
+    });
+  }
+
   // R8: AI-written-code risk signals in added lines.
   const signals: [RegExp, string][] = [
     [/^\+.*\b(it|test|describe)\.(skip|only)\(/m, 'skipped or focused tests'],

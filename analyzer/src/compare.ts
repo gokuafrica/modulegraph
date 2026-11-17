@@ -1,8 +1,8 @@
 import { diffLines } from 'diff';
-import type { ContractDelta, DiffLine, Effect, Operation, Param, Risk, TypeShape } from '../../schema/modulegraph.ts';
+import type { ContractDelta, DiffLine, Effect, EntryPoint, Operation, Param, PipelineItem, Risk, TypeShape } from '../../schema/modulegraph.ts';
 import { codeChanges, diffScope, functionIndex } from './compare-steps.ts';
 import { effectKey } from './effects.ts';
-import type { Snapshot } from './analyzers/types.ts';
+import type { Part, Snapshot } from './analyzers/types.ts';
 
 export type Graphish = Omit<Snapshot, 'fingerprints' | 'parts'>;
 
@@ -62,6 +62,14 @@ export function compare(head: Snapshot, base?: Snapshot): Graphish {
       if (base.scopes[entry.id] && out.scopes[entry.id]) diffScope(out.scopes[entry.id], base.scopes[entry.id]);
     }
     if (entry.change === 'added') entry.changes = codeChanges(undefined, head.parts[entry.id], baseFns, headFns);
+    if (before) {
+      const delta = pipelineDelta(before.pipeline ?? [], entry.pipeline ?? [], base.parts[entry.id] ?? [], head.parts[entry.id] ?? []);
+      if (delta) {
+        entry.pipelineDelta = delta;
+        // Who may call it, or what runs around it, changed: the entry point changed even if its handler didn't.
+        if (entry.change === 'unchanged') entry.change = 'modified';
+      }
+    }
     const prev = before?.effects ?? [];
     entry.effectsAdded = entry.effects.filter((e) => !prev.some((p) => effectKey(p) === effectKey(e)));
     entry.effectsRemoved = prev.filter((p) => !entry.effects.some((e) => effectKey(p) === effectKey(e)));
@@ -74,6 +82,25 @@ export function compare(head: Snapshot, base?: Snapshot): Graphish {
 
   markContainsChanges(out);
   return out;
+}
+
+/** `guard AuthGuard (global)`: how a pipeline item is compared between revisions. */
+export function pipelineKey(p: PipelineItem): string {
+  return `${p.kind} ${p.name} (${p.scope})`;
+}
+
+/**
+ * Pipeline items an entry point gained or lost, and those whose code changed (a guard's `canActivate` or a helper it
+ * calls, compared by the functions the head or base analysis recorded for it).
+ */
+function pipelineDelta(before: PipelineItem[], after: PipelineItem[], baseParts: Part[], headParts: Part[]): EntryPoint['pipelineDelta'] {
+  const b = new Map(before.map((p) => [pipelineKey(p), p]));
+  const a = new Map(after.map((p) => [pipelineKey(p), p]));
+  const text = (parts: Part[], name: string) => parts.find((p) => p.name === name)?.text;
+  const added = [...a.keys()].filter((k) => !b.has(k));
+  const removed = [...b.keys()].filter((k) => !a.has(k));
+  const changed = [...a].filter(([k, p]) => b.has(k) && [...new Set([...(p.functions ?? []), ...(b.get(k)!.functions ?? [])])].some((fn) => text(baseParts, fn) !== text(headParts, fn))).map(([k]) => k);
+  return added.length || removed.length || changed.length ? { added, removed, changed } : undefined;
 }
 
 function markContainsChanges(g: Graphish): void {

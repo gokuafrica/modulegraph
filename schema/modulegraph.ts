@@ -78,8 +78,11 @@ export interface PipelineItem {
   name: string;
   /** Where it is applied: app-wide, on the controller class, or on the handler method. */
   scope: 'global' | 'controller' | 'method';
+  /** Where it is applied (the decorator, the `useGlobalGuards` call, the provider, the middleware chain). */
   file?: string;
   line?: number;
+  /** The service's own functions it runs (`AuthGuard.canActivate` and helpers it calls), when the flow was analyzed. */
+  functions?: string[];
 }
 
 /**

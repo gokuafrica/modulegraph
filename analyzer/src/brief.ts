@@ -56,6 +56,15 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://127.0.0.
     out.push(`Lazy analysis: ${st.entryPointsAnalyzed} of ${st.entryPointsKnown} flows analyzed (${g.lazy!.seeds.map((x) => `\`${label(g, x.id)}\``).join(', ')}). Reach counts are lower bounds.`);
   }
 
+  // ---------- access control ----------
+  // Before the module changes: a guard removed from a controller changes no operation, but opens every route on it.
+  const pipelineFindings = newFindings.filter((f) => f.rule === 'access-control-changed' || f.rule === 'request-pipeline-changed');
+  if (pipelineFindings.length) {
+    out.push('', '## Access control and request pipeline: high risk', '');
+    out.push('What runs before these handlers changed. Guards, middleware and auth metadata decide who may call them; interceptors, pipes and filters run around them. Each line applies to every entry point it lists.', '');
+    for (const f of pipelineFindings) out.push(`- **${f.severity.toUpperCase()}** ${f.message}`);
+  }
+
   // ---------- changes ----------
   // One section per independent change. Its parts are the changed operations only reached through its root.
   out.push('', '## Changes, riskiest first', '');
@@ -123,8 +132,17 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://127.0.0.
   const modifiedEntries = Object.values(g.entryPoints).filter((e) => e.change === 'modified');
   if (added.length || removed.length || modifiedEntries.length) {
     out.push('## Entry points', '');
-    for (const e of added) out.push(`- **New**: \`${e.label}\` (${e.file}:${e.line}) → ${stepsOf(g, e)}. Side effects: ${e.effects.map(fx).join(', ') || 'none'}`);
-    for (const e of modifiedEntries) out.push(`- **Handler changed**: \`${e.label}\` (${e.file}:${e.line})`);
+    for (const e of added) {
+      // A new endpoint is a new door: say what guards it (or that nothing does).
+      const guards = (e.pipeline ?? []).filter((p) => p.kind === 'guard' || p.kind === 'middleware' || p.kind === 'metadata').map((p) => `${p.name} (${p.scope})`);
+      const guarded = e.pipeline ? ` Guarded by: ${guards.join(', ') || '**nothing**'}.` : '';
+      out.push(`- **New**: \`${e.label}\` (${e.file}:${e.line}) → ${stepsOf(g, e)}. Side effects: ${e.effects.map(fx).join(', ') || 'none'}.${guarded}`);
+    }
+    for (const e of modifiedEntries) {
+      const d = e.pipelineDelta;
+      const pipe = d ? [...d.removed.map((x) => `−${x}`), ...d.added.map((x) => `+${x}`), ...d.changed.map((x) => `changed ${x}`)].join(', ') : '';
+      out.push(`- **${pipe && !e.changes?.some((c) => c.role === 'handler') ? 'Pipeline changed' : 'Handler changed'}**: \`${e.label}\` (${e.file}:${e.line})${pipe ? `. Pipeline: ${pipe}` : ''}`);
+    }
     for (const e of removed) out.push(`- **Removed**: \`${e.label}\``);
     out.push('');
   }

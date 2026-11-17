@@ -6,9 +6,9 @@
  * (`entryPoints`, `decoratorEntries`, `sinks`, …), so an agent can teach modulegraph an unknown framework without
  * code. Hooks cover what data can't say (route prefixes from `app.use('/x', router)`, Prisma's `prisma.user.*`).
  */
-import type { CallExpression, NewExpression, Node, Type } from 'ts-morph';
+import type { CallExpression, ClassDeclaration, Decorator, MethodDeclaration, NewExpression, Node, SourceFile, Type } from 'ts-morph';
 import type { DecoratorEntryRule, EntryRule, ResponseRule, SinkRule } from '../../../config.ts';
-import type { Effect } from '../../../../../schema/modulegraph.ts';
+import type { Effect, PipelineItem } from '../../../../../schema/modulegraph.ts';
 
 export interface Framework {
   id: string;
@@ -57,6 +57,25 @@ export interface HookContext {
   table(of: Node | Type): string | undefined;
   /** Collection of a Mongoose model the receiver is (`@InjectModel(Order.name) orders`, `Model<Order>`). */
   collection(receiver: Node): string | undefined;
+  /** Package a decorator is imported from (`@nestjs/common`); '' for the project's own decorators. */
+  decoratorFrom(decorator: Decorator): string;
+  /** The service's own source files (no dependencies, no generated code). */
+  projectFiles(): SourceFile[];
+  /** Computed once per revision and kept: project-wide scans a hook needs for every entry point. */
+  memo<T>(key: string, compute: () => T): T;
+  /** True for code of the service itself (not a dependency, not generated). */
+  isProjectCode(node: Node): boolean;
+}
+
+/** One step of an entry point's request pipeline, as an adapter found it. */
+export interface PipelineSpec {
+  kind: PipelineItem['kind'];
+  name: string;
+  scope: PipelineItem['scope'];
+  /** The code that applies it: a decorator, a `useGlobalGuards(…)` call, an APP_GUARD provider, a middleware chain. */
+  at: Node;
+  /** What runs for each request (`canActivate`, `intercept`, a functional middleware), when it is the service's code. */
+  fn?: Node;
 }
 
 export interface FrameworkHooks {
@@ -66,5 +85,12 @@ export interface FrameworkHooks {
   globalVars?(ctx: HookContext): Record<string, string>;
   /** A side effect data rules can't describe (Prisma's `prisma.<model>.<op>()`). */
   sink?(site: CallSite, ctx: HookContext): Omit<Effect, 'file' | 'line'> | undefined;
+  /**
+   * Label variables for one decorated handler (route prefixes from elsewhere, API versions, GraphQL names).
+   * `path` replaces the default (global prefix + class path + method path).
+   */
+  decoratorVars?(method: MethodDeclaration, cls: ClassDeclaration, decorator: Decorator | undefined, ctx: HookContext): Record<string, string> | undefined;
+  /** What runs before a decorated handler (guards, interceptors, middleware, …), in order. `vars` are its label variables. */
+  pipeline?(method: MethodDeclaration, cls: ClassDeclaration, vars: Record<string, string>, ctx: HookContext): PipelineSpec[] | undefined;
 }
 

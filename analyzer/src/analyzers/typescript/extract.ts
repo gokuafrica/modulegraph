@@ -17,11 +17,12 @@ import {
   type NewExpression,
   type Type,
 } from 'ts-morph';
-import type { AnalysisIssue, Edge, Effect, EntryPoint, Exit, Param, Scope, Step, TypeShape } from '../../../../schema/modulegraph.ts';
+import type { AnalysisIssue, Edge, Effect, EntryPoint, Exit, Param, PipelineItem, Scope, Step, TypeShape } from '../../../../schema/modulegraph.ts';
 import type { CallMatch, Config, DecoratorEntryRule, EntryRule, ResponseRule, SinkRule } from '../../config.ts';
+import { pipelineKey } from '../../compare.ts';
 import { dedupeEffects } from '../../effects.ts';
 import type { OperationTarget, Part, RevisionAnalysis, Snapshot } from '../types.ts';
-import type { CallSite, Framework, FrameworkHooks, HookContext } from './frameworks/types.ts';
+import type { CallSite, Framework, FrameworkHooks, HookContext, PipelineSpec } from './frameworks/types.ts';
 
 export type { Part, Snapshot } from '../types.ts';
 
@@ -105,6 +106,12 @@ export class Extractor implements RevisionAnalysis {
   private frameworkPackages: Set<string>;
   /** Calls on injected dependencies (`this.repo.save()`) analyzed so far, and those that resolved to nothing. */
   private injectedCalls = new Set<Node>();
+  /** Request pipeline of each decorated entry point (guards, interceptors, …), as the framework adapters found it. */
+  private pipelines = new Map<string, PipelineSpec[]>();
+  /** Code that applies a pipeline item, or runs as one (`canActivate`), → the entry points it is in front of. */
+  private pipelineAt = new Map<Node, Set<string>>();
+  private listed = false;
+  private hookMemo = new Map<string, unknown>();
   private unresolvedInjected = new Map<Node, string>();
 
   constructor(
@@ -182,6 +189,7 @@ export class Extractor implements RevisionAnalysis {
    * and decorated handlers (@Get, @EventPattern, @Cron, …). Names are checked before types, so this stays cheap.
    */
   listEntryPoints(): void {
+    this.listed = true;
     for (const file of this.projectFiles()) {
       for (const node of file.getDescendants()) {
         if (Node.isCallExpression(node) || Node.isNewExpression(node)) {
@@ -277,6 +285,11 @@ export class Extractor implements RevisionAnalysis {
       const id = this.decoratorEntryOf(decorated);
       if (id) return [id];
     }
+    // A class decorator (`@Controller('orders')`, `@UseGuards(X)`) belongs to every handler in the class.
+    if (decorated && Node.isClassDeclaration(decorated)) {
+      const ids = decorated.getMethods().map((m) => this.decoratorEntryOf(m)).filter((x): x is string => !!x);
+      if (ids.length) return [...new Set([...ids, ...this.scopesAt(node)])];
+    }
     return this.scopesAt(node);
   }
 
@@ -285,6 +298,12 @@ export class Extractor implements RevisionAnalysis {
    * and, for helpers that get inlined, everything that calls the helper.
    */
   scopesAt(node: Node, seen = new Set<Node>()): string[] {
+    // Inside a guard, interceptor or middleware, or in the code that applies one: every entry point behind it.
+    if (!this.listed) this.listEntryPoints();
+    for (let cur: Node | undefined = node; cur; cur = cur.getParent()) {
+      const behind = this.pipelineAt.get(cur);
+      if (behind) return [...behind];
+    }
     for (let cur = node.getParent(); cur; cur = cur.getParent()) {
       if (Node.isCallExpression(cur) || Node.isNewExpression(cur)) {
         const id = this.entryIdOf(cur);
@@ -602,13 +621,38 @@ export class Extractor implements RevisionAnalysis {
           vars[`class.${i}`] = this.literal(a);
           if (Node.isObjectLiteralExpression(a)) for (const p of a.getProperties()) if (Node.isPropertyAssignment(p)) vars[`class.${i}.${p.getName()}`] = this.literal(p.getInitializer());
         });
+        const ctx = this.hookContext();
+        for (const h of this.rules.hooks) Object.assign(vars, h.decoratorVars?.(method, cls, dec, ctx));
         const label = this.fill(rule.label, args, vars);
+        const known = this.entrySites.has(`${rule.kind}:${label}`);
         id = this.addEntry(`${rule.kind}:${label}`, rule.kind, label, rule.readOnly, { at: method, handler: method });
+        if (!known) this.setPipeline(id, method, cls, vars);
         break;
       }
     }
     this.entryIdCache.set(method, id);
     return id;
+  }
+
+  /**
+   * What runs before the handler (adapters' `pipeline` hooks: Nest guards, interceptors, middleware, …). Recorded on
+   * the entry point and indexed, so a change to a guard or to where it is applied maps to the entry points behind it.
+   */
+  private setPipeline(id: string, method: MethodDeclaration, cls: ClassDeclaration, vars: Record<string, string>): void {
+    const ctx = this.hookContext();
+    const specs = this.rules.hooks.flatMap((h) => h.pipeline?.(method, cls, vars, ctx) ?? []);
+    if (!specs.length) return;
+    this.pipelines.set(id, specs);
+    this.snapshot.entryPoints[id].pipeline = specs.map((s): PipelineItem => ({
+      kind: s.kind, name: s.name, scope: s.scope, file: this.rel(s.at.getSourceFile().getFilePath()), line: s.at.getStartLineNumber(),
+    }));
+    for (const s of specs) {
+      for (const node of [s.at, s.fn]) {
+        if (!node) continue;
+        if (!this.pipelineAt.has(node)) this.pipelineAt.set(node, new Set());
+        this.pipelineAt.get(node)!.add(id);
+      }
+    }
   }
 
   private addEntry(id: string, kind: EntryPoint['kind'], label: string, readOnly: boolean | undefined, site: EntrySite): string {
@@ -630,16 +674,23 @@ export class Extractor implements RevisionAnalysis {
 
   private buildEntry(id: string): void {
     const { at, handler } = this.entrySites.get(id)!;
-    const scope = this.buildScope(id, handler);
-    const label = this.snapshot.entryPoints[id].label;
-    this.recordParts(id, { name: label, role: 'handler', file: this.rel(at.getSourceFile().getFilePath()), line: at.getStartLineNumber(), text: at.getText() }, scope.result.parts);
+    const entry = this.snapshot.entryPoints[id];
+    // Guards, interceptors and middleware run on every request: their steps (and side effects) are the entry's too.
+    const specs = this.pipelines.get(id) ?? [];
+    const prelude = specs.flatMap((s, i) => (s.fn && isFn(s.fn) ? [{ fn: s.fn, name: fnName(s.fn), item: i }] : []));
+    const scope = this.buildScope(id, handler, prelude);
+    for (const p of scope.prelude) if (entry.pipeline?.[p.item]) entry.pipeline[p.item].functions = p.functions;
+    const label = entry.label;
+    // Where the pipeline items are applied is part of the entry point too: removing `@UseGuards(X)` changes it.
+    const pipeline = (entry.pipeline ?? []).map(pipelineKey).join('\n');
+    this.recordParts(id, { name: label, role: 'handler', file: this.rel(at.getSourceFile().getFilePath()), line: at.getStartLineNumber(), text: at.getText() }, scope.result.parts, pipeline);
   }
 
-  private recordParts(id: string, own: Part, inlined: Part[]): void {
+  private recordParts(id: string, own: Part, inlined: Part[], extra = ''): void {
     const seen = new Set<string>();
     const parts = [own, ...inlined].filter((p) => !seen.has(p.name) && !!seen.add(p.name));
     this.snapshot.parts[id] = parts.map((p) => ({ ...p, text: dedent(p.text) }));
-    this.snapshot.fingerprints[id] = normalise([own.text, ...inlined.map((p) => p.text)].join('\n'));
+    this.snapshot.fingerprints[id] = normalise([own.text, ...inlined.map((p) => p.text), extra].join('\n'));
   }
 
   /** Where the rule says the handler is: `arg:N`, `arg:N.prop` or `last`, with `|` alternatives. */
@@ -671,9 +722,17 @@ export class Extractor implements RevisionAnalysis {
 
   // ---------- scopes ----------
 
-  private buildScope(id: string, fn: Fn): { scope: Scope; result: FnResult } {
+  private buildScope(id: string, fn: Fn, prelude: { fn: Fn; name: string; item: number }[] = []): { scope: Scope; result: FnResult; prelude: { item: number; functions: string[] }[] } {
     this.stepCounter = 0;
+    // Pipeline functions first (they run before the handler), as if inlined: their steps say `via` which one.
+    const pre = prelude.map((p) => ({ p, r: this.analyzeFn(p.fn, new Set([p.fn])) }));
     const result = this.analyzeFn(fn, new Set([fn]));
+    for (const { p, r } of pre.reverse()) {
+      result.steps.unshift(...r.steps.map((s) => ({ ...s, via: s.via ?? p.name })));
+      result.edges.push(...r.edges);
+      result.parts.unshift({ name: p.name, role: 'pipeline', file: this.rel(p.fn.getSourceFile().getFilePath()), line: p.fn.getStartLineNumber(), text: p.fn.getText() }, ...r.parts);
+    }
+    const preludeFunctions = pre.map(({ p, r }) => ({ item: p.item, functions: [p.name, ...r.parts.map((x) => x.name)] }));
     const edges = [...result.edges];
     for (const [producer, labels] of result.returns) {
       if (producer !== 'entry') edges.push({ from: producer, to: 'exit', kind: 'data', label: [...labels].join(', ') || undefined });
@@ -695,7 +754,7 @@ export class Extractor implements RevisionAnalysis {
     const exits = exitsOf(fn, this.rel(fn.getSourceFile().getFilePath()), result.steps);
     if (exits.length) scope.exits = exits;
     this.snapshot.scopes[id] = scope;
-    return { scope, result };
+    return { scope, result, prelude: preludeFunctions };
   }
 
   private analyzeFn(fn: Fn, stack: Set<Node>): FnResult {
@@ -1045,6 +1104,13 @@ export class Extractor implements RevisionAnalysis {
         const decl = of instanceof Node ? this.classOf(of) : of.getSymbol()?.getDeclarations()[0];
         return decl && Node.isClassDeclaration(decl) && this.isProjectFile(decl.getSourceFile().getFilePath()) ? entityTable(decl, (n) => this.literal(n)) : undefined;
       },
+      decoratorFrom: (d) => this.decoratorPkg(d),
+      projectFiles: () => this.projectFiles(),
+      memo: <T>(key: string, compute: () => T): T => {
+        if (!this.hookMemo.has(key)) this.hookMemo.set(key, compute());
+        return this.hookMemo.get(key) as T;
+      },
+      isProjectCode: (n) => this.isProjectFile(n.getSourceFile().getFilePath()),
       collection: (receiver) => {
         const name = this.injectedName(receiver) ?? receiver.getType().getTypeArguments()[0]?.getSymbol()?.getName();
         return name ? collectionName(name) : undefined;
