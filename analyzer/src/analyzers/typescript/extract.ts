@@ -146,14 +146,22 @@ export class Extractor implements RevisionAnalysis {
 
   /** Public methods of all modules: the operations that exist, analyzed or not. */
   knownOperations(): string[] {
-    return [...this.moduleIds.keys()].flatMap((cls) => this.publicMethods(cls).map((m) => `${cls.getName()}.${m.getName()}`));
+    return [...this.moduleIds.keys()].flatMap((cls) => this.publicMethods(cls).map((m) => this.opIdOf(cls, m.getName())));
+  }
+
+  /**
+   * `<module id>.<method>`: `OrdersService.cancel`. Two classes with the same name are two modules
+   * (`OrdersService`, `OrdersService@src/legacy/orders.service.ts`), so their operations stay apart too.
+   */
+  private opIdOf(cls: ClassDeclaration, method: string): string {
+    return `${this.moduleIds.get(cls) ?? cls.getName()}.${method}`;
   }
 
   /** Class, file and parameter names of every module method: what the example recorder wraps. */
   operationTargets(): OperationTarget[] {
     return [...this.moduleIds.keys()].flatMap((cls) =>
       this.publicMethods(cls).map((m) => ({
-        opId: `${cls.getName()}.${m.getName()}`,
+        opId: this.opIdOf(cls, m.getName()),
         file: this.rel(cls.getSourceFile().getFilePath()),
         className: cls.getName()!,
         method: m.getName(),
@@ -209,11 +217,19 @@ export class Extractor implements RevisionAnalysis {
     const out = new Set<string>();
     for (const ref of found.method.findReferencesAsNodes()) {
       const call = callOf(ref);
-      if (!call) continue;
-      // Calls from the same class are inlined into the caller, not a step: same rule as `resolve`.
-      for (const id of this.scopesAt(call)) if (!id.startsWith(`${found.cls.getName()}.`)) out.add(id);
+      // References include calls through an interface or base class that resolve elsewhere (another implementation,
+      // or nothing when several qualify): only calls that resolve to this operation are its callers.
+      if (!call || !this.resolvesTo(call, opId)) continue;
+      // Every scope the call is a step of, including other operations of the same class (`resolveHold` calls
+      // `this.cancel`): `resolve` makes those steps too. A recursive call is not a caller.
+      for (const id of this.scopesAt(call)) if (id !== opId) out.add(id);
     }
     return [...out];
+  }
+
+  private resolvesTo(call: Invocation, opId: string): boolean {
+    const r = this.resolve(call);
+    return r.kind === 'op' && r.opId === opId;
   }
 
   /** Scopes whose analysis covers the given lines of a file: where a diff hunk lands in the graph. */
@@ -282,15 +298,9 @@ export class Extractor implements RevisionAnalysis {
       const entry = this.decoratorEntryOf(fn);
       if (entry) return [entry];
       const cls = fn.getParent();
-      if (Node.isClassDeclaration(cls) && this.moduleIds.has(cls) && this.isOperation(fn)) {
-        out.push(`${cls.getName()}.${fn.getName()}`);
-        // Public methods of the same class that call this one inline it.
-        for (const ref of fn.findReferencesAsNodes()) {
-          const call = callOf(ref);
-          if (call && call.getFirstAncestor((n) => Node.isClassDeclaration(n)) === cls) out.push(...this.scopesAt(call, seen));
-        }
-        return out;
-      }
+      // An operation is its own scope. Callers (in this class or another) have it as a step, not inlined, so
+      // a change inside it does not change them.
+      if (Node.isClassDeclaration(cls) && this.moduleIds.has(cls) && this.isOperation(fn)) return [this.opIdOf(cls, fn.getName())];
     }
     // A helper (private method, function, arrow in a variable): inlined wherever it is called.
     const named = Node.isVariableDeclaration(fn.getParent()) ? fn.getParent()! : fn;
@@ -305,10 +315,11 @@ export class Extractor implements RevisionAnalysis {
   }
 
   private findOp(opId: string): { cls: ClassDeclaration; method: MethodDeclaration } | undefined {
-    const dot = opId.indexOf('.');
-    const className = opId.slice(0, dot);
+    // Module ids may contain dots (`OrdersService@src/legacy/orders.service.ts`); method names don't.
+    const dot = opId.lastIndexOf('.');
+    const moduleId = opId.slice(0, dot);
     const name = opId.slice(dot + 1);
-    const cls = [...this.moduleIds.keys()].find((c) => c.getName() === className);
+    const cls = [...this.moduleIds].find(([, id]) => id === moduleId)?.[0];
     const method = cls && this.publicMethods(cls).find((m) => m.getName() === name);
     return cls && method ? { cls, method } : undefined;
   }
@@ -393,7 +404,7 @@ export class Extractor implements RevisionAnalysis {
 
   private extractOperation(cls: ClassDeclaration, method: MethodDeclaration): void {
     const moduleId = this.moduleIds.get(cls)!;
-    const id = `${cls.getName()}.${method.getName()}`;
+    const id = this.opIdOf(cls, method.getName());
     if (this.snapshot.operations[id]) return;
     this.currentClass = cls;
     const scope = this.buildScope(id, method);
@@ -714,7 +725,7 @@ export class Extractor implements RevisionAnalysis {
       // Another operation, in this module or another, is a step of its own (`resolveHold` → `release` / `cancel`):
       // the flow stays one module level deep. Only private helpers are inlined into the caller.
       if (cls && moduleId && Node.isMethodDeclaration(decl) && this.isOperation(decl) && decl.getParent() === cls) {
-        return { kind: 'op', opId: `${owner}.${name}` };
+        return { kind: 'op', opId: this.opIdOf(cls, name) };
       }
       if (Node.isMethodDeclaration(decl) && decl.getBody() && this.isProjectFile(decl.getSourceFile().getFilePath())) {
         return { kind: 'inline', fn: decl, name: `${owner}.${name}` };

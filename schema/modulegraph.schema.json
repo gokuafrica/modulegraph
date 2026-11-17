@@ -159,6 +159,13 @@
         "lazy": {
           "$ref": "#/definitions/LazyInfo",
           "description": "Present when the graph was built lazily: only what the review needed so far."
+        },
+        "incomplete": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/AnalysisIssue"
+          },
+          "description": "Why the analysis may have missed things (packages that don't resolve, calls it couldn't follow, changed code it\ncouldn't place). Present and non-empty = the review is incomplete: \"no findings\" does not mean \"safe\"."
         }
       },
       "required": [
@@ -173,6 +180,89 @@
         "scopes",
         "findings",
         "review"
+      ],
+      "additionalProperties": false
+    },
+    "AnalysisIssue": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "unresolved-imports",
+            "unresolved-calls",
+            "unmapped-change"
+          ],
+          "description": "`unresolved-imports`: packages the code imports are not installed, so library calls (and their side effects)\ncan't be recognised. `unresolved-calls`: many calls on injected dependencies resolve to nothing.\n`unmapped-change`: changed code that is in no flow the analyzer knows (a framework it doesn't model)."
+        },
+        "message": {
+          "type": "string",
+          "description": "One line, for the CLI and the top of the brief."
+        },
+        "hint": {
+          "type": "string",
+          "description": "What to do about it."
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Packages, call sites or changed functions, a few at most."
+        },
+        "side": {
+          "type": "string",
+          "enum": [
+            "head",
+            "base"
+          ],
+          "description": "Which revision it was found on."
+        }
+      },
+      "required": [
+        "kind",
+        "message"
+      ],
+      "additionalProperties": false
+    },
+    "PipelineItem": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "middleware",
+            "guard",
+            "interceptor",
+            "pipe",
+            "filter",
+            "metadata"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "description": "Class name, or the decorator as written for metadata (`@Roles(['admin'])`)."
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "global",
+            "controller",
+            "method"
+          ],
+          "description": "Where it is applied: app-wide, on the controller class, or on the handler method."
+        },
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "kind",
+        "name",
+        "scope"
       ],
       "additionalProperties": false
     },
@@ -697,7 +787,8 @@
           "enum": [
             "operation",
             "handler",
-            "helper"
+            "helper",
+            "pipeline"
           ]
         },
         "file": {
@@ -884,6 +975,43 @@
             "full"
           ],
           "description": "Lazy analyses only. listed: only its registration is known; reached: known to reach the change; full: flow analyzed."
+        },
+        "pipeline": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/PipelineItem"
+          },
+          "description": "What runs before the handler (guards, interceptors, …), in the order the framework applies it."
+        },
+        "pipelineDelta": {
+          "type": "object",
+          "properties": {
+            "added": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "removed": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "changed": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "added",
+            "removed",
+            "changed"
+          ],
+          "additionalProperties": false,
+          "description": "Set when comparing with a base and the pipeline differs: items added, removed, or whose code changed, as\n`guard AuthGuard (global)`. Any of these changes who may call the entry point or what runs around it."
         }
       },
       "required": [

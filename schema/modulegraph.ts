@@ -44,6 +44,42 @@ export interface ModuleGraph {
   review: ReviewSummary;
   /** Present when the graph was built lazily: only what the review needed so far. */
   lazy?: LazyInfo;
+  /**
+   * Why the analysis may have missed things (packages that don't resolve, calls it couldn't follow, changed code it
+   * couldn't place). Present and non-empty = the review is incomplete: "no findings" does not mean "safe".
+   */
+  incomplete?: AnalysisIssue[];
+}
+
+export interface AnalysisIssue {
+  /**
+   * `unresolved-imports`: packages the code imports are not installed, so library calls (and their side effects)
+   * can't be recognised. `unresolved-calls`: many calls on injected dependencies resolve to nothing.
+   * `unmapped-change`: changed code that is in no flow the analyzer knows (a framework it doesn't model).
+   */
+  kind: 'unresolved-imports' | 'unresolved-calls' | 'unmapped-change';
+  /** One line, for the CLI and the top of the brief. */
+  message: string;
+  /** What to do about it. */
+  hint?: string;
+  /** Packages, call sites or changed functions, a few at most. */
+  items?: string[];
+  /** Which revision it was found on. */
+  side?: 'head' | 'base';
+}
+
+/**
+ * One step of the request pipeline in front of an entry point's handler (NestJS: middleware, guards, interceptors,
+ * pipes, exception filters), or route metadata that guards read (`@Public()`, `@Roles(['admin'])`).
+ */
+export interface PipelineItem {
+  kind: 'middleware' | 'guard' | 'interceptor' | 'pipe' | 'filter' | 'metadata';
+  /** Class name, or the decorator as written for metadata (`@Roles(['admin'])`). */
+  name: string;
+  /** Where it is applied: app-wide, on the controller class, or on the handler method. */
+  scope: 'global' | 'controller' | 'method';
+  file?: string;
+  line?: number;
 }
 
 /**
@@ -191,7 +227,7 @@ export interface DiffLine {
 export interface CodeChange {
   /** "resolve", or the inlined helper, e.g. "riskTier" or "KycModule.persist". */
   name: string;
-  role: 'operation' | 'handler' | 'helper';
+  role: 'operation' | 'handler' | 'helper' | 'pipeline';
   file: string;
   /** First line of the function (head; base when removed). */
   line: number;
@@ -230,6 +266,13 @@ export interface EntryPoint {
   changes?: CodeChange[];
   /** Lazy analyses only. listed: only its registration is known; reached: known to reach the change; full: flow analyzed. */
   analysis?: 'listed' | 'reached' | 'full';
+  /** What runs before the handler (guards, interceptors, …), in the order the framework applies it. */
+  pipeline?: PipelineItem[];
+  /**
+   * Set when comparing with a base and the pipeline differs: items added, removed, or whose code changed, as
+   * `guard AuthGuard (global)`. Any of these changes who may call the entry point or what runs around it.
+   */
+  pipelineDelta?: { added: string[]; removed: string[]; changed: string[] };
 }
 
 export interface Scope {

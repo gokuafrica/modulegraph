@@ -1,0 +1,28 @@
+{
+  "name": "store-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NestJS fixture for analyzer/src/framework-check.ts and regression-check.ts: request pipeline (guards, interceptors, middleware, auth metadata), CQRS, custom providers, TypeORM query builders and raw SQL, Mongoose documents, RouterModule, URI versioning, GraphQL, WebSockets, two classes with the same name.",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nestjs/common": "^12.3.2",
+    "@nestjs/core": "^12.3.2",
+    "@nestjs/cqrs": "^12.1.3",
+    "@nestjs/graphql": "^14.2.1",
+    "@nestjs/mongoose": "^12.0.1",
+    "@nestjs/typeorm": "^12.0.2",
+    "@nestjs/websockets": "^12.5.1",
+    "graphql": "^16.11.0",
+    "mongoose": "^9.11.4",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "typeorm": "^1.1.2"
+  },
+  "type": "module",
+  "devDependencies": {
+    "typescript": "^5.9.0",
+    "@types/node": "^24.0.0"
+  }
+}

@@ -16,6 +16,7 @@
     "sample-nest-service",
     "sample-birth-service",
     "fixtures/frameworks",
+    "fixtures/frameworks/nest",
     "analyzer",
     "ui"
   ],
