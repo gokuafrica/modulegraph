@@ -73,6 +73,30 @@ export function installedPackage(projectDir: string, pkg: string): PackageJson |
   }
 }
 
+/**
+ * Packages that do network I/O themselves: HTTP clients, file transfer, mail, databases and caches, RPC, cloud
+ * SDKs. A dependency that is one, or is built on one (a vendor's generated REST client on axios), calls out.
+ */
+const NETWORK_PACKAGES = new Set(['axios', 'node-fetch', 'got', 'undici', 'superagent', 'request', 'ky', 'cross-fetch', 'isomorphic-fetch', 'needle', 'ssh2', 'ssh2-sftp-client', 'ftp', 'basic-ftp', 'nodemailer', 'ioredis', 'redis', 'mongodb', 'pg', 'mysql', 'mysql2', 'tedious', 'oracledb', '@grpc/grpc-js', 'grpc', 'ws', 'socket.io-client', 'mqtt', 'ldapjs', 'soap', 'aws-sdk', 'googleapis', '@elastic/elasticsearch', ...MESSAGING_PACKAGES]);
+const NETWORK_SCOPES = /^@(aws-sdk|google-cloud|azure|smithy)\//;
+const isNetwork = (pkg: string) => NETWORK_PACKAGES.has(pkg) || NETWORK_SCOPES.test(pkg);
+
+/** The network packages a dependency is, or is built on (its own dependencies): empty when it does no network I/O. */
+export function networkVia(projectDir: string, pkg: string): string[] {
+  if (isNetwork(pkg)) return [pkg];
+  const p = installedPackage(projectDir, pkg);
+  if (!p) return [];
+  return [...new Set([...Object.keys(p.dependencies ?? {}), ...Object.keys(p.peerDependencies ?? {})])].filter(isNetwork);
+}
+
+/** Calls on a network client that open, close or configure it, rather than send or fetch something. */
+const LIFECYCLE = /^(connect|disconnect|reconnect|end|close|destroy|dispose|init|initialize|quit|on|once|off|addListener|removeListener|removeAllListeners|setMaxListeners|use|configure|set[A-Z]\w*|with[A-Z]\w*|is[A-Z]\w*|has[A-Z]\w*|toString|toJSON|valueOf|on[A-Z]\w*)$/;
+
+/** A network client's method that does I/O: every one but opening, closing and configuring the client. */
+export function isNetworkCall(method: string): boolean {
+  return !LIFECYCLE.test(method);
+}
+
 /** Messaging packages a dependency is built on (`@corp/kafka-client` → kafkajs). */
 export function wraps(projectDir: string, pkg: string): string[] {
   const p = installedPackage(projectDir, pkg);
@@ -115,9 +139,13 @@ export function registryKind(text: string): 'consumer' | 'queue' | 'cron' | 'eve
   return 'consumer';
 }
 
-/** The side effect a client method most likely is, for a suggested sink rule. */
-export function sinkKind(pkg: string, owner: string): 'kafka' | 'outbox' | 'queue' | 'http' | 'event' {
+/**
+ * The side effect a client method most likely is, for a suggested sink rule. Calls out of the process that are no
+ * message (an HTTP API, a vendor SDK, SFTP, mail) are `http`: a call to another system, named by its target.
+ */
+export function sinkKind(pkg: string, owner: string): 'kafka' | 'outbox' | 'queue' | 'http' | 'event' | 'db.write' {
   const text = `${pkg} ${owner}`;
+  if (/^(pg|mysql2?|mongodb|tedious|oracledb|@elastic\/elasticsearch)$/.test(pkg)) return 'db.write';
   if (/outbox/i.test(text)) return 'outbox';
   if (/kafka|avro|producer/i.test(text)) return 'kafka';
   if (/queue|sqs|bull|amqp|rabbit|job/i.test(text)) return 'queue';

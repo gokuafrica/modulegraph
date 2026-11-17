@@ -105,10 +105,15 @@ call, so it has no side effects, and its review said "not blocked". Now the back
   handlers of a map, `nest start -- a-consumer,another`, selects consumers and is not a job). The issue carries the
   `entryRegistries` rule that fixes it.
 - `unknown-side-effects`: dependencies whose name says producer, outbox, queue or cloud client (or that are built on
-  a broker client), imported by the service for their values, that no adapter or `sinks` rule describes. The issue
-  lists the calls into them and carries suggested `sinks`: the target is `arg:N.topic` when the argument is an object
-  with a `topic`, else the first string argument, else a message object; factories and lifecycle calls (`producer()`,
-  `connect()`, `isHealthy()`) are left out. Check the kind and the target.
+  a broker client), and dependencies that do network I/O themselves or through their own dependencies (an HTTP
+  client, `ssh2`, FTP, mail, a database or cache driver, gRPC, a cloud SDK: a vendor's generated REST client on
+  `axios`, `ssh2-sftp-client` on `ssh2`), imported by the service for their values, that no adapter or `sinks` rule
+  describes. The issue lists the calls into them and carries suggested `sinks`. For a messaging package the target is
+  `arg:N.topic` when the argument is an object with a `topic`, else the first string argument, else a message object;
+  factories and lifecycle calls (`producer()`, `connect()`, `isHealthy()`) are left out. For a network client every
+  call is I/O (`getApplicant()` too) except opening, closing and configuring it (`connect()`, `end()`, `on*()`),
+  with the package as the target (`const:<package>`) and kind `http` (a call to another system). Check the kind and
+  the target.
 
 A type-only import (`import type`, or a name used only in types) doesn't count, and neither does code outside the
 service: tests, dot-folders (`.local/scripts/…`) and a top-level `scripts/` or `tools/`.
@@ -143,7 +148,9 @@ Adapters are mostly data, and the same data can go in a service's profile
     { "extends": "BaseConsumerHandler", "method": "handleMessages", "kind": "consumer", "label": "consumer {key}" },
     // module picked by a command-line argument: main.ts boots JOBS[argv._[0]], a local `modules[command]`, a dynamic
     // module (`modules[command].register()`, providers from what register() returns) or `case 'x':`; what runs is
-    // the module's providers' lifecycle hooks (default onApplicationBootstrap|onModuleInit, and run)
+    // the module's providers' lifecycle hooks (default onApplicationBootstrap|onModuleInit, and run). One entry point
+    // per job, whatever methods run it: the hooks in Nest's order (onModuleInit, then onApplicationBootstrap), and a
+    // listed method another listed one calls (`onApplicationBootstrap() { await this.run(); }`) is a step of it
     { "argv": "src/main.ts", "kind": "cron", "label": "job {key}" }
   ],
   "docDecorators": [ { "decorator": "Doc", "from": "@acme/docs", "props": ["description"] } ],   // more description sources
@@ -155,7 +162,11 @@ Adapters are mostly data, and the same data can go in a service's profile
 A sink's `arg:N` target is followed back to where the value is made: a local `const`, a `this.x` field set in the
 constructor, `config.get('KAFKA_TOPICS').RECORD_CREATED` (shown as the config key, `KAFKA_TOPICS.RECORD_CREATED`), a
 parameter (what the service's own callers pass, `a | b`), a message built by a factory (the string the factory is
-given: `createSyncedMessage(guid, id, 'RecordApproved')` → `RecordApproved`), an object's `topic` / `type`.
+given: `buildMessage(id, 'OrderShipped')` → `OrderShipped`), an object's `topic` / `type`. A `url:N` target is
+followed the same way (a local, a `this.x` field, `request({ url })`) into a template: config keys and parameters in
+braces, `${this.config.getOrThrow('PAYMENTS_URL')}/accounts/${id}` → `{PAYMENTS_URL}/accounts/{id}`; an absolute URL
+gives its host. A TypeORM `entity` target is the entity class passed (`manager.create(Order, …)`), else the type of
+the argument, an entity or an array of them (`manager.save(rows)`).
 
 Profile descriptions (`modules.overrides.<Class>.operations.<method>`) are matched by class name, module id or display
 name, in any case; keys that match no class or public method are reported (`profile: … describes nothing`, and a
@@ -208,8 +219,11 @@ and marks it `generator: "agent:<model>"`.
   others are `OrdersService@<file>`. Adding a class with an existing name in a file that sorts earlier renames the
   existing module's id in that review.
 - Raw SQL is classified by its leading keyword; a stored procedure call (`CALL`, `EXEC`) counts as a write.
-- Transactions through a query runner (`queryRunner.startTransaction()` … `commitTransaction()`) are not drawn as a
-  transaction box; only `….transaction(cb)` and `@Transactional()` are.
+- Transactions: `….transaction(cb)`, `@Transactional()`, and transactions opened by hand
+  (`queryRunner.startTransaction()` … `commitTransaction()`, directly or through the method's own helpers, on one or
+  several data sources). For the last, every step between the start and the last commit is in the transaction, which
+  is named after the data sources (`@InjectDataSource('orders')`): `orders + audit transaction`. A transaction a
+  method's caller opened and passes in (a `queryRunner` parameter) shows in the caller's flow, not in the method's.
 - Examples from tests: Jest only (config in `package.json` or `jest.config.json/js/cjs`; `jest.config.ts` is not read),
   specs picked by name (`*.spec.*` / `*.test.*` that mention a changed class or its callers, or import their files); e2e
   specs are not run. A branch that isn't checked out runs in a temporary git worktree with links to the checkout's

@@ -22,6 +22,7 @@ import { ReviewsController } from './reviews/reviews.controller.ts';
 import { ReviewsService } from './reviews/reviews.service.ts';
 import { Session, SessionsService } from './sessions/sessions.service.ts';
 import { OrdersGateway } from './ws/orders.gateway.ts';
+import { LedgerController, LedgerService, RatesClient } from './ledger/ledger.service.ts';
 
 @Module({
   imports: [
@@ -33,13 +34,13 @@ import { OrdersGateway } from './ws/orders.gateway.ts';
     AdminModule,
     RouterModule.register([{ path: 'admin', module: AdminModule }]),
   ],
-  controllers: [OrdersController, LegacyOrdersController, ReviewsController],
+  controllers: [OrdersController, LegacyOrdersController, ReviewsController, LedgerController],
   providers: [
     { provide: APP_GUARD, useClass: AuthGuard },
     { provide: PAYMENT_GATEWAY, useClass: StripeGateway },
     { provide: NOTIFIER, useFactory: () => new EmailNotifier() },
     OrdersService, LegacyOrdersService, PaymentsService, ReviewsService, SessionsService, AuditService,
-    PlaceOrderHandler, ListOrdersHandler, OrderPlacedHandler, OrdersResolver, OrdersGateway,
+    PlaceOrderHandler, ListOrdersHandler, OrderPlacedHandler, OrdersResolver, OrdersGateway, LedgerService, RatesClient,
   ],
 })
 export class AppModule implements NestModule {

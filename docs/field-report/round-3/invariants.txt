@@ -1,0 +1,83 @@
+sample-service --head feature/birthinfo-consent
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+
+sample-service --head feature/kyc-risk-tiers --lazy
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+
+sample-nest-service --head feature/order-fraud-hold
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I5] api entry points = route decorators in src (8 / 8)
+
+sample-nest-service --head feature/order-fraud-hold --lazy
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I5] api entry points = route decorators in src (8 / 8)
+profile: 3 descriptions describe nothing in this service (use the class name, as in the brief's JSON):
+  `ResidencyService`: no module of this service has that class name
+  `ResidencyStore`: no module of this service has that class name
+  `AddressCheckClient`: no module of this service has that class name
+
+sample-birth-service --head feature/enforce-document-birth-info
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I5] api entry points = route decorators in src (3 / 3)
+profile: 3 descriptions describe nothing in this service (use the class name, as in the brief's JSON):
+  `ResidencyService`: no module of this service has that class name
+  `ResidencyStore`: no module of this service has that class name
+  `AddressCheckClient`: no module of this service has that class name
+
+sample-birth-service --head feature/enforce-document-birth-info --lazy
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I5] api entry points = route decorators in src (3 / 3)
+
+sample-legacy-nest-service --head fix/scope-manual-data-to-row, profile from the repo
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I5] api entry points = route decorators in src (20 / 20)
+
+fixtures/frameworks (working tree)
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+
+fixtures/frameworks (working tree) --lazy
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+
+sample-legacy-nest-service --head fix/scope-manual-data-to-row --lazy, no profile
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I5] api entry points = route decorators in src (20 / 20)
+
+sample-legacy-nest-service --head fix/scope-manual-data-to-row, with the profile the first run suggested
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I5] api entry points = route decorators in src (20 / 20)
+  ✓ [I6] with the suggested profile applied, nothing is incomplete
+
+all invariants hold on every review

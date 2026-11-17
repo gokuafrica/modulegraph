@@ -38,6 +38,8 @@ interface Expected {
   calls?: Record<string, string[]>;
   /** entry id -> its request pipeline, `kind name (scope)` in order */
   pipelines?: Record<string, string[]>;
+  /** scope id -> step (`call X.y` / `kind target`) -> the transaction it runs in ('' for none) */
+  transactions?: Record<string, Record<string, string>>;
 }
 
 const NEST_ORDERS = 'OrdersService@fixtures/frameworks/nest/src/orders/orders.service.ts';
@@ -56,7 +58,7 @@ const LEGACY_API: Record<string, string[]> = {
   'api:GET /api/v1/internal/audit-log/:recordGuid': ['db.read audit_log'],
   'api:GET /api/v1/internal/user-records/:guid/comments': ['db.read comments'],
   'api:POST /api/v1/internal/user-records/:guid/comments': ['db.write comments', 'db.write audit_log'],
-  'api:GET /api/v1/internal/user-records/:guid/documents': ['http {base}/v2/records/{recordGuid}/documents'],
+  'api:GET /api/v1/internal/user-records/:guid/documents': ['http {documentsServiceUrl}/v2/records/{recordGuid}/documents'],
   'api:POST /api/v1/internal/escalations/:recordGuid': ['db.write escalations', 'db.write audit_log'],
   'api:PUT /api/v1/internal/escalations/:id/resolve': ['db.read escalations', 'db.write escalations', ...LEGACY_APPROVE],
   'api:GET /health': ['db.read raw sql'],
@@ -211,6 +213,7 @@ const cases: Expected[] = [
     modules: [
       'ReportsService', 'AuditService', 'OrdersService', NEST_ORDERS, 'EmailNotifier', 'SmsNotifier', 'PlaceOrderHandler', 'ListOrdersHandler',
       'OrderPlacedHandler', 'StripeGateway', 'FakeGateway', 'PaymentsService', 'ReviewsService', 'SessionsService',
+      'LedgerService', 'RatesClient',
     ],
     entries: {
       // RouterModule.register([{ path: 'admin', module: AdminModule }]); query builders
@@ -237,8 +240,13 @@ const cases: Expected[] = [
       'api:GraphQL mutation cancelOrder': [GUARDED, 'db.write orders'],
       'api:GraphQL field Order.session': [GUARDED],
       'consumer:ws orders.watch': [GUARDED, 'db.read orders'],
+      // a URL from a config key in a field and a local; a transaction opened by hand on two data sources; an array of
+      // entities built with manager.create(Entity, …) and saved at once
+      'api:POST /api/ledger/transfers': [GUARDED, 'http {RATES_SERVICE_URL}/rates/{currency}', 'db.write ledger_entries', 'db.write transfer_log', 'db.write audit_log'],
     },
     operations: {
+      'RatesClient.rate': ['http {RATES_SERVICE_URL}/rates/{currency}'],
+      'LedgerService.transfer': ['db.write ledger_entries', 'db.write transfer_log'],
       'ReportsService.daily': ['db.read orders'],
       'ReportsService.purgeCancelled': ['db.write orders'],
       'AuditService.record': ['db.write audit_log'],
@@ -267,6 +275,12 @@ const cases: Expected[] = [
       'PlaceOrderHandler.execute': ['OrderPlacedHandler.handle'],
       'OrderPlacedHandler.handle': ['EmailNotifier.send'],
       'PaymentsService.charge': ['StripeGateway.charge'],
+      'LedgerService.transfer': ['RatesClient.rate', 'AuditService.record'],
+    },
+    transactions: {
+      // between `Promise.all([this.begin(this.booksDb), this.begin(this.archiveDb)])` and the commits; the helper's
+      // insert through the runner it is given too
+      'LedgerService.transfer': { 'call RatesClient.rate': '', 'db.write ledger_entries': 'books + archive transaction', 'db.write transfer_log': 'books + archive transaction', 'call AuditService.record': '' },
     },
     pipelines: {
       // consumer.apply(RequestIdMiddleware).forRoutes(OrdersController, 'reviews')
@@ -334,7 +348,7 @@ const cases: Expected[] = [
       // inherited handleMessages → this.syncFeature() of each class
       'consumer:kafka consumer sync-feature-assignments': ['db.write review_assignments', 'kafka review-tools.agent-assigned.v1', 'db.write audit_log'],
       'consumer:kafka consumer sync-feature-comments': ['db.write comments', 'db.write audit_log'],
-      'consumer:kafka consumer sync-feature-documents': ['http {base}/v2/records/{recordGuid}/documents', 'db.write audit_log'],
+      'consumer:kafka consumer sync-feature-documents': ['http {documentsServiceUrl}/v2/records/{recordGuid}/documents', 'db.write audit_log'],
       'consumer:kafka consumer sync-feature-escalations': ['db.write escalations', 'kafka review-tools.record-escalated.v1', 'db.write audit_log'],
       'consumer:kafka consumer sync-feature-tags': ['db.write record_tags', 'db.write audit_log'],
       'consumer:kafka consumer tag-added': ['db.write record_tags'],
@@ -412,6 +426,13 @@ for (const c of cases) {
   for (const [id, pipeline] of Object.entries(c.pipelines ?? {})) {
     const got = (g.entryPoints[id]?.pipeline ?? []).map((p) => `${p.kind} ${p.name} (${p.scope})`);
     if (JSON.stringify(got) !== JSON.stringify(pipeline)) fail(`${id} pipeline ${got.join(', ')} ≠ ${pipeline.join(', ')}`);
+  }
+  for (const [id, want] of Object.entries(c.transactions ?? {})) {
+    const steps = g.scopes[id]?.steps ?? [];
+    for (const [name, tx] of Object.entries(want)) {
+      const got = steps.filter((s) => (s.kind === 'effect' ? `${s.effect?.kind} ${s.effect?.target}` : `call ${s.target}`) === name).map((s) => s.transaction ?? '');
+      if (!got.length || got.some((t) => t !== tx)) fail(`${id}: ${name} in transaction ${got.map((t) => `"${t}"`).join(', ') || '(no such step)'} ≠ "${tx}"`);
+    }
   }
   for (const [id, type] of Object.entries(c.returns ?? {})) {
     const got = g.scopes[id]?.returns?.type;

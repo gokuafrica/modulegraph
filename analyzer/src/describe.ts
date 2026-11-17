@@ -33,15 +33,34 @@ export function describe<G extends Pick<ModuleGraph, 'modules' | 'operations'> &
     if (!op || (op.summary && op.summarySource !== 'class')) continue;
     Object.assign(op, { summary: entry.summary, summarySource: 'api', summaryFrom: `${entry.summaryFrom ?? 'API docs'} on ${entry.label}` });
   }
-  // A described operation that only hands over to another (a facade): context for the one doing the work.
+  // A described operation that hands over to another (a facade): context for the one doing the work.
   for (const facade of Object.values(g.operations)) {
     if (!facade.summary || facade.change === 'removed') continue;
-    const steps = g.scopes?.[facade.id]?.steps ?? [];
-    const worker = steps.length === 1 && steps[0].kind === 'call' ? g.operations[steps[0].target!] : undefined;
+    const target = delegate(g.scopes?.[facade.id]);
+    const worker = target ? g.operations[target] : undefined;
     if (!worker || worker.summary || worker.id === facade.id) continue;
     worker.context = { from: facade.id, summary: facade.summary };
   }
   return g;
+}
+
+/** Reads and lookups a facade may do before it hands over: they prepare arguments, they do no work of their own. */
+const LOOKUP = /^(get|find|load|fetch|resolve|read|lookup|to|parse|map)([A-Z]|$)/;
+
+/**
+ * The operation a facade hands over to: its only call, or its last call whose result it returns, when everything
+ * before it only prepares the arguments (steps of its own private helpers, lookups, reads). Undefined when it does
+ * work of its own (a write, a publish, a second call that isn't a lookup).
+ */
+function delegate(scope: NonNullable<ModuleGraph['scopes']>[string] | undefined): string | undefined {
+  const steps = scope?.steps ?? [];
+  if (steps.length === 1) return steps[0].kind === 'call' ? steps[0].target : undefined;
+  const returned = new Set((scope?.edges ?? []).filter((e) => e.to === 'exit' && e.kind === 'data').map((e) => e.from));
+  const last = steps.at(-1);
+  if (!last || last.kind !== 'call' || !returned.has(last.id)) return undefined;
+  const preparing = steps.slice(0, -1).every((s) =>
+    s.kind === 'call' ? !!s.via || LOOKUP.test(s.target?.split('.').at(-1) ?? '') : s.effect?.kind === 'db.read');
+  return preparing ? last.target : undefined;
 }
 
 /**

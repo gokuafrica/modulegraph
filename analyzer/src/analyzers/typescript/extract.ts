@@ -20,7 +20,7 @@ import {
 } from 'ts-morph';
 import type { AnalysisIssue, Edge, Effect, EntryPoint, Exit, Param, PipelineItem, Scope, Step, TypeShape } from '../../../../schema/modulegraph.ts';
 import type { CallMatch, Config, DecoratorEntryRule, DocDecoratorRule, EntryRule, RegistryEntryRule, ResponseRule, SinkRule } from '../../config.ts';
-import { argvScripts, CONSUMER_PACKAGES, EFFECT_NAME, isEffectMethod, readPackageJson, registryKind, sinkKind, suggestedTarget, wraps } from './coverage-hints.ts';
+import { argvScripts, CONSUMER_PACKAGES, EFFECT_NAME, isEffectMethod, isNetworkCall, networkVia, readPackageJson, registryKind, sinkKind, suggestedTarget, wraps } from './coverage-hints.ts';
 import { frameworks as allFrameworks } from './frameworks/index.ts';
 import { pipelineKey } from '../../compare.ts';
 import { dedupeEffects } from '../../effects.ts';
@@ -65,6 +65,8 @@ interface EntrySite {
   handler: Fn;
   /** The class the handler runs as, when it inherits the method from a base class: `this.x()` means its `x`. */
   thisClass?: ClassDeclaration;
+  /** Methods the framework calls before the handler, in order (a job's `onModuleInit`, then `onApplicationBootstrap`). */
+  before?: { method: MethodDeclaration; cls: ClassDeclaration }[];
 }
 
 /** One handler class a profile registry rule makes an entry point. */
@@ -73,6 +75,8 @@ interface RegistryEntry {
   label: string;
   at: Node;
   cls: ClassDeclaration;
+  /** Every method the framework calls for this entry point, in order: one entry point, not one per method. */
+  chain: { method: MethodDeclaration; cls: ClassDeclaration }[];
 }
 
 /** Config rules plus every enabled framework adapter's rules, merged once per revision. */
@@ -102,6 +106,8 @@ const MAX_TYPE = 110;
 const HANDLER_FAMILIES = [/^handle/, /^(process|consume)/, /^on[A-Z]/, /^(execute|run)$/];
 /** Framework lifecycle hooks: called by the framework at start and stop, never a message or job handler. */
 const LIFECYCLE_HOOK = /^on(Module|Application)(Init|Bootstrap|Destroy|Shutdown)$|^beforeApplicationShutdown$/;
+/** The order a framework calls start hooks in (Nest: every `onModuleInit`, then every `onApplicationBootstrap`). */
+const START_ORDER = ['onModuleInit', 'onApplicationBootstrap'];
 
 export function extract(project: Project, repoRoot: string, projectDir: string, config: Config, frameworks: Framework[] = []): Snapshot {
   return new Extractor(project, repoRoot, projectDir, config, frameworks).run();
@@ -437,7 +443,10 @@ export class Extractor implements RevisionAnalysis {
   /**
    * Handler methods the profile's registry rules make entry points, with their labels. Computed once. Several
    * handler classes may share one method they inherit from a base class (`handleBatch` on a shared base):
-   * each class is an entry point of its own.
+   * each class is an entry point of its own. A registered thing (a job, a consumer key) is ONE entry point, whatever
+   * methods run it: a job whose providers have `onModuleInit` and `onApplicationBootstrap` runs both, in that order;
+   * a listed method that another listed one calls (`onApplicationBootstrap() { await this.run(); }`) is a step of
+   * it, not an entry point of its own.
    */
   private registryIndex(): Map<MethodDeclaration, RegistryEntry[]> {
     if (this.registryMemo) return this.registryMemo;
@@ -449,17 +458,22 @@ export class Extractor implements RevisionAnalysis {
       // Through the base classes: a handler may inherit its method (methodOf walks the chain).
       const handlersOf = (cls: ClassDeclaration) =>
         methods.map((m) => methodOf(cls, m)).filter((m): m is MethodDeclaration => !!m && this.isProjectFile(m.getSourceFile().getFilePath()));
-      const add = (cls: ClassDeclaration, key: string, at: Node, qualify: boolean) => {
-        const handlers = handlersOf(cls);
-        for (const m of handlers) {
-          const done = seen.get(cls) ?? new Set<MethodDeclaration>();
-          seen.set(cls, done);
-          if (done.has(m)) continue;
-          done.add(m);
-          const base = this.fill(rule.label, [], { key, class: cls.getName() ?? '?', method: m.getName() });
-          const list = out.get(m) ?? [];
-          out.set(m, list);
-          list.push({ rule, label: qualify || handlers.length > 1 ? `${base} (${cls.getName()}.${m.getName()})` : base, at, cls });
+      const add = (classes: ClassDeclaration[], key: string, at: Node) => {
+        const chain = classes
+          .flatMap((cls) => this.startMethods(cls, handlersOf(cls), methods).map((method) => ({ method, cls })))
+          .sort((a, b) => startRank(a.method.getName(), methods) - startRank(b.method.getName(), methods))
+          .filter(({ method, cls }) => {
+            const done = seen.get(cls) ?? new Set<MethodDeclaration>();
+            seen.set(cls, done);
+            return !done.has(method) && !!done.add(method);
+          });
+        if (!chain.length) return;
+        const last = chain.at(-1)!;
+        const label = this.fill(rule.label, [], { key, class: last.cls.getName() ?? '?', method: last.method.getName() });
+        for (const { method, cls } of chain) {
+          const list = out.get(method) ?? [];
+          out.set(method, list);
+          list.push({ rule, label, at, cls, chain });
         }
       };
       const listed = new Set<ClassDeclaration>();
@@ -468,18 +482,43 @@ export class Extractor implements RevisionAnalysis {
           const cls = this.classOf(item.value);
           if (!cls) continue;
           listed.add(cls);
-          add(cls, item.key, item.at, false);
+          add([cls], item.key, item.at);
         }
       }
       if (rule.extends) {
         for (const file of this.projectFiles()) {
-          for (const cls of file.getClasses()) if (!listed.has(cls) && !cls.isAbstract() && extendsNamed(cls, rule.extends)) add(cls, cls.getName() ?? '?', cls, false);
+          for (const cls of file.getClasses()) if (!listed.has(cls) && !cls.isAbstract() && extendsNamed(cls, rule.extends)) add([cls], cls.getName() ?? '?', cls);
         }
       }
       if (rule.argv) {
         for (const { key, module, at } of this.argvModules(rule.argv)) {
-          const providers = this.moduleProviders(module).filter((c) => handlersOf(c).length);
-          for (const c of providers) add(c, key, at, providers.length > 1);
+          add(this.moduleProviders(module).filter((c) => handlersOf(c).length), key, at);
+        }
+      }
+    }
+    return out;
+  }
+
+  /** The listed methods of a handler class the framework calls itself: those no other listed method calls. */
+  private startMethods(cls: ClassDeclaration, handlers: MethodDeclaration[], listed: string[]): MethodDeclaration[] {
+    const reached = new Set<MethodDeclaration>();
+    for (const h of handlers) for (const m of this.thisCallsFrom(h, cls)) if (m !== h) reached.add(m);
+    const starts = handlers.filter((h) => !reached.has(h));
+    return (starts.length ? starts : handlers.slice(0, 1)).sort((a, b) => startRank(a.getName(), listed) - startRank(b.getName(), listed));
+  }
+
+  /** Methods `fn` reaches through `this.x()` calls, as `cls` has them (own or inherited), transitively. */
+  private thisCallsFrom(fn: MethodDeclaration, cls: ClassDeclaration): Set<MethodDeclaration> {
+    const out = new Set<MethodDeclaration>();
+    const queue = [fn];
+    while (queue.length) {
+      for (const call of queue.pop()!.getDescendantsOfKind(SyntaxKind.CallExpression)) {
+        const e = call.getExpression();
+        if (!Node.isPropertyAccessExpression(e) || e.getExpression().getKind() !== SyntaxKind.ThisKeyword) continue;
+        const m = methodOf(cls, e.getName());
+        if (m && !out.has(m)) {
+          out.add(m);
+          queue.push(m);
         }
       }
     }
@@ -690,10 +729,12 @@ export class Extractor implements RevisionAnalysis {
       });
     }
 
-    // 4. Packages that look like producers, outboxes, queues or cloud clients, which no adapter or rule describes.
+    // 4. Packages that look like producers, outboxes, queues or cloud clients, or that do network I/O (themselves or
+    //    through what they are built on: a vendor's REST client on axios, an SFTP client on ssh2), which no adapter or
+    //    rule describes. Their calls leave the process, and the review would not show them.
     const known = new Set([...allFrameworks.flatMap((f) => [...f.packages, ...(f.sinks ?? []).flatMap((s) => (s.module ?? '').split('|'))]), ...this.rules.sinks.flatMap((s) => (s.module ?? '').split('|'))].filter(Boolean));
     const sinkClasses = new Set(this.rules.sinks.flatMap((s) => (s.class ?? '').split('|')).filter(Boolean));
-    const suspects = deps.filter((d) => !known.has(d) && (EFFECT_NAME.test(d) || wraps(this.projectDir, d).length));
+    const suspects = deps.filter((d) => !known.has(d) && (EFFECT_NAME.test(d) || wraps(this.projectDir, d).length || networkVia(this.projectDir, d).length));
     const fxItems: string[] = [];
     const sinks: string[] = [];
     for (const dep of suspects) {
@@ -715,8 +756,13 @@ export class Extractor implements RevisionAnalysis {
         }
       }
       const via = wraps(this.projectDir, dep);
-      const effectful = [...calls.values()].filter((c) => isEffectMethod(c.method));
-      fxItems.push(`${dep}${via.length ? ` (wraps ${via.join(', ')})` : ''}: ${calls.size ? [...calls.entries()].map(([k, c]) => `${k}${c.n > 1 ? ` ×${c.n}` : ''}`).join(', ') : `${[...imported].join(', ')} imported`} in ${files.map((f) => this.rel(f.getFilePath())).slice(0, 2).join(', ')}${files.length > 2 ? ', …' : ''}`);
+      // A messaging wrapper publishes in some calls only (`send`, not `producer()`). A network client that is no
+      // messaging package does I/O in every call but opening, closing and configuring it (`getApplicant` too): its
+      // target is the package, as no argument names a topic.
+      const net = !via.length && !EFFECT_NAME.test(dep) ? networkVia(this.projectDir, dep) : [];
+      const effectful = [...calls.values()].filter((c) => (net.length ? isNetworkCall(c.method) : isEffectMethod(c.method))).map((c) => (net.length ? { ...c, target: `const:${dep}` } : c));
+      const built = via.length ? ` (wraps ${via.join(', ')})` : net.length && net[0] !== dep ? ` (network I/O through ${net.join(', ')})` : net.length ? ' (network I/O)' : '';
+      fxItems.push(`${dep}${built}: ${calls.size ? [...calls.entries()].map(([k, c]) => `${k}${c.n > 1 ? ` ×${c.n}` : ''}`).join(', ') : `${[...imported].join(', ')} imported`} in ${files.map((f) => this.rel(f.getFilePath())).slice(0, 2).join(', ')}${files.length > 2 ? ', …' : ''}`);
       for (const c of effectful) {
         sinks.push(`{ "class": "${c.owner}", "module": "${dep}", "method": "${c.method}", "kind": "${sinkKind(dep, c.owner)}", "target": "${c.target}" }`);
       }
@@ -724,7 +770,7 @@ export class Extractor implements RevisionAnalysis {
     if (fxItems.length) {
       out.push({
         kind: 'unknown-side-effects',
-        message: `${fxItems.length} package${fxItems.length > 1 ? 's look' : ' looks'} like ${fxItems.length > 1 ? 'producers, outboxes or cloud clients' : 'a producer, an outbox or a cloud client'}, but no adapter or profile rule describes ${fxItems.length > 1 ? 'them' : 'it'}: calls into ${fxItems.length > 1 ? 'them' : 'it'} are not side effects in this review (no Kafka topic, outbox event or external call is shown for them).`,
+        message: `${fxItems.length} package${fxItems.length > 1 ? 's look' : ' looks'} like ${fxItems.length > 1 ? 'producers, outboxes or network clients' : 'a producer, an outbox or a network client'}, but no adapter or profile rule describes ${fxItems.length > 1 ? 'them' : 'it'}: calls into ${fxItems.length > 1 ? 'them' : 'it'} are not side effects in this review (no Kafka topic, outbox event or external call is shown for them).`,
         hint: sinks.length
           ? 'Describe the calls that publish, write or call out as `sinks` in the service\'s profile (suggested below: check the kind and which argument names the topic or event; factories such as `producer()` and `connect()` are left out), then analyze again. A package without side effects: add it to `coverage.ignore`.'
           : 'Describe their calls as `sinks` in the service\'s profile (docs/analyzers.md), or add the package to `coverage.ignore`.',
@@ -1045,7 +1091,10 @@ export class Extractor implements RevisionAnalysis {
   private registryEntriesOf(method: MethodDeclaration, thisClass?: ClassDeclaration): string[] {
     return (this.registryIndex().get(method) ?? [])
       .filter((r) => !thisClass || r.cls === thisClass || isSubclassOf(r.cls, thisClass))
-      .map((r) => this.addEntry(`${r.rule.kind}:${r.label}`, r.rule.kind, r.label, false, { at: r.at, handler: method, thisClass: r.cls }));
+      .map((r) => {
+        const last = r.chain.at(-1) ?? { method, cls: r.cls };
+        return this.addEntry(`${r.rule.kind}:${r.label}`, r.rule.kind, r.label, false, { at: r.at, handler: last.method, thisClass: last.cls, before: r.chain.slice(0, -1) });
+      });
   }
 
   /** Every entry point a method is: registry entries, else its decorators. */
@@ -1139,11 +1188,13 @@ export class Extractor implements RevisionAnalysis {
   }
 
   private buildEntry(id: string): void {
-    const { at, handler, thisClass } = this.entrySites.get(id)!;
+    const { at, handler, thisClass, before = [] } = this.entrySites.get(id)!;
     const entry = this.snapshot.entryPoints[id];
     // Guards, interceptors and middleware run on every request: their steps (and side effects) are the entry's too.
     const specs = this.pipelines.get(id) ?? [];
-    const prelude = specs.flatMap((s, i) => (s.fn && isFn(s.fn) ? [{ fn: s.fn, name: fnName(s.fn), item: i, label: `${s.kind} ${s.name}` }] : []));
+    const prelude: Prelude[] = specs.flatMap((s, i) => (s.fn && isFn(s.fn) ? [{ fn: s.fn, name: fnName(s.fn), item: i, label: `${s.kind} ${s.name}` }] : []));
+    // Methods the framework calls before the handler (a job's earlier start hooks): steps of the same entry point.
+    prelude.push(...before.map((b) => ({ fn: b.method, name: `${b.cls.getName()}.${b.method.getName()}`, item: -1, cls: b.cls })));
     const outer = this.currentClass;
     this.currentClass = thisClass;
     const scope = this.buildScope(id, handler, prelude);
@@ -1224,18 +1275,24 @@ export class Extractor implements RevisionAnalysis {
 
   // ---------- scopes ----------
 
-  private buildScope(id: string, fn: Fn, prelude: { fn: Fn; name: string; item: number; label: string }[] = []): { scope: Scope; result: FnResult; prelude: { item: number; functions: string[] }[] } {
+  private buildScope(id: string, fn: Fn, prelude: Prelude[] = []): { scope: Scope; result: FnResult; prelude: { item: number; functions: string[] }[] } {
     this.stepCounter = 0;
     // Pipeline functions first (they run before the handler), as if inlined: their steps say `via` which one.
-    const pre = prelude.map((p) => ({ p, r: this.analyzeFn(p.fn, new Set([p.fn])) }));
+    const outer = this.currentClass;
+    const pre = prelude.map((p) => {
+      if (p.cls) this.currentClass = p.cls;
+      const r = this.analyzeFn(p.fn, new Set([p.fn]));
+      this.currentClass = outer;
+      return { p, r };
+    });
     const result = this.analyzeFn(fn, new Set([fn]));
     for (const { p, r } of pre.reverse()) {
       // Marked as the pipeline's, so a reviewer can fold cross-cutting code (metrics, logging) out of the business flow.
-      result.steps.unshift(...r.steps.map((s) => ({ ...s, via: s.via ?? p.name, pipeline: p.label })));
+      result.steps.unshift(...r.steps.map((s) => ({ ...s, via: s.via ?? p.name, ...(p.label ? { pipeline: p.label } : {}) })));
       result.edges.push(...r.edges);
-      result.parts.unshift({ name: p.name, role: 'pipeline', file: this.rel(p.fn.getSourceFile().getFilePath()), line: p.fn.getStartLineNumber(), text: p.fn.getText() }, ...r.parts);
+      result.parts.unshift({ name: p.name, role: p.label ? 'pipeline' : 'handler', file: this.rel(p.fn.getSourceFile().getFilePath()), line: p.fn.getStartLineNumber(), text: p.fn.getText() }, ...r.parts);
     }
-    const preludeFunctions = pre.map(({ p, r }) => ({ item: p.item, functions: [p.name, ...r.parts.map((x) => x.name)] }));
+    const preludeFunctions = pre.filter(({ p }) => p.item >= 0).map(({ p, r }) => ({ item: p.item, functions: [p.name, ...r.parts.map((x) => x.name)] }));
     const edges = [...result.edges];
     for (const [producer, labels] of result.returns) {
       if (producer !== 'entry') edges.push({ from: producer, to: 'exit', kind: 'data', label: [...labels].join(', ') || undefined });
@@ -1318,7 +1375,7 @@ export class Extractor implements RevisionAnalysis {
         return;
       }
       const { guardNodes, ...guard } = guardOf(call, fn);
-      const transaction = transactionOf(call, fn);
+      const transaction = transactionOf(call, fn) ?? this.openedTransaction(call, fn);
       const guards: Prod = new Map();
       for (const g of guardNodes) mergeInto(guards, strip(prodOf(g)));
       const inputs = new Map<string, Set<string>>();
@@ -1403,6 +1460,112 @@ export class Extractor implements RevisionAnalysis {
     return { steps, edges, returns, parts, responses };
   }
 
+  // ---------- transactions opened by hand ----------
+
+  private txWindows = new Map<Node, { start: number; end: number; name: string } | null>();
+
+  /**
+   * A transaction opened by hand rather than with a callback: `queryRunner.startTransaction()` … `commitTransaction()`
+   * (TypeORM; any client whose methods are called that), directly or through the function's own helpers
+   * (`Promise.all([this.begin(this.ordersDb), this.begin(this.auditDb)])`). Every call between the start and the
+   * last commit runs in it; they commit together, so it is one transaction, named after the data sources it was
+   * opened on (`@InjectDataSource('orders')` → `orders`): `orders + audit transaction`.
+   */
+  private openedTransaction(call: Invocation, fn: Fn): string | undefined {
+    if (!this.txWindows.has(fn)) this.txWindows.set(fn, this.txWindow(fn));
+    const w = this.txWindows.get(fn);
+    return w && call.getStart() >= w.start && call.getStart() < w.end ? w.name : undefined;
+  }
+
+  private txWindow(fn: Fn): { start: number; end: number; name: string } | null {
+    const body = fn.getBody();
+    if (!body) return null;
+    const calls = body.getDescendantsOfKind(SyntaxKind.CallExpression);
+    // A call that does `name` itself, or through a helper of the service's own that does.
+    const does = (call: CallExpression, name: string) => {
+      if (calleeName(call) === name) return true;
+      const decl = this.resolveDeclaration(call.getExpression());
+      return !!decl && isFn(decl) && this.isProjectFile(decl.getSourceFile().getFilePath()) && (decl as Fn).getDescendantsOfKind(SyntaxKind.CallExpression).some((c) => calleeName(c) === name);
+    };
+    const starts = calls.filter((c) => does(c, 'startTransaction'));
+    if (!starts.length) return null;
+    const commits = calls.filter((c) => c.getStart() > starts[0].getEnd() && does(c, 'commitTransaction'));
+    const names: string[] = [];
+    for (const s of starts) {
+      const callee = s.getExpression();
+      // `runner.startTransaction()`: the runner; a helper (`this.begin(this.ordersDb)`): what it is given.
+      const sources = [...(Node.isPropertyAccessExpression(callee) ? [callee.getExpression()] : []), ...s.getArguments()];
+      const name = sources.map((a) => this.dataSourceName(a)).find(Boolean);
+      if (name && !names.includes(name)) names.push(name);
+    }
+    // The whole start expression (`Promise.all([...])`) comes before the first step in the transaction.
+    let first: Node = starts[0];
+    for (let p = first.getParent(); p && p !== body && !Node.isStatement(p); p = p.getParent()) first = p;
+    return { start: Math.max(...starts.map((s) => s.getEnd()), first.getEnd()), end: commits.at(-1)?.getStart() ?? body.getEnd(), name: `${names.join(' + ') || 'queryRunner'} transaction` };
+  }
+
+  /**
+   * The data source a query runner (or transaction context) comes from: followed through variables, `ctx.queryRunner`,
+   * `contexts[0]` of a `Promise.all([...])`, `createQueryRunner()`, and helpers given the data source, to a field
+   * injected with a name (`@InjectDataSource('orders')`), else the field's own name.
+   */
+  private dataSourceName(node: Node, depth = 0): string | undefined {
+    if (depth > 10) return undefined;
+    const n = unwrap(node);
+    const next = (x: Node | undefined) => (x ? this.dataSourceName(x, depth + 1) : undefined);
+    if (Node.isAwaitExpression(n)) return next(n.getExpression());
+    if (Node.isIdentifier(n)) {
+      const decl = this.resolveDeclaration(n);
+      if (decl && Node.isVariableDeclaration(decl)) return next(decl.getInitializer());
+      if (decl && Node.isBindingElement(decl)) {
+        // const [orders, audit] = await Promise.all([...])
+        const pattern = decl.getParent();
+        const v = pattern?.getParent();
+        if (Node.isArrayBindingPattern(pattern) && Node.isVariableDeclaration(v)) return next(this.elementOf(v.getInitializer(), pattern.getElements().indexOf(decl)));
+      }
+      return undefined;
+    }
+    if (Node.isPropertyAccessExpression(n)) {
+      if (unwrap(n.getExpression()).getKind() !== SyntaxKind.ThisKeyword) return next(n.getExpression());
+      const decl = this.resolveDeclaration(n);
+      if (decl && (Node.isParameterDeclaration(decl) || Node.isPropertyDeclaration(decl))) {
+        for (const d of decl.getDecorators()) for (const a of d.getArguments()) if (Node.isStringLiteral(a)) return a.getLiteralValue();
+      }
+      return n.getName();
+    }
+    if (Node.isElementAccessExpression(n)) {
+      const index = Number(this.literal(n.getArgumentExpressionOrThrow()));
+      const holder = unwrap(n.getExpression());
+      const decl = Node.isIdentifier(holder) ? this.resolveDeclaration(holder) : undefined;
+      const item = Number.isInteger(index) && decl && Node.isVariableDeclaration(decl) ? this.elementOf(decl.getInitializer(), index) : undefined;
+      return next(item ?? holder);
+    }
+    if (Node.isCallExpression(n)) {
+      const callee = n.getExpression();
+      if (calleeName(n) === 'createQueryRunner' && Node.isPropertyAccessExpression(callee)) return next(callee.getExpression());
+      for (const a of n.getArguments()) {
+        const v = next(a);
+        if (v) return v;
+      }
+      return Node.isPropertyAccessExpression(callee) ? next(callee.getExpression()) : undefined;
+    }
+    if (Node.isObjectLiteralExpression(n)) {
+      for (const p of n.getProperties()) {
+        const v = Node.isPropertyAssignment(p) ? next(p.getInitializer()) : Node.isShorthandPropertyAssignment(p) ? next(p.getNameNode()) : undefined;
+        if (v) return v;
+      }
+    }
+    return undefined;
+  }
+
+  /** Item `index` of an array a variable holds: `[a, b]`, or what `await Promise.all([a, b])` resolves to. */
+  private elementOf(init: Node | undefined, index: number): Node | undefined {
+    let v = init && unwrap(init);
+    if (v && Node.isAwaitExpression(v)) v = unwrap(v.getExpression());
+    if (v && isPromiseAll(v)) v = unwrap((v as CallExpression).getArguments()[0]);
+    return v && Node.isArrayLiteralExpression(v) ? v.getElements()[index] : undefined;
+  }
+
   // ---------- resolution ----------
 
   private resolve(call: Invocation): Resolved {
@@ -1477,7 +1640,11 @@ export class Extractor implements RevisionAnalysis {
     if (spec === 'injected') return this.injectedName(site.receiver);
     if (spec === 'entity') {
       const typeArg = site.receiver?.getType().getTypeArguments()[0];
-      const fromArg = args[0] && (this.classOf(args[0]) ?? args[0].getType().getSymbol()?.getDeclarations()[0]);
+      // The entity class passed (`manager.update(Order, …)`), else the argument's type: an entity, or an array of them
+      // (`manager.save(rows)` with `rows = items.map((i) => repo.create({…}))`, or `manager.create(Order, …)` items).
+      const argType = args[0]?.getType().getNonNullableType();
+      const element = argType?.isArray() ? argType.getArrayElementType() : argType;
+      const fromArg = args[0] && (this.classOf(args[0]) ?? element?.getSymbol()?.getDeclarations()[0]);
       const decl = typeArg?.getSymbol()?.getDeclarations()[0] ?? fromArg;
       return decl && Node.isClassDeclaration(decl) ? entityTable(decl, (n) => this.literal(n)) : undefined;
     }
@@ -1613,15 +1780,44 @@ export class Extractor implements RevisionAnalysis {
   /** Host for absolute URLs; the path with `{name}` for interpolated parts otherwise. */
   private urlTarget(node: Node | undefined): string | undefined {
     if (!node) return undefined;
-    const value = this.literal(node);
-    let text = value;
-    if (value.startsWith('<') && Node.isTemplateExpression(node)) {
-      text = node.getHead().getLiteralText() + node.getTemplateSpans().map((s) => `{${lastName(s.getExpression())}}${s.getLiteral().getLiteralText()}`).join('');
-    } else if (value.startsWith('<')) {
-      return undefined;
-    }
+    const text = this.urlText(node);
+    if (text === undefined) return undefined;
     const m = /^[a-z]+:\/\/([^/?#]+)/i.exec(text);
     return m ? m[1] : text.replace(/[?#].*$/, '');
+  }
+
+  /**
+   * A URL as a template, followed back to where its parts are made, as `targetText` does for topics: a local
+   * variable or a `this.x` field set in the constructor to its value, a config key in braces
+   * (`configService.getOrThrow('PAYMENTS_URL')` → `{PAYMENTS_URL}`), a parameter as `{its name}`, string `+`.
+   * Undefined when it can't be read.
+   */
+  private urlText(node: Node, depth = 0, seen = new Set<Node>()): string | undefined {
+    const value = this.literal(node);
+    if (!value.startsWith('<') && value !== '?') return value;
+    if (depth > 6 || seen.has(node)) return undefined;
+    seen.add(node);
+    const n = unwrap(node);
+    const next = (x: Node | undefined) => (x ? this.urlText(x, depth + 1, seen) : undefined);
+    const key = configKey(n, (x) => this.literal(x));
+    if (key) return `{${key}}`;
+    if (Node.isAwaitExpression(n)) return next(n.getExpression());
+    if (Node.isTemplateExpression(n)) {
+      return n.getHead().getLiteralText() + n.getTemplateSpans().map((s) => `${next(s.getExpression()) ?? `{${lastName(s.getExpression())}}`}${s.getLiteral().getLiteralText()}`).join('');
+    }
+    if (Node.isBinaryExpression(n) && n.getOperatorToken().getKind() === SyntaxKind.PlusToken) {
+      return [n.getLeft(), n.getRight()].map((x) => next(x) ?? `{${lastName(x)}}`).join('');
+    }
+    if (Node.isIdentifier(n)) {
+      const parent = n.getParent();
+      const symbol = parent && Node.isShorthandPropertyAssignment(parent) && parent.getNameNode() === n ? parent.getValueSymbol() : n.getSymbol();
+      const decl = symbol?.getDeclarations()[0];
+      if (decl && Node.isVariableDeclaration(decl)) return next(decl.getInitializer());
+      if (decl && Node.isParameterDeclaration(decl)) return `{${decl.getName()}}`;
+      return undefined;
+    }
+    if (Node.isPropertyAccessExpression(n) && unwrap(n.getExpression()).getKind() === SyntaxKind.ThisKeyword) return next(this.fieldValue(n));
+    return undefined;
   }
 
   /**
@@ -1926,6 +2122,22 @@ export class Extractor implements RevisionAnalysis {
 
 // ---------- pure helpers ----------
 
+/** Something that runs before a scope's own function: a pipeline item (`label`), or an earlier start hook (`cls`). */
+interface Prelude {
+  fn: Fn;
+  name: string;
+  /** Index in the entry point's pipeline; -1 for an earlier start hook. */
+  item: number;
+  label?: string;
+  cls?: ClassDeclaration;
+}
+
+/** Where a start method runs among the others: framework start hooks in their order, then the rule's order. */
+function startRank(name: string, listed: string[]): number {
+  const i = START_ORDER.indexOf(name);
+  return i >= 0 ? i : START_ORDER.length + Math.max(0, listed.indexOf(name));
+}
+
 function methodsOf(rule: CallMatch): string[] {
   return Array.isArray(rule.method) ? rule.method : rule.method.split('|');
 }
@@ -2004,6 +2216,11 @@ export function pkgOf(path: string): string {
   const rest = p.slice(i + '/node_modules/'.length).split('/');
   const name = rest[0].startsWith('@') ? `${rest[0]}/${rest[1]}` : rest[0];
   if (name === 'typescript' || name === '@types/node' || name === 'undici-types') return 'global';
+  // Types published apart (`@types/ssh2-sftp-client`, `@types/scope__pkg`) describe the package itself.
+  if (name.startsWith('@types/')) {
+    const real = name.slice(7);
+    return real.includes('__') ? `@${real.replace('__', '/')}` : real;
+  }
   return name;
 }
 

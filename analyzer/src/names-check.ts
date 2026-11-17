@@ -4,7 +4,7 @@
  * that only matches the sample passes every check here and fails on the next real service.
  *
  * Scans analyzer/src and ui/src, comments included, except the checks (`*-check.ts`), which test the samples by name.
- * The names: those of the round-2 acceptance fixture (acceptance/round-2) and of sample-legacy-nest-service.
+ * The names: those of the round-2 and round-3 acceptance fixtures (acceptance/) and of sample-legacy-nest-service.
  * usage: npm run names-check --workspace analyzer
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -21,6 +21,18 @@ const NAMES: [string, RegExp][] = [
   ['records-review-service', /records-review-service/],
   ['SyncFeature', /SyncFeature/],
   ['.local', /\.local\b/],
+  // round-3 acceptance fixture (acceptance/round-3)
+  ['VendorIdentityClient', /VendorIdentityClient/],
+  ['vendorco', /vendorco/i],
+  ['RecordNationalityService', /RecordNationalityService/],
+  ['RecordMessagesService', /RecordMessagesService/],
+  ['UserRecordStatusService', /UserRecordStatusService/],
+  ['ReviewerDirectoryService', /ReviewerDirectoryService/],
+  ['LOCKS_SERVICE_BASE_URL', /LOCKS_SERVICE_BASE_URL/],
+  ['GEOIP_PROXY_BASE_URL', /GEOIP_PROXY_BASE_URL/],
+  ['ASSESSMENTS_SERVICE_BASE_URL', /ASSESSMENTS_SERVICE_BASE_URL/],
+  ['VENDOR_WORKFLOW_API_BASE_URL', /VENDOR_WORKFLOW_API_BASE_URL/],
+  ['captcha-vendor', /captcha-vendor/],
   // sample-legacy-nest-service and its packages
   ['ConcludeManualReview', /ConcludeManualReview/],
   ['user-records-service', /user-records-service/],
