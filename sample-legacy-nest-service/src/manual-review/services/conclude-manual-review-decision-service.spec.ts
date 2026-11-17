@@ -79,7 +79,10 @@ describe('ConcludeManualReviewDecisionService', () => {
       const result = await service.approve(AGENT_GUID, '6f1c2b8e-1d2a-4c55-9a7e-3b0d1f2c9a10', approveDecision);
 
       expect(result).toEqual({ guid: '6f1c2b8e-1d2a-4c55-9a7e-3b0d1f2c9a10', status: UserRecordStatusCode.APPROVED, reviewedBy: AGENT_GUID, reviewedAt: NOW, recordsUpdated: 2 });
-      expect(legacyRepository.update).toHaveBeenCalledTimes(2);
+      expect(legacyRepository.findOne).toHaveBeenCalledTimes(2);
+      expect(legacyRepository.save).toHaveBeenCalledTimes(2);
+      expect(kmsService.encryptString).toHaveBeenCalledWith(JSON.stringify({ firstName: 'Ana', lastName: 'Ferreira', countryOfBirth: 'PRT', dateOfBirth: '1990-04-03' }));
+      expect(kmsService.encryptString).toHaveBeenCalledWith(JSON.stringify({ addressLine1: 'Rua das Flores 12', city: 'Porto', country: 'PRT', firstName: 'Ana', countryOfBirth: 'PRT' }));
       expect(userRecordStatusService.setStatus).toHaveBeenCalledWith(legacyRunner, expect.any(Array), UserRecordStatusCode.APPROVED, AGENT_GUID);
       expect(legacyRunner.commitTransaction).toHaveBeenCalled();
       expect(adminRunner.commitTransaction).toHaveBeenCalled();

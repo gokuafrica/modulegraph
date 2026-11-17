@@ -44,12 +44,7 @@ export class ConcludeManualReviewDecisionService {
     const userRecords = await this.userRecordService.findAllByUserGuid(record.userGuid);
     const transactionContexts = await this.startTransactions();
     try {
-      const manualData = {
-        ...record.data,
-        ...decision.data,
-      };
-      const encryptedManualData = await this.kmsService.encryptString(JSON.stringify(this.userRecordDataTransformer.normalize(manualData)));
-      await this.setUserRecordManualData(transactionContexts, userRecords, encryptedManualData);
+      await this.setUserRecordManualData(transactionContexts, userRecords, decision.data);
       await this.userRecordStatusService.setStatus(this.runnerFor(transactionContexts, 'legacy'), userRecords, UserRecordStatusCode.APPROVED, agentGuid);
       await this.saveDecision(this.runnerFor(transactionContexts, 'admin'), agentGuid, guid, 'APPROVED', decision.reason);
       const syncedMessage = await this.syncedMessageService.createSyncedMessage(guid, record.id, 'UserRecordApprovedNotification');
@@ -72,8 +67,7 @@ export class ConcludeManualReviewDecisionService {
     const userRecords = await this.userRecordService.findAllByUserGuid(record.userGuid);
     const transactionContexts = await this.startTransactions();
     try {
-      const encryptedManualData = await this.kmsService.encryptString(JSON.stringify(this.userRecordDataTransformer.normalize({ ...record.data, ...dto.data })));
-      await this.setUserRecordManualData(transactionContexts, userRecords, encryptedManualData);
+      await this.setUserRecordManualData(transactionContexts, userRecords, dto.data);
       await this.saveDecision(this.runnerFor(transactionContexts, 'admin'), agentGuid, guid, 'DATA_UPDATED', dto.reason);
       await Promise.all(transactionContexts.map(({ queryRunner }) => queryRunner.commitTransaction()));
     } catch (error) {
@@ -122,13 +116,15 @@ export class ConcludeManualReviewDecisionService {
   }
 
   // Copies the reviewed record's data onto every row of the user, so all of them show what the agent approved.
-  private async setUserRecordManualData(transactionContexts: TransactionContext[], userRecords: UserRecord[], encryptedManualData: string): Promise<void> {
+  private async setUserRecordManualData(transactionContexts: TransactionContext[], userRecords: UserRecord[], agentData: Record<string, unknown>): Promise<void> {
     const repository = this.runnerFor(transactionContexts, 'legacy').manager.getRepository(UserRecord);
-    await Promise.all(
-      userRecords.map((userRecord) =>
-        repository.update({ guid: userRecord.guid }, { manualData: encryptedManualData, updatedAt: this.dateService.now() }),
-      ),
-    );
+    for (const userRecord of userRecords) {
+      const row = await repository.findOne({ where: { guid: userRecord.guid } });
+      const merged = { ...row.data, ...agentData };
+      const normalized = this.userRecordDataTransformer.normalize(merged);
+      const manualData = await this.kmsService.encryptString(JSON.stringify(normalized));
+      await repository.save({ ...row, manualData, updatedAt: this.dateService.now() });
+    }
   }
 
   private async saveDecision(queryRunner: QueryRunner, agentGuid: string, guid: string, decision: string, reason?: string): Promise<void> {
