@@ -288,7 +288,8 @@ export function changeFindings(g: Graphish, diff: RawDiff, config: Config, inten
   for (const file of diff.files.filter((f) => f.status === 'deleted' && /\.(test|spec)\.tsx?$/.test(f.path))) {
     findings.push({ rule: 'guardrail-weakened', severity: 'error', message: `Test file deleted: ${file.path}`, isNew: true, subject: { type: 'file', id: file.path } });
   }
-  const entryFiles = new Set(Object.values(g.entryPoints).map((e) => e.file));
+  // Files with an entry point, or with code an entry point runs (a guard or interceptor in front of it).
+  const entryFiles = new Set(Object.values(g.entryPoints).flatMap((e) => [e.file, ...(e.changes ?? []).map((c) => c.file)]));
   const outside = diff.files.filter((f) => f.modules.length === 0 && !entryFiles.has(f.path) && /\.tsx?$/.test(f.path));
   if (outside.length) {
     findings.push({

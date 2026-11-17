@@ -116,6 +116,8 @@ export class Extractor implements RevisionAnalysis {
   private pipelineAt = new Map<Node, Set<string>>();
   private listed = false;
   private hookMemo = new Map<string, unknown>();
+  /** Class names more than one module has. */
+  private sharedNames = new Set<string>();
   private unresolvedInjected = new Map<Node, string>();
 
   constructor(
@@ -154,7 +156,11 @@ export class Extractor implements RevisionAnalysis {
 
   /** Module discovery only: which classes are modules. Cheap: no function bodies are analyzed. */
   init(): void {
-    for (const cls of this.discoverModules(this.projectFiles().flatMap((f) => f.getClasses()))) this.registerModule(cls);
+    const modules = this.discoverModules(this.projectFiles().flatMap((f) => f.getClasses()));
+    // Two modules with one class name get their folder in the display name: `Orders (legacy)`, `Orders (orders)`.
+    const names = modules.map((c) => c.getName());
+    this.sharedNames = new Set(names.filter((n, i) => n && names.indexOf(n) !== i) as string[]);
+    for (const cls of modules) this.registerModule(cls);
   }
 
   private projectFiles() {
@@ -549,7 +555,7 @@ export class Extractor implements RevisionAnalysis {
     this.moduleIds.set(cls, id);
     this.snapshot.modules[id] = {
       id,
-      name: override.name ?? (named ? named[1] : className.replace(/(Module|Service)$/, '') || className),
+      name: override.name ?? `${named ? named[1] : className.replace(/(Module|Service)$/, '') || className}${this.sharedNames.has(className) ? ` (${basename(dirname(cls.getSourceFile().getFilePath()))})` : ''}`,
       className,
       file,
       line: cls.getStartLineNumber(),
