@@ -28,6 +28,12 @@ export function compare(head: Snapshot, base?: Snapshot): Graphish {
       op.diff = lineDiff(before.source, op.source);
       op.changes = codeChanges(base.parts[op.id], head.parts[op.id], baseFns, headFns);
       if (base.scopes[op.id] && out.scopes[op.id]) diffScope(out.scopes[op.id], base.scopes[op.id]);
+    } else if (keys(before.calls) !== keys(op.calls) || keys(before.directEffects.map(effectKey)) !== keys(op.directEffects.map(effectKey))) {
+      // Same code, different wiring: a DI binding or an entity's table moved, so its calls or effects go elsewhere.
+      op.change = 'modified';
+      op.diff = lineDiff(before.source, op.source);
+      op.changes = [];
+      if (base.scopes[op.id] && out.scopes[op.id]) diffScope(out.scopes[op.id], base.scopes[op.id]);
     }
     if (op.change === 'added') op.changes = codeChanges(undefined, head.parts[op.id], baseFns, headFns);
     const delta = contractDelta(before, op);
@@ -162,3 +168,6 @@ function lineDiff(before: string, after: string): DiffLine[] {
 
 const paramSig = (ps: Param[]) => ps.map((p) => `${p.name}:${p.type}`).join(',');
 const shapeSig = (s: TypeShape) => `${s.type}|${(s.fields ?? []).map((f) => `${f.name}:${f.type}`).join(',')}`;
+
+/** A list as a set, for comparing calls and effects regardless of order. */
+const keys = (xs: string[]) => [...new Set(xs)].sort().join('|');

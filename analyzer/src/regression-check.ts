@@ -154,6 +154,42 @@ const scenarios: Record<string, () => void> = {
     }
   },
 
+  P1di() {
+    console.log('\nP1: PAYMENT_GATEWAY rebound from StripeGateway to FakeGateway (only AppModule changes)');
+    const dir = store();
+    branch(dir, 'p1-di', 'Payments: use the fake gateway', [
+      ['src/app.module.ts', "import { PAYMENT_GATEWAY, StripeGateway } from './payments/gateway.ts';", "import { FakeGateway, PAYMENT_GATEWAY } from './payments/gateway.ts';"],
+      ['src/app.module.ts', '{ provide: PAYMENT_GATEWAY, useClass: StripeGateway }', '{ provide: PAYMENT_GATEWAY, useClass: FakeGateway }'],
+    ]);
+    for (const lazy of [false, true]) {
+      const label = lazy ? 'lazy' : 'full';
+      const r = analyze(dir, `p1-di-${label}`, ['--head', 'p1-di', '--base', 'main', ...(lazy ? ['--lazy'] : [])]);
+      const charge = r.graph.operations['PaymentsService.charge'];
+      ok(`${label}: PaymentsService.charge is modified though its code is not`, charge?.change === 'modified', `${charge?.change}`);
+      ok(`${label}: it now calls FakeGateway.charge, not StripeGateway.charge, and loses http api.stripe.example`,
+        !!charge?.delta?.callsAdded.includes('FakeGateway.charge') && !!charge.delta.callsRemoved.includes('StripeGateway.charge') &&
+        charge.delta.effectsRemoved.some((e) => effectKey(e) === 'http api.stripe.example'), JSON.stringify(charge?.delta));
+      const pay = r.graph.entryPoints['api:POST /api/v1/orders/:id/pay'];
+      ok(`${label}: POST /api/v1/orders/:id/pay no longer calls the payment API`, !!pay?.effectsRemoved?.some((e) => effectKey(e) === 'http api.stripe.example'), JSON.stringify(pay?.effectsRemoved));
+    }
+  },
+
+  P1cqrs() {
+    console.log('\nP1: a write inside a CQRS query handler');
+    const dir = store();
+    branch(dir, 'p1-cqrs', 'Orders: mark listed orders as seen', [
+      ['src/orders/commands.ts', "    return this.orders.createQueryBuilder('o').where('o.customer_id = :id', { id: query.customerId }).getMany();",
+        "    await this.orders.createQueryBuilder().update().set({ status: 'pending' }).where('customer_id = :id', { id: query.customerId }).execute();\n    return this.orders.createQueryBuilder('o').where('o.customer_id = :id', { id: query.customerId }).getMany();"],
+    ]);
+    for (const lazy of [false, true]) {
+      const label = lazy ? 'lazy' : 'full';
+      const r = analyze(dir, `p1-cqrs-${label}`, ['--head', 'p1-cqrs', '--base', 'main', ...(lazy ? ['--lazy'] : [])]);
+      ok(`${label}: ListOrdersHandler.execute gains db.write orders`, !!r.graph.operations['ListOrdersHandler.execute']?.delta?.effectsAdded.some((e) => effectKey(e) === 'db.write orders'));
+      ok(`${label}: GET /api/v1/orders (QueryBus.execute) reaches it: read-path-writes`,
+        findings(r.graph, 'read-path-writes').some((f) => f.message.includes('db.write `orders`') && f.message.includes('GET /api/v1/orders')), allFindings(r.graph));
+    }
+  },
+
   // R5, R6: lazy questions answered like full analysis.
   R5R6() {
     console.log('\nR5/R6: lazy analysis vs full analysis on the fixture');

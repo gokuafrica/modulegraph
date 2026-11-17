@@ -24,7 +24,16 @@ interface Expected {
   operations: Record<string, string[]>;
   /** entry id -> type of what the handler answers */
   returns?: Record<string, string>;
+  /** operation id -> operations it calls */
+  calls?: Record<string, string[]>;
+  /** entry id -> its request pipeline, `kind name (scope)` in order */
+  pipelines?: Record<string, string[]>;
 }
+
+const NEST_ORDERS = 'OrdersService@fixtures/frameworks/nest/src/orders/orders.service.ts';
+/** Every route, resolver and gateway goes through the global AuthGuard (APP_GUARD), which reads sessions. */
+const GUARDED = 'db.read sessions';
+const GLOBAL_PIPELINE = ['guard AuthGuard (global)', 'pipe ValidationPipe (global)', 'filter HttpErrorFilter (global)'];
 
 const cases: Expected[] = [
   {
@@ -107,6 +116,82 @@ const cases: Expected[] = [
     },
     returns: { 'api:GET /v1/invoices/:id': 'Invoice', 'api:GET /health': '{ ok: boolean; }', 'api:POST /v1/products': 'ProductDoc' },
   },
+  {
+    // NestJS beyond controllers and repositories: request pipeline, CQRS, custom providers, query builders, raw SQL,
+    // Mongoose documents, RouterModule, URI versioning, GraphQL, WebSockets, two classes named OrdersService.
+    project: 'fixtures/frameworks/nest',
+    frameworks: ['nestjs', 'nestjs-cqrs', 'typeorm', 'mongoose'],
+    modules: [
+      'ReportsService', 'AuditService', 'OrdersService', NEST_ORDERS, 'EmailNotifier', 'SmsNotifier', 'PlaceOrderHandler', 'ListOrdersHandler',
+      'OrderPlacedHandler', 'StripeGateway', 'FakeGateway', 'PaymentsService', 'ReviewsService', 'SessionsService',
+    ],
+    entries: {
+      // RouterModule.register([{ path: 'admin', module: AdminModule }]); query builders
+      'api:GET /api/admin/reports/daily': [GUARDED, 'db.read orders'],
+      'api:POST /api/admin/reports/purge': [GUARDED, 'db.write orders'],
+      // the other OrdersService: raw SQL on legacy_orders
+      'api:GET /api/legacy/orders/:id': [GUARDED, 'db.read legacy_orders'],
+      'api:POST /api/legacy/orders/:id/cancel': [GUARDED, 'db.write legacy_orders'],
+      // @Controller({ path: 'orders', version: '1' }), @Version('2'); QueryBus / CommandBus → handlers → EventBus →
+      // OrderPlacedHandler → @Inject(NOTIFIER) bound by useFactory: () => new EmailNotifier()
+      'api:GET /api/v1/orders': [GUARDED, 'db.read orders'],
+      'api:GET /api/v1/orders/:id': [GUARDED, 'db.read orders'],
+      'api:GET /api/v2/orders/:id': [GUARDED, 'db.read orders'],
+      'api:POST /api/v1/orders': [GUARDED, 'db.write orders', 'http mail.example.com'],
+      'api:POST /api/v1/orders/:id/hold': [GUARDED, 'db.write order_holds', 'db.write orders'],
+      'api:POST /api/v1/orders/expire': [GUARDED, 'db.write orders', 'db.read orders'],
+      // @Inject(PAYMENT_GATEWAY) bound to StripeGateway (FakeGateway implements the interface too)
+      'api:POST /api/v1/orders/:id/pay': [GUARDED, 'http api.stripe.example'],
+      // @UseInterceptors(AuditInterceptor) writes audit_log on every call; Mongoose document save / deleteOne
+      'api:GET /api/reviews': [GUARDED, 'db.write audit_log', 'db.read reviews'],
+      'api:POST /api/reviews/:id/approve': [GUARDED, 'db.write audit_log', 'db.read reviews', 'db.write reviews'],
+      'api:DELETE /api/reviews/:id': [GUARDED, 'db.write audit_log', 'db.read reviews', 'db.write reviews'],
+      'api:GraphQL query order': [GUARDED, 'db.read orders'],
+      'api:GraphQL mutation cancelOrder': [GUARDED, 'db.write orders'],
+      'api:GraphQL field Order.session': [GUARDED],
+      'consumer:ws orders.watch': [GUARDED, 'db.read orders'],
+    },
+    operations: {
+      'ReportsService.daily': ['db.read orders'],
+      'ReportsService.purgeCancelled': ['db.write orders'],
+      'AuditService.record': ['db.write audit_log'],
+      'OrdersService.get': ['db.read legacy_orders'],
+      'OrdersService.cancel': ['db.write legacy_orders'],
+      [`${NEST_ORDERS}.get`]: ['db.read orders'],
+      [`${NEST_ORDERS}.cancel`]: ['db.write orders'],
+      [`${NEST_ORDERS}.release`]: ['db.write order_holds'],
+      [`${NEST_ORDERS}.resolveHold`]: [],
+      [`${NEST_ORDERS}.expireStale`]: ['db.write orders', 'db.read orders'],
+      'EmailNotifier.send': ['http mail.example.com'],
+      'SmsNotifier.send': ['http sms.example.com'],
+      'PlaceOrderHandler.execute': ['db.write orders'],
+      'ListOrdersHandler.execute': ['db.read orders'],
+      'OrderPlacedHandler.handle': [],
+      'StripeGateway.charge': ['http api.stripe.example'],
+      'FakeGateway.charge': [],
+      'PaymentsService.charge': [],
+      'ReviewsService.list': ['db.read reviews'],
+      'ReviewsService.approve': ['db.read reviews', 'db.write reviews'],
+      'ReviewsService.remove': ['db.read reviews', 'db.write reviews'],
+      'SessionsService.find': ['db.read sessions'],
+    },
+    calls: {
+      [`${NEST_ORDERS}.resolveHold`]: [`${NEST_ORDERS}.release`, `${NEST_ORDERS}.cancel`],
+      'PlaceOrderHandler.execute': ['OrderPlacedHandler.handle'],
+      'OrderPlacedHandler.handle': ['EmailNotifier.send'],
+      'PaymentsService.charge': ['StripeGateway.charge'],
+    },
+    pipelines: {
+      // consumer.apply(RequestIdMiddleware).forRoutes(OrdersController, 'reviews')
+      'api:GET /api/v1/orders': ['middleware RequestIdMiddleware (global)', 'guard AuthGuard (global)', 'guard RolesGuard (controller)', ...GLOBAL_PIPELINE.slice(1), 'metadata @Public() (method)'],
+      'api:POST /api/v1/orders': ['middleware RequestIdMiddleware (global)', 'guard AuthGuard (global)', 'guard RolesGuard (controller)', ...GLOBAL_PIPELINE.slice(1), "metadata @Roles(['clerk']) (method)"],
+      'api:GET /api/reviews': ['middleware RequestIdMiddleware (global)', 'guard AuthGuard (global)', 'interceptor AuditInterceptor (controller)', ...GLOBAL_PIPELINE.slice(1)],
+      'api:GET /api/admin/reports/daily': [...GLOBAL_PIPELINE, "metadata @Roles(['admin']) (controller)"],
+      'api:GET /api/legacy/orders/:id': GLOBAL_PIPELINE,
+      'api:GraphQL query order': GLOBAL_PIPELINE,
+      'consumer:ws orders.watch': GLOBAL_PIPELINE,
+    },
+  },
 ];
 
 let failures = 0;
@@ -140,6 +225,14 @@ for (const c of cases) {
     const op = g.operations[id];
     if (!op) { fail(`operation ${id} not found`); continue; }
     if (!same(op.directEffects.map(effectKey), effects)) fail(`${id} effects ${op.directEffects.map(effectKey).join(', ')} ≠ ${effects.join(', ')}`);
+  }
+  for (const [id, calls] of Object.entries(c.calls ?? {})) {
+    const got = g.operations[id]?.calls ?? [];
+    if (!same(got, calls)) fail(`${id} calls ${got.join(', ')} ≠ ${calls.join(', ')}`);
+  }
+  for (const [id, pipeline] of Object.entries(c.pipelines ?? {})) {
+    const got = (g.entryPoints[id]?.pipeline ?? []).map((p) => `${p.kind} ${p.name} (${p.scope})`);
+    if (JSON.stringify(got) !== JSON.stringify(pipeline)) fail(`${id} pipeline ${got.join(', ')} ≠ ${pipeline.join(', ')}`);
   }
   for (const [id, type] of Object.entries(c.returns ?? {})) {
     const got = g.scopes[id]?.returns?.type;

@@ -1,6 +1,7 @@
 import { type ClassDeclaration, type Decorator, type MethodDeclaration, Node, SyntaxKind } from 'ts-morph';
 import type { DecoratorEntryRule } from '../../../config.ts';
 import { joinPath } from '../extract.ts';
+import { consumersAt, implementation } from './nest-di.ts';
 import { nestPipeline } from './nest-pipeline.ts';
 import type { Framework, HookContext } from './types.ts';
 
@@ -64,6 +65,8 @@ export const nestjs: Framework = {
       return undefined;
     },
     pipeline: nestPipeline,
+    implementation,
+    consumersAt,
   },
 };
 

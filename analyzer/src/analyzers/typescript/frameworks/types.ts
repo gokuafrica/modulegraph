@@ -92,5 +92,13 @@ export interface FrameworkHooks {
   decoratorVars?(method: MethodDeclaration, cls: ClassDeclaration, decorator: Decorator | undefined, ctx: HookContext): Record<string, string> | undefined;
   /** What runs before a decorated handler (guards, interceptors, middleware, …), in order. `vars` are its label variables. */
   pipeline?(method: MethodDeclaration, cls: ClassDeclaration, vars: Record<string, string>, ctx: HookContext): PipelineSpec[] | undefined;
+  /** The class dependency injection binds a receiver to (`@Inject(TOKEN) gateway` → the provider's `useClass`). */
+  implementation?(receiver: Node, ctx: HookContext): ClassDeclaration | undefined;
+  /** Classes whose injected dependencies the code at `node` binds (a changed provider entry). */
+  consumersAt?(node: Node, ctx: HookContext): ClassDeclaration[] | undefined;
+  /** Handler methods a bus call dispatches to (CQRS `commandBus.execute(new X())` → `XHandler.execute`). */
+  dispatch?(site: CallSite, ctx: HookContext): MethodDeclaration[] | undefined;
+  /** Callee names `dispatch` handles (`execute`, `publish`), so the callers of a handler can be found. */
+  dispatchNames?: string[];
 }
 

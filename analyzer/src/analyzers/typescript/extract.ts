@@ -36,6 +36,8 @@ type Resolved =
   | { kind: 'sink'; effect: Effect }
   | { kind: 'response'; arg?: Node }
   | { kind: 'inline'; fn: Fn; name: string }
+  /** A bus call (CQRS) that runs these handlers. */
+  | { kind: 'dispatch'; targets: Resolved[] }
   | { kind: 'unknown' };
 
 interface FnResult {
@@ -73,6 +75,8 @@ interface Rules {
   hooks: FrameworkHooks[];
   /** Callee names that can register an entry point (cheap filter before type resolution). */
   entryNames: Set<string>;
+  /** Callee names that can dispatch to handlers (CQRS buses), for finding a handler's callers. */
+  dispatchNames: Set<string>;
 }
 
 const MAX_TYPE = 110;
@@ -135,6 +139,7 @@ export class Extractor implements RevisionAnalysis {
       ignoreMethods: new Set(frameworks.flatMap((f) => f.ignoreMethods ?? [])),
       hooks: frameworks.flatMap((f) => (f.hooks ? [f.hooks] : [])),
       entryNames: new Set(entries.flatMap((r) => (methodsOf(r).includes('new') ? (r.class ?? '').split('|') : methodsOf(r)))),
+      dispatchNames: new Set(frameworks.flatMap((f) => f.hooks?.dispatchNames ?? [])),
     };
   }
 
@@ -239,12 +244,18 @@ export class Extractor implements RevisionAnalysis {
       // `this.cancel`): `resolve` makes those steps too. A recursive call is not a caller.
       for (const id of this.scopesAt(call)) if (id !== opId) out.add(id);
     }
+    // Handlers are reached through a bus (`commandBus.execute(new X())`), not by name.
+    for (const name of this.rules.dispatchNames) {
+      for (const call of this.callsNamed(name)) {
+        if (this.resolvesTo(call, opId)) for (const id of this.scopesAt(call)) if (id !== opId) out.add(id);
+      }
+    }
     return [...out];
   }
 
   private resolvesTo(call: Invocation, opId: string): boolean {
     const r = this.resolve(call);
-    return r.kind === 'op' && r.opId === opId;
+    return (r.kind === 'op' && r.opId === opId) || (r.kind === 'dispatch' && r.targets.some((t) => t.kind === 'op' && t.opId === opId));
   }
 
   /** Scopes whose analysis covers the given lines of a file: where a diff hunk lands in the graph. */
@@ -284,6 +295,14 @@ export class Extractor implements RevisionAnalysis {
     if (decorated && Node.isMethodDeclaration(decorated)) {
       const id = this.decoratorEntryOf(decorated);
       if (id) return [id];
+    }
+    // A changed DI binding (`{ provide: TOKEN, useClass: X }`): calls through the token now reach another class.
+    const ctx = this.hookContext();
+    for (const h of this.rules.hooks) {
+      const consumers = h.consumersAt?.(node, ctx);
+      if (consumers?.length) {
+        return consumers.flatMap((c) => (this.moduleIds.has(c) ? this.publicMethods(c).map((m) => this.opIdOf(c, m.getName())) : c.getMethods().map((m) => this.decoratorEntryOf(m)).filter((x): x is string => !!x)));
+      }
     }
     // A class decorator (`@Controller('orders')`, `@UseGuards(X)`) belongs to every handler in the class.
     if (decorated && Node.isClassDeclaration(decorated)) {
@@ -501,6 +520,8 @@ export class Extractor implements RevisionAnalysis {
       if (!name || platform.has(name) || exclude.includes(name)) return false;
       const tagged = cls.getJsDocs().some((d) => d.getTags().some((t) => t.getTagName() === this.config.moduleTag));
       if (include.includes(name) || tagged) return true;
+      // An abstract class is a contract: the classes that implement it are the modules.
+      if (cls.isAbstract()) return false;
       const decorators = cls.getDecorators().map((d) => d.getName());
       if (decorators.some((d) => this.rules.notModuleDecorators.has(d))) return false;
       if (cls.getImplements().some((i) => this.rules.notModuleImplements.has(i.getExpression().getText()))) return false;
@@ -820,6 +841,16 @@ export class Extractor implements RevisionAnalysis {
       for (const g of guardNodes) mergeInto(guards, strip(prodOf(g)));
       const inputs = new Map<string, Set<string>>();
       for (const arg of call.getArguments()) mergeInto(inputs, prodOf(arg));
+      // A bus call runs each handler registered for the message: one step per handler.
+      for (const target of resolved.kind === 'dispatch' ? resolved.targets : [resolved]) handleTarget(call, target, guard, guards, inputs, transaction);
+    };
+
+    const handleTarget = (call: Invocation, resolved: Resolved, guard: { condition?: string; loop?: boolean }, guards: Prod, inputs: Map<string, Set<string>>, transaction: string | undefined) => {
+      const produced = (prod: Prod) => {
+        const prev = callProd.get(call);
+        if (prev) mergeInto(prev, prod);
+        else callProd.set(call, prod);
+      };
       if (resolved.kind === 'op' || resolved.kind === 'sink') {
         const step: Step = {
           id: `s${++this.stepCounter}`,
@@ -837,7 +868,7 @@ export class Extractor implements RevisionAnalysis {
         for (const producer of guards.keys()) {
           if (producer !== 'entry' && !inputs.has(producer)) edges.push({ from: producer, to: step.id, kind: 'control', label: 'guards' });
         }
-        callProd.set(call, new Map([[step.id, new Set()]]));
+        produced(new Map([[step.id, new Set()]]));
       } else if (resolved.kind === 'inline' && !stack.has(resolved.fn)) {
         stack.add(resolved.fn);
         const sub = this.analyzeFn(resolved.fn, stack);
@@ -862,7 +893,7 @@ export class Extractor implements RevisionAnalysis {
           if (producer === 'entry') mergeInto(result, inputs);
           else result.set(producer, labels);
         }
-        callProd.set(call, result);
+        produced(result);
         responses.push(...sub.responses);
       }
     };
@@ -899,6 +930,10 @@ export class Extractor implements RevisionAnalysis {
       if (effect) return { kind: 'sink', effect: { ...effect, file: this.rel(call.getSourceFile().getFilePath()), line: call.getStartLineNumber() } };
       const response = this.rules.responses.find((r) => matches(r, site));
       if (response) return { kind: 'response', arg: call.getArguments()[response.arg] };
+      for (const h of this.rules.hooks) {
+        const handlers = h.dispatch?.(site, this.hookContext());
+        if (handlers?.length) return { kind: 'dispatch', targets: handlers.map((m) => this.resolveMethod(m)) };
+      }
     }
     if (Node.isNewExpression(call)) return { kind: 'unknown' };
     if (site && site.owner && site.name !== 'new') {
@@ -918,6 +953,16 @@ export class Extractor implements RevisionAnalysis {
     if (decl && isFn(decl) && decl.getBody() && this.isProjectFile(decl.getSourceFile().getFilePath())) {
       const name = Node.isFunctionDeclaration(decl) ? decl.getName() ?? 'fn' : call.getExpression().getText();
       return { kind: 'inline', fn: decl, name };
+    }
+    return { kind: 'unknown' };
+  }
+
+  /** A method the code reaches without a direct call (a bus handler): an operation step, or inlined. */
+  private resolveMethod(method: MethodDeclaration): Resolved {
+    const cls = method.getParent();
+    if (Node.isClassDeclaration(cls) && this.moduleIds.has(cls) && this.isOperation(method)) return { kind: 'op', opId: this.opIdOf(cls, method.getName()) };
+    if (method.getBody() && this.isProjectFile(method.getSourceFile().getFilePath())) {
+      return { kind: 'inline', fn: method, name: `${Node.isClassDeclaration(cls) ? cls.getName() : 'class'}.${method.getName()}` };
     }
     return { kind: 'unknown' };
   }
@@ -1028,6 +1073,22 @@ export class Extractor implements RevisionAnalysis {
     if (!(Node.isMethodDeclaration(decl) || Node.isMethodSignature(decl) || Node.isPropertySignature(decl) || Node.isPropertyDeclaration(decl))) return undefined;
     const name = decl.getName();
     const parent = decl.getParent();
+    // Dependency injection may bind the receiver to another class (`@Inject(TOKEN)`, an abstract class token).
+    if (receiver && (Node.isInterfaceDeclaration(parent) || Node.isClassDeclaration(parent))) {
+      const ctx = this.hookContext();
+      for (const h of this.rules.hooks) {
+        const bound = h.implementation?.(receiver, ctx);
+        const method = bound && methodOf(bound, name);
+        if (bound && method) return { call, cls: bound, owner: bound.getName() ?? '', name, pkg: '', decl: method, receiver };
+      }
+    }
+    if (Node.isClassDeclaration(parent) && parent.isAbstract() && Node.isMethodDeclaration(decl) && decl.isAbstract()) {
+      // An abstract method: the one module that implements it, as for interfaces.
+      const subs = [...this.moduleIds.keys()].filter((c) => c.getBaseClass() === parent);
+      const method = subs.length === 1 ? subs[0].getMethod(name) : undefined;
+      if (method) return { call, cls: subs[0], owner: subs[0].getName() ?? '', name, pkg, decl: method, receiver };
+      return { call, owner: parent.getName() ?? '', name, pkg, decl, receiver };
+    }
     if (Node.isInterfaceDeclaration(parent)) {
       const ifaceName = parent.getName();
       const impls = [...this.moduleIds.keys()].filter((c) => c.getImplements().some((i) => i.getExpression().getText() === ifaceName));
@@ -1582,4 +1643,13 @@ function fnName(fn: Node): string {
   if (parent && Node.isVariableDeclaration(parent)) return parent.getName();
   const outer = fn.getFirstAncestor(isFnNode);
   return outer ? `callback in ${fnName(outer)}` : 'anonymous function';
+}
+
+/** A method of a class or one of its base classes. */
+function methodOf(cls: ClassDeclaration, name: string): MethodDeclaration | undefined {
+  for (let c: ClassDeclaration | undefined = cls, depth = 0; c && depth < 8; c = c.getBaseClass(), depth++) {
+    const m = c.getMethod(name);
+    if (m && !m.isAbstract()) return m;
+  }
+  return undefined;
 }
