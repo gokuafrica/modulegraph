@@ -1,5 +1,5 @@
 import { useContext, useState } from 'react';
-import type { Effect, Finding, ModuleGraph, Operation } from '../../../schema/modulegraph.ts';
+import type { Effect, Finding, ModuleGraph, Operation, Param } from '../../../schema/modulegraph.ts';
 import { chipsFor, effectKey, opTitle } from '../graph/model.ts';
 import { ActionsContext, casesOf, EffectChip, EFFECT_META, ExampleContext } from './Nodes.tsx';
 import { exampleLabels, ObjectTree } from './ObjectTree.tsx';
@@ -56,12 +56,12 @@ function OpCard({ g, op }: { g: ModuleGraph; op: Operation }) {
         <div className="insp-title">{mod.name}<span className="muted">.{op.name}()</span></div>
         <div className="insp-sub">
           {op.change !== 'unchanged' && <span className={`badge b-${op.change}`}>{op.change}</span>}
-          {op.delta && op.change !== 'unchanged' && <span className={`badge risk-${op.delta.risk}`}>{op.delta.risk} risk</span>}
+          <RiskBadges g={g} op={op} />
           {mod.owner && <span className="owner">{mod.owner}</span>}
         </div>
-        {op.summary && <p className="summary">{op.summary} <SummarySource source={op.summary && op.summarySource} /></p>}
-        {mod.summary && <p className="summary module-summary"><b>{mod.name}:</b> {mod.summary} <SummarySource source={mod.summarySource} /></p>}
-        {!op.summary && !mod.summary && <p className="summary muted">No description in the code or the profile yet: the review agent writes one (module-review skill).</p>}
+        {op.summary && <p className="summary">{op.summary} <SummarySource source={op.summary && op.summarySource} from={op.summaryFrom} /></p>}
+        {mod.summary && mod.summary !== op.summary && <p className="summary module-summary"><b>{mod.name}:</b> {mod.summary} <SummarySource source={mod.summarySource} /></p>}
+        {!op.summary && <MissingDescription g={g} op={op} />}
         <div className="file" title="The diagram shows this revision of the code">{op.file}:{op.line} <span className="muted">· {revisionNote(g)}</span></div>
         <div className="insp-actions">
           <button onClick={() => actions.references(op.id)} title="Impact view: everything that calls this operation, up to the entry points (Shift+F12)">Show references ⤴</button>
@@ -72,14 +72,16 @@ function OpCard({ g, op }: { g: ModuleGraph; op: Operation }) {
       <section>
         <h4>Inputs</h4>
         {op.delta?.params && <div className="delta-line removed">− ({op.delta.params.before.map((p) => `${p.name}: ${p.type}`).join(', ')})</div>}
-        {op.params.length ? op.params.map((p) => <div className="param" key={p.name}>{p.name}: <span>{p.type}</span></div>) : <div className="muted">none</div>}
+        {op.params.length ? op.params.map((p) => <ParamRow key={p.name} p={p} />) : <div className="muted">none</div>}
       </section>
 
       <section>
         <h4>Output</h4>
         <div className="param"><span>{op.returns.type}</span></div>
         {(op.returns.fields ?? []).map((f) => (
-          <div key={f.name} className={`param indent ${op.delta?.returns && !before.some((b) => b.name === f.name) ? 'added' : ''}`}>{f.name}: <span>{f.type}</span></div>
+          <div key={f.name} className={`param indent ${op.delta?.returns && !before.some((b) => b.name === f.name) ? 'added' : ''}`} title={f.description}>
+            {f.name}: <span>{f.type}</span>{f.description && <div className="param-doc">{f.description}</div>}
+          </div>
         ))}
         {before.filter((b) => !(op.returns.fields ?? []).some((f) => f.name === b.name)).map((f) => (
           <div key={f.name} className="param indent removed">{f.name}: <span>{f.type}</span></div>
@@ -88,7 +90,13 @@ function OpCard({ g, op }: { g: ModuleGraph; op: Operation }) {
 
       {op.examples?.length ? (
         <section>
-          <h4>Example calls <span className="muted small">recorded by running {g.source.examples?.scenario ?? 'a scenario'} on the head revision; click one to follow its request everywhere</span></h4>
+          {g.source.examples?.kind === 'tests' ? (
+            <h4 title={`Recorded by running these specs on the head revision:\n${(g.source.examples.specs ?? []).join('\n')}\n\nThe values come from the tests' mocks and fixtures, not from real requests.`}>
+              Example calls <span className="muted small"><span className="tests-tag">from unit tests (mocked dependencies)</span> {g.source.examples.specs?.length ?? 0} spec file{g.source.examples.specs?.length === 1 ? '' : 's'}; click one to follow its test everywhere</span>
+            </h4>
+          ) : (
+            <h4>Example calls <span className="muted small">recorded by running {g.source.examples?.scenario ?? 'a scenario'} on the head revision; click one to follow its request everywhere</span></h4>
+          )}
           {op.examples.map((e, i) => {
             const ids = casesOf(e, i);
             const names = ids.map((id) => cases[id]).filter(Boolean);
@@ -128,9 +136,11 @@ function OpCard({ g, op }: { g: ModuleGraph; op: Operation }) {
         <section>
           <h4>Code changes <span className="muted small">{op.changes.length} function{op.changes.length > 1 ? 's' : ''} · <span className="plus">+{op.changes.reduce((n, c) => n + c.added, 0)}</span> <span className="minus">−{op.changes.reduce((n, c) => n + c.removed, 0)}</span></span></h4>
           {op.changes.map((c) => (
-            <button key={c.name} className="linkrow fn-row" onClick={() => actions.showDiff(op.id)} title={`${c.file}:${c.line}`}>
-              <span className={`st st-${c.status}`}>{c.status[0].toUpperCase()}</span> <b>{c.name}</b>
-              <span className="muted small"> {c.file.split('/').pop()}</span>
+            <button key={c.name} className="linkrow fn-row" onClick={() => actions.showDiff(op.id)} title={`${c.name}\n${c.file}:${c.line}`}>
+              <span className={`st st-${c.status}`}>{c.status[0].toUpperCase()}</span>
+              {/* A helper of the operation's own class needs no class name: the name stays short enough to read. */}
+              <b className="fn-name">{c.name.startsWith(`${mod.className}.`) ? c.name.slice(mod.className.length + 1) : c.name}</b>
+              <span className="muted small fn-file">{c.file.split('/').pop()}</span>
               <span className="counts small"><span className="plus">+{c.added}</span> <span className="minus">−{c.removed}</span></span>
             </button>
           ))}
@@ -147,6 +157,33 @@ function OpCard({ g, op }: { g: ModuleGraph; op: Operation }) {
         )}
       </section>
     </div>
+  );
+}
+
+/**
+ * One word for risk everywhere: the change's risk, the value the Changes bar and the brief show (it counts steps
+ * added or removed inside, and the changes reached through it). The contract's own risk (inputs, outputs, side
+ * effects only) is a detail next to it, named as such, so the two never read as a contradiction.
+ */
+function RiskBadges({ g, op }: { g: ModuleGraph; op: Operation }) {
+  if (op.change === 'unchanged' && !op.containsChanges) return null;
+  const q = g.review.queue.find((x) => x.operation === op.id);
+  const asChange = g.review.changes.find((c) => c.root === op.id);
+  const risk = asChange?.risk ?? q?.risk;
+  const contract = op.delta && op.change !== 'unchanged' ? op.delta.risk : undefined;
+  return (
+    <>
+      {risk && (
+        <span className={`badge risk-${risk}`} title={`Change risk (the same as in the Changes bar and the brief): ${q?.reason ?? 'changes inside'}${asChange && q && asChange.risk !== q.risk ? `; ${q.risk} on its own, ${asChange.risk} with the changes inside it` : ''}.`}>
+          change: {risk}
+        </span>
+      )}
+      {contract && (
+        <span className="badge contract-risk" title="Contract risk: what callers see (inputs, outputs, side effects). Behaviour inside the operation is not part of it.">
+          contract: {contract}
+        </span>
+      )}
+    </>
   );
 }
 
@@ -175,6 +212,7 @@ function EntryCard({ g, id }: { g: ModuleGraph; id: string }) {
           {entry.readOnly && <span className="badge">read-only</span>}
           {entry.change !== 'unchanged' && <span className={`badge b-${entry.change}`}>{entry.change}</span>}
         </div>
+        {entry.summary && <p className="summary">{entry.summary} <SummarySource source={entry.summarySource} from={entry.summaryFrom} /></p>}
         <div className="file">{entry.file}:{entry.line}</div>
         <div className="insp-actions"><button onClick={() => actions.openEntry(id)}>Open flow ▸</button></div>
       </div>
@@ -214,9 +252,49 @@ function ResourceCard({ g, id }: { g: ModuleGraph; id: string }) {
   );
 }
 
-/** Who wrote a description: the code's authors, or the review agent (in the service profile). */
-function SummarySource({ source }: { source?: string }) {
+/** Where a description comes from: the code's doc comment, its API documentation, its class, or the review agent. */
+function SummarySource({ source, from }: { source?: string; from?: string }) {
   if (source === 'profile') return <span className="summary-src agent" title="Not in the code: written in the service profile (configs/<service>/), usually by the review agent after reading the code">written by the review agent</span>;
   if (source === 'code') return <span className="summary-src" title="The code's own doc comment">from the code</span>;
+  if (source === 'api') {
+    // "@ApiOperation on PUT /api/…": the decorator on the tag, the endpoint in the tooltip.
+    const decorator = from?.split(' on ')[0] ?? 'the API docs';
+    return <span className="summary-src" title={`The service's API documentation${from ? `: ${from}` : ''}. The endpoint hands the request to this operation, so it describes it too.`}>from {decorator}</span>;
+  }
+  if (source === 'class') return <span className="summary-src" title="No doc comment on the method: this is the doc comment of its class">from the class's doc comment</span>;
   return null;
+}
+
+/** An input, with the documented fields of its type (a DTO's `@ApiProperty` descriptions). */
+function ParamRow({ p }: { p: Param }) {
+  return (
+    <div className="param" title={p.description}>
+      {p.name}: <span>{p.type}</span>
+      {p.description && <div className="param-doc">{p.description}</div>}
+      {p.fields?.map((f) => (
+        <div key={f.name} className="param indent" title={f.description}>
+          {f.name}: <span>{f.type}</span>{f.description && <div className="param-doc">{f.description}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Nothing describes this operation (no doc comment, no API docs of an endpoint that hands to it, no class comment,
+ * nothing in the profile). Says exactly how to fill it in, for a person and for their agent.
+ */
+function MissingDescription({ g, op }: { g: ModuleGraph; op: Operation }) {
+  const mod = g.modules[op.moduleId];
+  const profile = g.source.profile?.path ?? `~/.modulegraph/configs/${g.service}/modulegraph.config.json`;
+  const snippet = `"modules": { "overrides": { "${mod.className}": { "operations": { "${op.name}": "…" } } } }`;
+  const changed = op.change !== 'unchanged';
+  return (
+    <div className="summary muted missing-doc">
+      <p>No description: no doc comment, no API docs (<code>@ApiOperation</code>) on an endpoint that hands to it, nothing in the profile.{changed ? ' It changed, so the review needs one.' : ''}</p>
+      <p>Ask your agent: <i>“Describe {mod.className}.{op.name} in the modulegraph profile”</i> (module-review skill), or add it yourself in <code>{profile}</code>{g.source.profile?.exists ? '' : ' (create it)'}:</p>
+      <pre className="code-block small">{snippet}</pre>
+      <p>then ↻ refresh.</p>
+    </div>
+  );
 }

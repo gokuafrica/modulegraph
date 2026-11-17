@@ -70,6 +70,18 @@ export const nestjs: Framework = {
   },
 };
 
+/**
+ * @nestjs/swagger: what the service says about its API, read as descriptions (after JSDoc). `@ApiOperation` on a
+ * handler describes the entry point (and the operation it hands the request to); `@ApiProperty` describes DTO fields.
+ */
+export const nestSwagger: Framework = {
+  id: 'nestjs-swagger',
+  name: 'Swagger (@nestjs/swagger)',
+  packages: ['@nestjs/swagger'],
+  docDecorators: [{ decorator: 'ApiOperation', from: '@nestjs/swagger', props: ['description', 'summary'] }],
+  fieldDocDecorators: [{ decorator: 'ApiProperty|ApiPropertyOptional|ApiResponseProperty', from: '@nestjs/swagger', props: ['description', 'title'] }],
+};
+
 function globalPrefix(ctx: HookContext): string {
   const call = ctx.callsNamed('setGlobalPrefix')[0];
   const value = call ? ctx.literal(call.getArguments()[0]) : '';
@@ -96,7 +108,27 @@ function routeVars(method: MethodDeclaration, cls: ClassDeclaration, dec: Decora
     if (versions.length && v.uri) version = versions.length > 1 ? `{${versions.map((x) => `${v.prefix}${x}`).join(',')}}` : `${v.prefix}${versions[0]}`;
     else if (versions.length) suffix = ` [version ${versions.join(', ')}]`;
   }
-  return { path: `${joinPath(globalPrefix(ctx), version, routePath)}${suffix}`, routePath };
+  // `setGlobalPrefix('api', { exclude: ['health', { path: 'metrics', method: RequestMethod.GET }] })`
+  const verb = dec.getName().toUpperCase();
+  const excluded = ctx.memo('nest:prefix-excludes', () => globalPrefixExcludes(ctx)).some((x) => x.path.test(routePath.replace(/^\/+|\/+$/g, '')) && (!x.method || x.method === 'ALL' || x.method === verb));
+  return { path: `${joinPath(excluded ? '' : globalPrefix(ctx), version, routePath)}${suffix}`, routePath };
+}
+
+/** Routes the global prefix leaves out: `setGlobalPrefix('api', { exclude: [...] })`. */
+function globalPrefixExcludes(ctx: HookContext): { path: RegExp; method?: string }[] {
+  const opts = ctx.callsNamed('setGlobalPrefix')[0]?.getArguments()[1];
+  const list = opts && Node.isObjectLiteralExpression(opts) ? propertyValue(opts, 'exclude') : undefined;
+  if (!list || !Node.isArrayLiteralExpression(list)) return [];
+  const toRegex = (p: string) => new RegExp(`^${p.replace(/^\/+|\/+$/g, '').split('/').map((s) => (s.startsWith(':') ? '[^/]+' : s === '*' || s === '(.*)' ? '.*' : s.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))).join('/')}$`);
+  return list.getElements().flatMap((el) => {
+    if (Node.isObjectLiteralExpression(el)) {
+      const path = ctx.literal(propertyValue(el, 'path'));
+      const method = propertyValue(el, 'method')?.getText().split('.').pop();
+      return path.startsWith('<') || path === '?' ? [] : [{ path: toRegex(path), method }];
+    }
+    const path = ctx.literal(el);
+    return path.startsWith('<') || path === '?' ? [] : [{ path: toRegex(path) }];
+  });
 }
 
 interface Versioning {

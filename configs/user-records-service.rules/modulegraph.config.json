@@ -1,0 +1,12 @@
+{
+  "entryRegistries": [
+    { "map": "ConsumerHandlerMap", "method": "handle", "kind": "consumer", "label": "kafka consumer {key}" },
+    { "argv": "src/main.ts", "kind": "cron", "label": "job {key}" }
+  ],
+  "sinks": [
+    { "class": "AvroProducer", "module": "@acme/nestjs-kafkajs", "method": "send", "kind": "kafka", "target": "arg:0" },
+    { "class": "KafkaJsService", "module": "@acme/nestjs-kafkajs", "method": "sendMessage", "kind": "kafka", "target": "arg:0" },
+    { "class": "OutboxWriter", "module": "@acme/typeorm-outbox-writer", "method": "write", "kind": "outbox", "target": "arg:1" },
+    { "class": "KMSClient", "module": "@aws-sdk/client-kms", "method": "send", "kind": "http", "target": "const:aws-kms" }
+  ]
+}

@@ -20,6 +20,20 @@ export async function fetchLive(g: ModuleGraph, graphId: string): Promise<Module
   }
 }
 
+/**
+ * Why a review is only a saved file here, when the server knows (`modulegraph open` found the project folder or the
+ * branches gone): shown in the top bar. Undefined when it doesn't say, or nothing answers.
+ */
+export async function savedReason(g: ModuleGraph, graphId: string): Promise<string | undefined> {
+  try {
+    const res = await fetch(`${apiOf(g) ?? '/api'}/graphs/${graphId}`, { cache: 'no-store' });
+    if (res.ok || res.status >= 500) return undefined;
+    return ((await res.json()) as { reason?: string }).reason;
+  } catch {
+    return undefined;
+  }
+}
+
 /** Asks the server to analyze more of the graph; returns the updated graph. */
 export async function expand(g: ModuleGraph, graphId: string, action: ExpandAction, id: string): Promise<ModuleGraph> {
   const res = await fetch(`${apiOf(g)}/graphs/${graphId}/expand`, {

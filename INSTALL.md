@@ -76,7 +76,7 @@ In any repository with a TypeScript service:
   committed and uncommitted, is compared with the repo's default branch, and the review opens in the browser.
   Edit code and click refresh in the review to see the change. `modulegraph review --head <branch>` reviews another
   branch without checking it out, `--pr <n>` a GitHub PR, `--uncommitted` only what isn't committed.
-- `modulegraph open` shows saved reviews; `modulegraph help` lists every option.
+- `modulegraph open <id>` shows a saved review, live again while its code is on this machine; `modulegraph help` lists every option.
 - **Finishing.** A review server stops by itself after 30 minutes with no requests (`--idle <minutes>`), or with
   `modulegraph stop`. Saved reviews stay in `~/.modulegraph/reviews/` (with your service's code in them) until you
   remove them: `modulegraph done <id>` (or the review page's **✓ done** button) removes one review, its PR ref and

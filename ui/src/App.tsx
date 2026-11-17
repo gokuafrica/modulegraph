@@ -2,7 +2,7 @@ import { Background, Controls, ReactFlow, useReactFlow, type Edge, type Node } f
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ModuleGraph } from '../../schema/modulegraph.ts';
 import { Inspector, type Selection } from './components/Inspector.tsx';
-import { endReview, expand, fetchLive, isStale, refresh, servedGraphs, type ExpandAction } from './api.ts';
+import { endReview, expand, fetchLive, isStale, refresh, savedReason, servedGraphs, type ExpandAction } from './api.ts';
 import { DiffPanel } from './components/DiffView.tsx';
 import { edgeTypes } from './components/Edges.tsx';
 import { ActionsContext, casesOf, ExampleContext, exampleFor, nodeTypes, type Actions } from './components/Nodes.tsx';
@@ -106,12 +106,16 @@ export default function App() {
   const [diffFor, setDiffFor] = useState<string>();
   /** Lazy graphs: the analysis server is reachable, so unanalyzed parts can be expanded. */
   const [live, setLive] = useState(false);
+  /** Not live: why, when the server serving the saved file knows (the project folder or branch is gone). */
+  const [whySaved, setWhySaved] = useState<string>();
   const [busy, setBusy] = useState<string>();
   const [selection, setSelection] = useState<Selection>();
   const [collapsePassthrough, setCollapse] = useState(true);
   const [showResources, setShowResources] = useState(false);
+  /** The request pipeline (guards, interceptors, middleware) step by step instead of one folded node. */
+  const [showPipeline, setShowPipeline] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  const [canvas, setCanvas] = useState<{ nodes: Node[]; edges: Edge[]; key: string; meta?: { maxDepth: number; shown: number; total: number; frontier: string[] }; chain?: string[]; addedCount?: number }>();
+  const [canvas, setCanvas] = useState<{ nodes: Node[]; edges: Edge[]; key: string; meta?: { maxDepth: number; shown: number; total: number; frontier: string[] }; chain?: string[]; addedCount?: number; pipelineSteps?: number }>();
   const [error, setError] = useState<string>();
   const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('modulegraph-theme') as Theme) ?? 'dark');
   /** The example request every node shows (one scenario request, followed through every module it reached). */
@@ -144,13 +148,15 @@ export default function App() {
       .then((data: ModuleGraph) => {
         setG(data);
         setLive(false);
+        setWhySaved(undefined);
+        const notLive = () => void savedReason(data, graphId).then(setWhySaved);
         if (data.lazy) {
           fetchLive(data, graphId).then((fresh) => {
-            if (!fresh) return;
+            if (!fresh) return notLive();
             setG(fresh);
             setLive(true);
           });
-        }
+        } else notLive();
         setExpandedGroups(new Set());
         const h = readHash();
         if (h.g === graphId && h.v === 'flow' && h.t) {
@@ -190,7 +196,7 @@ export default function App() {
       // The server may have started after this page loaded: look again before giving up.
       const fresh = await fetchLive(cur, graphIdRef.current!);
       if (!fresh) {
-        setToast('This part is not analyzed in the saved file, and the live server is not answering. Run `npm run live` (or `npm run live -- all` for every demo), then try again.');
+        setToast(`This part is not analyzed in the saved file, and no review server is answering. Run \`modulegraph open ${graphIdRef.current}\` to serve this review live, then try again.`);
         return false;
       }
       liveRef.current = true;
@@ -271,7 +277,7 @@ export default function App() {
         if (++missed < 2) return;
         setStale(false);
         setLive(false);
-        setToast('The review server has stopped (it stops after a while with no requests, or the review was ended). This page shows what was analyzed; run `modulegraph review` again to continue live.');
+        setToast(`The review server has stopped (it stops after a while with no requests, or the review was ended). This page shows what was analyzed; run \`modulegraph open ${graphId}\` to continue live.`);
       });
     };
     check();
@@ -419,12 +425,12 @@ export default function App() {
     let cancelled = false;
     if (view.mode === 'flow') {
       const scopeId = view.trail.at(-1)!;
-      const model = flowModel(g, scopeId, { collapsePassthrough, showResources, focusOp: view.focus, focusPath: view.focus ? ancestors(index, targetOps(g, view.focus)) : undefined, before: view.before });
+      const model = flowModel(g, scopeId, { collapsePassthrough, showResources, showPipeline, focusOp: view.focus, focusPath: view.focus ? ancestors(index, targetOps(g, view.focus)) : undefined, before: view.before });
       for (const n of model.nodes) if (n.type === 'module') n.data.reach = index.reach.get(n.data.opId as string)?.size ?? 0;
       // Keep following the same request when this flow was part of it (drilling in from a caller); else its first.
       const shown = model.nodes.find((n) => n.id === '__entry')?.data.examples as Parameters<typeof exampleFor>[0];
       if (shown?.length) setCaseId((cur) => (exampleFor(shown, cur) ? cur : casesOf(shown[0], 0)[0]));
-      layout(model, theme).then((res) => !cancelled && setCanvas({ ...res, key: `${graphId}|${view.trail.join('>')}|${view.before ? 'before' : 'now'}|${collapsePassthrough}|${showResources}|${theme}|${Object.keys(g.scopes).length}`, chain: model.chain, addedCount: model.addedCount }));
+      layout(model, theme).then((res) => !cancelled && setCanvas({ ...res, key: `${graphId}|${view.trail.join('>')}|${view.before ? 'before' : 'now'}|${collapsePassthrough}|${showResources}|${showPipeline}|${theme}|${Object.keys(g.scopes).length}`, chain: model.chain, addedCount: model.addedCount, pipelineSteps: model.pipelineSteps }));
     } else {
       const model = impactModel(g, index, view.op, { depth: view.depth, groupThreshold: 12, expandedGroups });
       if (view.depth > model.maxDepth && model.maxDepth > 0) {
@@ -438,7 +444,7 @@ export default function App() {
     return () => {
       cancelled = true;
     };
-  }, [g, index, view, collapsePassthrough, showResources, expandedGroups, graphId, theme]);
+  }, [g, index, view, collapsePassthrough, showResources, showPipeline, expandedGroups, graphId, theme]);
 
   const actions: Actions = useMemo(
     () => ({
@@ -477,6 +483,7 @@ export default function App() {
       loadCallers: async (opIds) => {
         for (const id of opIds) if (!(await runExpand('callers', id, `callers of ${id}`))) return;
       },
+      togglePipeline: () => setShowPipeline((x) => !x),
     }),
     [navigate, runExpand],
   );
@@ -536,14 +543,13 @@ export default function App() {
               ✓ done
             </button>
           )}
-          {g.lazy && (
-            <span className={`lazy-badge ${live ? 'live' : ''}`}
-              title={live
-                ? 'Lazy analysis, live: only what this review needed is analyzed. Opening a flow, drilling in or loading callers analyzes more on demand.'
-                : 'Lazy analysis, saved file: shows what was analyzed so far. Run `npm run live` to expand the rest.'}>
-              {live ? '● live' : '○ saved'} · {g.lazy.stats.entryPointsAnalyzed} of {g.lazy.stats.entryPointsKnown} flows analyzed
+          {g.lazy && live && (
+            <span className="lazy-badge live"
+              title="Lazy analysis, live: only what this review needed is analyzed. Opening a flow, drilling in or loading callers analyzes more on demand.">
+              ● live · {g.lazy.stats.entryPointsAnalyzed} of {g.lazy.stats.entryPointsKnown} flows analyzed
             </span>
           )}
+          {!live && <SavedBadge g={g} graphId={graphId!} why={whySaved} />}
           <div className="spacer" />
           <label className="small"><input type="checkbox" checked={collapsePassthrough} onChange={(e) => setCollapse(e.target.checked)} /> skip pass-through wrappers</label>
           <label className="small"><input type="checkbox" checked={showResources} onChange={(e) => setShowResources(e.target.checked)} /> show data sources &amp; sinks</label>
@@ -604,6 +610,12 @@ export default function App() {
                     </>
                   );
                 })()}
+                {canvas?.pipelineSteps ? (
+                  <button className="diff-crumb pipeline-crumb" onClick={() => setShowPipeline(!showPipeline)}
+                    title="Middleware, guards and interceptors run before the handler on every request. Folded into one node so the business flow comes first.">
+                    {showPipeline ? 'fold the request pipeline' : `request pipeline: ${canvas.pipelineSteps} step${canvas.pipelineSteps === 1 ? '' : 's'} folded`}
+                  </button>
+                ) : null}
                 {(canvas?.chain?.length ?? 0) > 1 && (
                   <span className="muted small">
                     {' '}› {canvas!.chain!.slice(1).map((id) => (
@@ -671,6 +683,26 @@ export default function App() {
       </div>
      </ExampleContext.Provider>
     </ActionsContext.Provider>
+  );
+}
+
+/**
+ * A review shown from its saved file: nothing behind it re-analyzes, so there is no refresh or done. Says so, and
+ * the exact command that makes it live again, instead of silently leaving the buttons out.
+ */
+function SavedBadge({ g, graphId, why }: { g: ModuleGraph; graphId: string; why?: string }) {
+  const gone = !!why && /gone|no saved review|could not be read|written by an agent/.test(why);
+  const open = `modulegraph open ${graphId}`;
+  const stats = g.lazy ? ` · ${g.lazy.stats.entryPointsAnalyzed} of ${g.lazy.stats.entryPointsKnown} flows analyzed` : '';
+  const title = [
+    `This page shows the saved review file${stats}: nothing behind it re-analyzes, so refresh, done and analysis on demand are off.`,
+    why ? `Why: ${why}.` : '',
+    gone ? (g.source.command ? `To review the change again from scratch: ${g.source.command}` : '') : `\`${open}\` serves it live again (what was explored is analyzed again${g.source.command ? `; or from scratch: ${g.source.command}` : ''}).`,
+  ].filter(Boolean).join('\n\n');
+  return (
+    <span className="lazy-badge saved" title={title}>
+      ○ saved{why ? `: ${why}` : ''}{gone ? '' : <>: run <code>{open}</code> to refresh</>}
+    </span>
   );
 }
 

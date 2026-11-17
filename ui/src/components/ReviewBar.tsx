@@ -45,7 +45,7 @@ export function ReviewBar({ g, home, onHome }: { g: ModuleGraph; home?: string; 
 function changeTip(g: ModuleGraph, c: ReviewChange): string {
   const why = new Map(g.review.queue.map((q) => [q.operation, q]));
   return [
-    `${opTitle(g, c.root)}: ${why.get(c.root)?.reason}`,
+    `${opTitle(g, c.root)}: ${c.risk} change risk (${why.get(c.root)?.reason})`,
     ...(c.parts.length ? ['', 'Changed inside it (reached only through it):', ...c.parts.map((p) => `  ${why.get(p)?.risk}  ${opTitle(g, p)}: ${why.get(p)?.reason}`)] : []),
     ...(c.alsoIn?.length ? ['', `Also reached through the change in ${c.alsoIn.map((r) => opTitle(g, r)).join(', ')}; other flows reach it too.`] : []),
     '',

@@ -60,6 +60,38 @@ export interface DecoratorEntryRule {
   readOnly?: boolean;
 }
 
+/**
+ * A decorator that documents what it decorates: `@ApiOperation({ summary, description })` on a handler,
+ * `@ApiProperty({ description })` on a DTO field. `props` are read in order from its object argument (the first
+ * string found wins); a plain string argument counts too. `decorator` and `from` accept `a|b` alternatives.
+ */
+export interface DocDecoratorRule {
+  decorator: string;
+  from: string;
+  props: string[];
+}
+
+/**
+ * Entry points registered the in-house way, by data instead of decorators or registration calls:
+ * - handler map + base class: `map` names a `Map` or object literal whose values are handler classes
+ *   (`ConsumerHandlerMap = new Map([['user-created', UserCreatedHandler], …])`); each entry is an entry point named by
+ *   its key, handled by the class's `method` (`handle`). `extends` adds every class that extends that base class
+ *   (named by class) that no map lists.
+ * - module chosen by a command-line argument: `argv` names the file that boots a different Nest module per argument
+ *   (`src/main.ts` reading `minimist(process.argv)`: `{ 'some-poller': SomePollerModule }`, or `case 'x':` around
+ *   `NestFactory.createApplicationContext(XModule)`). Each argument is an entry point; what runs is the `method` of
+ *   the module's providers (default: the lifecycle hooks `onApplicationBootstrap|onModuleInit`, and `run`).
+ * `label` fills `{key}` (map key or argument), `{class}`, `{method}`.
+ */
+export interface RegistryEntryRule {
+  map?: string;
+  extends?: string;
+  argv?: string;
+  method?: string;
+  kind: EntryKind;
+  label: string;
+}
+
 /** A call whose argument is the handler's response (`res.json(x)`): it feeds the exit like a `return`. */
 export interface ResponseRule extends CallMatch {
   arg: number;
@@ -108,6 +140,16 @@ export interface Config {
   entryPoints: EntryRule[];
   decoratorEntries: DecoratorEntryRule[];
   responses: ResponseRule[];
+  /** In-house registrations: handler maps, base classes, modules picked by a command-line argument. */
+  entryRegistries?: RegistryEntryRule[];
+  /**
+   * What the "probably missing" checks should stop flagging: package names (an `outbox`-named package that has no
+   * side effects), script names (`start:debug`), or registry variable names.
+   */
+  coverage?: { ignore?: string[] };
+  /** Extra description decorators for handlers and methods, and for DTO fields (added to the adapters'). */
+  docDecorators?: DocDecoratorRule[];
+  fieldDocDecorators?: DocDecoratorRule[];
   rules: {
     /** Operations that must run at most once per flow (expensive fetches meant to be shared). */
     fetchOnce: string[];

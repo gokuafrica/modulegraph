@@ -37,8 +37,9 @@ or a language.
   marks what the change adds or removes, dashed means via a submodule.
 - **Review queue and checks**: contract changes sorted by risk, plus machine-checked rules (new side effects,
   table ownership, read endpoints that write, CI weakening, side effects the PR description doesn't mention).
-- **Example data, one request throughout**: real inputs and outputs recorded by running a scenario against the
-  code under review. Each scenario request is a case, and every module call it made is recorded as part of it, so
+- **Example data, one request throughout**: inputs and outputs recorded by running the service's own tests (no
+  setup: the Jest specs that reference the changed classes and their callers, marked *from unit tests (mocked
+  dependencies)*), or, for real data, a scenario against the code under review. Each scenario request is a case, and every module call it made is recorded as part of it, so
   the flow's input, each module (one `in` / `out` line, or *not called in this request*) and the response all show
   the same request, and drilling in or going up keeps it: a module three levels down shows the call its caller made
   with the same user and data. Shown as expandable object trees (like the browser devtools).
@@ -175,8 +176,12 @@ npm run analyze -- --project sample-service --config $C/modulegraph.config.json 
 ```
 
 Each run writes `~/.modulegraph/reviews/<id>.json`, also for the demo services and `npm run live` (only `npm run demo`
-rewrites the shipped graphs in `ui/public/graphs/`, which are kept in git); `modulegraph open <id>` shows it. It also writes `<id>.brief.md`, the **review facts** as plain Markdown:
-- the verdict: blocking, not blocked, or **incomplete** (what the analysis could not see, and what to do about it);
+rewrites the shipped graphs in `ui/public/graphs/`, which are kept in git); `modulegraph open <id>` shows it, live again
+(refresh, done) while its repo and branches are on this machine. A page that only shows a saved file says so in its top
+bar (`○ saved: run modulegraph open <id> to refresh`). It also writes `<id>.brief.md`, the **review facts** as plain Markdown:
+- the verdict: blocking, not blocked, or **incomplete** (what the analysis could not see, and what to do about it,
+  down to the profile rule to add: a Kafka client but no consumer, a handler map, jobs started with a command-line
+  argument, producer / outbox / cloud packages nothing describes);
 - access-control changes: guards, middleware or auth metadata added, removed or edited, with every entry point
   behind them;
 - every contract change with the behaviour changes inside it (new and removed steps, changed guards) and the
@@ -257,7 +262,12 @@ Things to try:
    document read returns PRT/Porto, `BirthInfoVerifier.verify` returns `ok: false`, the save and the event say
    *not called in this request*, and the response throws the 422. Requests 3–7 cover a country-only document,
    no document data, and a place-only document. Code map: [sample-birth-service/README.md](sample-birth-service/README.md).
-6. **A change spread over several files** (`feature/kyc-risk-tiers`, "KYC: risk tiers … (multi-file)"):
+6. **A service shaped like real code, first run, no profile** (`sample-legacy-nest-service`, branch
+   `fix/scope-manual-data-to-row`): `modulegraph review --project sample-legacy-nest-service --head fix/scope-manual-data-to-row`.
+   The brief says the analysis is INCOMPLETE and gives the profile rules for the Kafka consumers in its handler map,
+   the jobs started with a command-line argument and its in-house producer and outbox packages; descriptions come from
+   `@ApiOperation`; examples come from its Jest specs; the global metrics interceptor is one folded node.
+7. **A change spread over several files** (`feature/kyc-risk-tiers`, "KYC: risk tiers … (multi-file)"):
    - KycCheck.runCheck now uses a new helper file (`riskTier.ts`) and a new private `persist`, and gets a
      manual-review branch.
    - SanctionsScreening gains a retry and a score.
@@ -276,13 +286,17 @@ Things to try:
    - `modulegraph.config.json`:
      - `sinks`: in-house client methods that are DB reads/writes, outbox, Kafka, queue or HTTP, and how to name the table or topic;
      - `entryPoints` / `decoratorEntries`: in-house route, consumer and cron registrations (frameworks without an adapter);
+   - `entryRegistries`: handlers registered by data, a handler map + base class (`ConsumerHandlerMap`) or a module
+     picked by a command-line argument (`nest start -- some-poller`). A first review suggests them in its brief;
+   - `coverage.ignore`: packages, scripts or maps the "probably missing" checks should not flag;
      - `modules`: include/exclude, display names, optional declared contracts;
      - `owners`: path globs to teams (the repo's CODEOWNERS is also read);
      - `rules`: `fetchOnce`, `tableOwners`, review `budget`.
 
      Defaults are in [analyzer/src/config.ts](analyzer/src/config.ts).
-   - `scenario.ts` (optional): drives the service, from whichever revision is under review, so real example
-     calls get recorded. Wrap each request in `step('GET /users/u-1/birth-info', () => …)` so its module calls
+   - `scenario.ts` (optional): without one, examples come from the service's own Jest tests (`--no-tests` skips them,
+     `--tests` allows them for a PR, which runs the PR's code). A scenario drives the service, from whichever revision
+     is under review, so real example calls get recorded. Wrap each request in `step('GET /users/u-1/birth-info', () => …)` so its module calls
      are recorded as one case. Services that need decorator metadata (NestJS, TypeORM) are compiled with
      TypeScript for this; see [configs/birth-info-service/scenario.ts](configs/birth-info-service/scenario.ts).
 3. **An agent writes the profile**: the Claude Code skill [.claude/skills/module-review](.claude/skills/module-review/SKILL.md)
@@ -315,6 +329,7 @@ base + head sources        steps, data edges, side effects      modulegraph/v1  
 | `sample-service/` | demo microservice, an ordinary codebase with no modulegraph markers. Branches `feature/birthinfo-consent` and `feature/kyc-risk-tiers` hold the demo changes |
 | `sample-nest-service/` | NestJS demo (order-service): REST, Kafka events, gRPC, BullMQ, cron, TypeORM. Branch `feature/order-fraud-hold` |
 | `sample-birth-service/` | NestJS demo (birth-info-service): document vs KYC birth info, with a scenario. Branch `feature/enforce-document-birth-info` |
+| `sample-legacy-nest-service/` | a demo shaped like a mature in-house NestJS service (user-records-service): no profile, no scenario, Swagger instead of JSDoc, two data sources, Kafka consumers in a handler map, jobs picked by a command-line argument, in-house packages (`packages/`), Jest specs. Branch `fix/scope-manual-data-to-row`; `configs/user-records-service.rules/` holds the profile rules its first review suggests |
 | `fixtures/frameworks/` | small Express + Prisma + KafkaJS + node-cron and Fastify + Mongoose + BullMQ services, and `nest/` (request pipeline, CQRS, custom providers, GraphQL, WebSockets, …) for `framework-check` and `regression-check` |
 | `configs/` | the demo services' profiles (config + scenario); yours go in `~/.modulegraph/configs/` |
 | `bin/`, `scripts/` | the `modulegraph` command; `setup.mjs` (install, build the UI, install the skill, self-check) |
@@ -330,5 +345,6 @@ dependencies installed: without them the review says it is incomplete rather tha
 relies on constructor injection; codebases built from plain functions need `modules.include` in the profile.
 Dynamic dispatch with several implementations is left unresolved unless dependency injection binds one (Nest
 `providers`). Code in an Nx `libs/` folder outside `--project` is not analyzed. More in
-[docs/analyzers.md](docs/analyzers.md#known-limits). Example data needs a runnable scenario. No persistence or
+[docs/analyzers.md](docs/analyzers.md#known-limits). Example data comes from a scenario or from the service's Jest tests
+(other test runners: not yet). No persistence or
 auth: it is a local tool, and the review server accepts connections from this machine only.

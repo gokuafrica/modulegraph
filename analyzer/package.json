@@ -14,10 +14,13 @@
     "validate": "tsx src/validate.ts",
     "live": "tsx src/live-demo.ts",
     "lazy-check": "tsx src/lazy-check.ts",
-    "test": "tsx src/mentions-check.ts && tsx src/framework-check.ts && tsx src/regression-check.ts && tsx src/changes-check.ts && tsx src/lazy-check.ts && tsx src/lifecycle-check.ts",
+    "test": "tsx src/mentions-check.ts && tsx src/framework-check.ts && tsx src/regression-check.ts && tsx src/changes-check.ts && tsx src/ui-model-check.ts && tsx src/legacy-review-check.ts && tsx src/lazy-check.ts && tsx src/lifecycle-check.ts",
     "lifecycle-check": "tsx src/lifecycle-check.ts",
     "framework-check": "tsx src/framework-check.ts",
-    "regression-check": "tsx src/regression-check.ts"
+    "regression-check": "tsx src/regression-check.ts",
+    "ui-model-check": "tsx src/ui-model-check.ts",
+    "legacy-review-check": "tsx src/legacy-review-check.ts",
+    "ui-check": "tsx src/ui-check.ts"
   },
   "dependencies": {
     "diff": "^8.0.2",
@@ -26,6 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "playwright-core": "^1.65.1",
     "typescript": "^5.9.0"
   }
 }

@@ -8,7 +8,9 @@ import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { typescript } from './analyzers/typescript/index.ts';
+import { compare } from './compare.ts';
 import { loadConfig } from './config.ts';
+import { describe } from './describe.ts';
 import { effectKey } from './effects.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -16,6 +18,14 @@ const repo = resolve(here, '../..').replace(/\\/g, '/');
 
 interface Expected {
   project: string;
+  /** A profile (repo-relative) to analyze with; none: defaults, as on a first run. */
+  config?: string;
+  /** entry or operation id -> where its description comes from (`code`, `api`, `class`, or `none`), after describe(). */
+  summaries?: Record<string, string>;
+  /** operation id -> `param.field` that must carry a description (a DTO field's `@ApiProperty({ description })`). */
+  fieldDocs?: Record<string, string[]>;
+  /** The kinds of the backend's "incomplete" issues (missing entry points, unknown side-effect packages). */
+  issues?: string[];
   frameworks: string[];
   modules: string[];
   /** entry id -> transitive effects */
@@ -34,6 +44,66 @@ const NEST_ORDERS = 'OrdersService@fixtures/frameworks/nest/src/orders/orders.se
 /** Every route, resolver and gateway goes through the global AuthGuard (APP_GUARD), which reads sessions. */
 const GUARDED = 'db.read sessions';
 const GLOBAL_PIPELINE = ['guard AuthGuard (global)', 'pipe ValidationPipe (global)', 'filter HttpErrorFilter (global)'];
+
+/** sample-legacy-nest-service: every handler goes through the middleware, the global interceptor and pipe; internal controllers add the guard. */
+const LEGACY = 'sample-legacy-nest-service';
+const LEGACY_PIPELINE = ['middleware RequestContextMiddleware (global)', 'guard InternalAuthGuard (controller)', 'interceptor RequestTimer (global)', 'pipe ValidationPipe (global)'];
+const LEGACY_APPROVE = ['db.read user_records', 'db.write user_records', 'db.write user_record_statuses', 'db.write manual_review_decisions'];
+/** Entry points of the service without a profile: its REST API only (setGlobalPrefix('api', { exclude: ['metrics', 'health'] })). */
+const LEGACY_API: Record<string, string[]> = {
+  'api:POST /api/v1/internal/assignments/:recordGuid': ['db.write review_assignments'],
+  'api:GET /api/v1/internal/assignments/mine': ['db.read review_assignments'],
+  'api:GET /api/v1/internal/audit-log/:recordGuid': ['db.read audit_log'],
+  'api:GET /api/v1/internal/user-records/:guid/comments': ['db.read comments'],
+  'api:POST /api/v1/internal/user-records/:guid/comments': ['db.write comments', 'db.write audit_log'],
+  'api:GET /api/v1/internal/user-records/:guid/documents': ['http {base}/v2/records/{recordGuid}/documents'],
+  'api:POST /api/v1/internal/escalations/:recordGuid': ['db.write escalations', 'db.write audit_log'],
+  'api:PUT /api/v1/internal/escalations/:id/resolve': ['db.read escalations', 'db.write escalations', ...LEGACY_APPROVE],
+  'api:GET /health': ['db.read raw sql'],
+  'api:GET /metrics': [],
+  'api:GET /api/v1/internal/manual-review/queue': ['db.read user_records'],
+  'api:PUT /api/v1/internal/manual-review/approve/:guid': LEGACY_APPROVE,
+  'api:PUT /api/v1/internal/manual-review/update/:guid': ['db.read user_records', 'db.write user_records', 'db.write manual_review_decisions'],
+  'api:PUT /api/v1/internal/manual-review/reject/:guid': LEGACY_APPROVE,
+  'api:GET /api/v1/internal/reports/daily': ['db.read manual_review_decisions'],
+  'api:POST /api/v1/internal/user-records/:guid/tags': ['db.write record_tags'],
+  'api:DELETE /api/v1/internal/user-records/:guid/tags/:tag': ['db.write record_tags'],
+  'api:GET /api/v1/internal/user-records/:guid': ['db.read user_records'],
+  'api:GET /api/v1/internal/user-records/:guid/status-history': ['db.read user_record_statuses'],
+  'api:POST /api/v1/internal/user-records': ['db.write user_records'],
+};
+const LEGACY_MODULES = [
+  'AssignmentsService', 'AuditLogService', 'CommentsService', 'DateService', 'DocumentsService', 'EscalationsService', 'KmsService', 'ManualReviewService',
+  'MetricsService', 'NotificationsService', 'OutboxEventsService', 'ReportsService', 'RequestContextService', 'TagsService', 'UserRecordDataTransformer',
+  'UserRecordStatusService', 'UserRecordService',
+];
+const LEGACY_OPS: Record<string, string[]> = {
+  // the changed one, on main: copies one record's data onto every row with update()
+  'ManualReviewService.approve': ['db.write user_records', 'db.write manual_review_decisions'],
+  'ManualReviewService.reject': ['db.write manual_review_decisions'],
+  'UserRecordStatusService.setStatus': ['db.write user_records', 'db.write user_record_statuses'],
+  'UserRecordService.getByGuid': ['db.read user_records'],
+  'UserRecordService.create': ['db.write user_records'],
+  'EscalationsService.resolve': ['db.read escalations', 'db.write escalations'],
+  'ReportsService.daily': ['db.read manual_review_decisions'],
+};
+/** Where descriptions come from with no profile: JSDoc (rare), @ApiOperation on the endpoint that hands over, the class's doc comment. */
+const LEGACY_SUMMARIES: Record<string, string> = {
+  'api:PUT /api/v1/internal/manual-review/approve/:guid': 'api',
+  'api:PUT /api/v1/internal/manual-review/update/:guid': 'api',
+  'api:GET /health': 'none',
+  'ManualReviewService.approve': 'api',
+  'ManualReviewService.updateUserRecordData': 'api',
+  'ManualReviewService.getQueue': 'api',
+  'UserRecordStatusService.getHistory': 'api',
+  // its endpoint calls two operations (getByGuidOrFail, then toDto): no single one to describe
+  'UserRecordService.getByGuidOrFail': 'none',
+  'DateService.now': 'code',
+  'UserRecordDataTransformer.normalize': 'class',
+  'MetricsService.startRequestTimer': 'class',
+  'KmsService.encryptString': 'none',
+  'UserRecordStatusService.setStatus': 'none',
+};
 
 const cases: Expected[] = [
   {
@@ -192,6 +262,56 @@ const cases: Expected[] = [
       'consumer:ws orders.watch': GLOBAL_PIPELINE,
     },
   },
+  {
+    // A realistic in-house service with no profile: REST from the Nest adapter; Kafka consumers in a handler map,
+    // jobs picked by a command-line argument and in-house producer / outbox packages are reported as missing.
+    project: LEGACY,
+    frameworks: ['nestjs', 'nestjs-swagger', 'kafkajs', 'typeorm'],
+    modules: [...LEGACY_MODULES, 'UserRecordDataUpdatedHandler', 'UserRecordCreatedHandler', 'CommentAddedHandler', 'ReviewEscalatedHandler'],
+    entries: LEGACY_API,
+    operations: { ...LEGACY_OPS, 'KmsService.encryptString': [], 'NotificationsService.notifyEscalation': [], 'OutboxEventsService.publish': [], 'UserRecordDataUpdatedHandler.handle': [] },
+    pipelines: {
+      'api:PUT /api/v1/internal/manual-review/approve/:guid': LEGACY_PIPELINE,
+      // the e2e spec's app.useGlobalPipes() is the test app's, not the service's
+      'api:GET /health': ['middleware RequestContextMiddleware (global)', 'interceptor RequestTimer (global)', 'pipe ValidationPipe (global)'],
+    },
+    summaries: LEGACY_SUMMARIES,
+    fieldDocs: { 'ManualReviewService.approve': ['decision.data', 'decision.checklist', 'decision.reason', 'returns.status', 'returns.recordsUpdated'] },
+    issues: ['missing-entry-points', 'unknown-side-effects'],
+  },
+  {
+    // The same service with the profile rules the first run suggests: consumers and jobs are entry points (their
+    // handler classes are no longer modules), producer, outbox and KMS calls are side effects.
+    project: LEGACY,
+    config: 'configs/user-records-service.rules/modulegraph.config.json',
+    frameworks: ['nestjs', 'nestjs-swagger', 'kafkajs', 'typeorm'],
+    modules: LEGACY_MODULES,
+    entries: {
+      ...LEGACY_API,
+      'api:POST /api/v1/internal/assignments/:recordGuid': ['db.write review_assignments', 'kafka review-tools.agent-assigned.v1'],
+      'api:POST /api/v1/internal/escalations/:recordGuid': ['db.write escalations', 'kafka review-tools.record-escalated.v1', 'db.write audit_log'],
+      'api:PUT /api/v1/internal/escalations/:id/resolve': ['db.read escalations', 'db.write escalations', ...LEGACY_APPROVE, 'http aws-kms', 'outbox <eventType>'],
+      'api:PUT /api/v1/internal/manual-review/approve/:guid': [...LEGACY_APPROVE, 'http aws-kms', 'outbox <eventType>'],
+      'api:PUT /api/v1/internal/manual-review/update/:guid': ['db.read user_records', 'db.write user_records', 'db.write manual_review_decisions', 'http aws-kms'],
+      'api:PUT /api/v1/internal/manual-review/reject/:guid': [...LEGACY_APPROVE, 'outbox <eventType>'],
+      'consumer:kafka consumer user-record-data-updated': ['db.read user_records', 'db.write user_records', 'db.write manual_review_decisions', 'http aws-kms'],
+      'consumer:kafka consumer user-record-created': ['db.write user_records'],
+      'consumer:kafka consumer comment-added': ['db.write comments', 'db.write audit_log'],
+      'consumer:kafka consumer review-escalated': ['db.write escalations', 'kafka review-tools.record-escalated.v1', 'db.write audit_log'],
+      'cron:job stale-review-poller': ['db.read review_assignments', 'db.write escalations', 'kafka review-tools.record-escalated.v1', 'db.write audit_log', 'kafka review-tools.stale-reviews.v1'],
+      'cron:job record-status-backfill': ['db.read user_records', 'db.write user_record_statuses'],
+    },
+    operations: {
+      ...LEGACY_OPS,
+      'KmsService.encryptString': ['http aws-kms'],
+      'NotificationsService.notifyEscalation': ['kafka review-tools.record-escalated.v1'],
+      'NotificationsService.notifyStaleReviews': ['kafka review-tools.stale-reviews.v1'],
+      // a wrapper: the event type is its parameter (docs/analyzers.md, known limits)
+      'OutboxEventsService.publish': ['outbox <eventType>'],
+    },
+    summaries: LEGACY_SUMMARIES,
+    issues: [],
+  },
 ];
 
 let failures = 0;
@@ -210,10 +330,12 @@ for (const c of cases) {
     if (!cli) throw new Error('prisma CLI not installed: run npm install');
     execFileSync(process.execPath, [cli, 'generate'], { cwd: projectDir, stdio: 'ignore' });
   }
-  const config = loadConfig(projectDir);
+  if (c.config) console.log(`  with ${c.config}`);
+  const config = loadConfig(projectDir, c.config ? join(repo, c.config) : undefined);
   const detected = typescript.frameworks(projectDir, config).map((f) => f.id);
   if (!same(detected, c.frameworks)) fail(`frameworks ${detected.join(', ')} ≠ ${c.frameworks.join(', ')}`);
-  const g = typescript.open({ repo, projectDir, config }).run();
+  const analysis = typescript.open({ repo, projectDir, config });
+  const g = analysis.run();
   if (!same(Object.keys(g.modules), c.modules)) fail(`modules ${Object.keys(g.modules).join(', ')} ≠ ${c.modules.join(', ')}`);
   for (const [id, effects] of Object.entries(c.entries)) {
     const e = g.entryPoints[id];
@@ -237,6 +359,27 @@ for (const c of cases) {
   for (const [id, type] of Object.entries(c.returns ?? {})) {
     const got = g.scopes[id]?.returns?.type;
     if (got !== type) fail(`${id} returns ${got} ≠ ${type}`);
+  }
+  if (c.summaries) {
+    const described = describe(compare(g), config);
+    for (const [id, source] of Object.entries(c.summaries)) {
+      const x = described.entryPoints[id] ?? described.operations[id];
+      if (!x) { fail(`${id} not found for its description`); continue; }
+      const got = x.summary ? x.summarySource ?? '?' : 'none';
+      if (got !== source) fail(`${id} description from ${got} ≠ ${source}${x.summary ? ` ("${x.summary.slice(0, 50)}…")` : ''}`);
+    }
+  }
+  for (const [id, fields] of Object.entries(c.fieldDocs ?? {})) {
+    const op = g.operations[id];
+    for (const path of fields) {
+      const [where, name] = path.split('.');
+      const field = where === 'returns' ? op?.returns.fields?.find((f) => f.name === name) : op?.params.find((p) => p.name === where)?.fields?.find((f) => f.name === name);
+      if (!field?.description) fail(`${id} ${path} has no description (@ApiProperty)`);
+    }
+  }
+  if (c.issues) {
+    const got = (analysis.issues?.() ?? []).map((i) => i.kind);
+    if (!same(got, c.issues)) fail(`issues ${got.join(', ') || 'none'} ≠ ${c.issues.join(', ') || 'none'}`);
   }
   console.log(`  ${Object.keys(g.modules).length} modules, ${Object.keys(g.operations).length} operations, ${Object.keys(g.entryPoints).length} entry points checked`);
 }

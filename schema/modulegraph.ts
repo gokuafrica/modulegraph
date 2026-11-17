@@ -21,6 +21,10 @@ export interface Effect {
 export interface Param {
   name: string;
   type: string;
+  /** What it is, from the code's own documentation (a field's JSDoc, `@ApiProperty({ description })`). */
+  description?: string;
+  /** One level of documented fields, for an input whose type is a documented class (a DTO). */
+  fields?: Param[];
 }
 
 export interface TypeShape {
@@ -56,8 +60,11 @@ export interface AnalysisIssue {
    * `unresolved-imports`: packages the code imports are not installed, so library calls (and their side effects)
    * can't be recognised. `unresolved-calls`: many calls on injected dependencies resolve to nothing.
    * `unmapped-change`: changed code that is in no flow the analyzer knows (a framework it doesn't model).
+   * `missing-entry-points`: signs of entry points the analysis did not find (a Kafka client but no consumer, a handler
+   * map, scripts that start the app with an argument). `unknown-side-effects`: packages that look like messaging,
+   * outbox or cloud clients, which no adapter or profile rule describes, so their calls are not side effects.
    */
-  kind: 'unresolved-imports' | 'unresolved-calls' | 'unmapped-change';
+  kind: 'unresolved-imports' | 'unresolved-calls' | 'unmapped-change' | 'missing-entry-points' | 'unknown-side-effects';
   /** One line, for the CLI and the top of the brief. */
   message: string;
   /** What to do about it. */
@@ -66,6 +73,8 @@ export interface AnalysisIssue {
   items?: string[];
   /** Which revision it was found on. */
   side?: 'head' | 'base';
+  /** Profile JSON that fixes it (keys of `modulegraph.config.json`), when the analysis can say what it would be. */
+  suggestion?: string;
 }
 
 /**
@@ -123,11 +132,29 @@ export interface Source {
   intent?: string;
   /** Where the intent came from: the --intent flag, the PR description, or the branch's commit messages. */
   intentSource?: 'flag' | 'pr' | 'commits';
+  /**
+   * The service profile this review used, or where to create one (`exists: false`), with the home folder as `~`:
+   * where descriptions and rules go. The UI names it in its "add a description" hints.
+   */
+  profile?: { path: string; exists: boolean };
+  /** The command that analyzes this review again, live (`modulegraph review …`): shown when the review is only a saved file. */
+  command?: string;
   /** Which backend produced the graph and which framework adapters it used. */
   analyzer?: { id: string; language: string; frameworks: { id: string; name: string; reason: string }[] };
-  /** Scenario that was run against the head revision to capture example inputs/outputs. */
+  /** Scenario (or the service's tests) run against the head revision to capture example inputs/outputs. */
   examples?: {
+    /** The scenario file; for `kind: tests`, "unit tests (mocked dependencies)". */
     scenario: string;
+    /** `scenario`: a profile's scenario.ts (real calls). `tests`: the service's own specs, whose data comes from mocks. */
+    kind?: 'scenario' | 'tests';
+    /** `tests`: the spec files that ran, relative to the project folder, and how many tests they have. */
+    specs?: string[];
+    tests?: number;
+    /** `tests`: the run hit its time limit (`--tests-timeout`), so some cases are missing. */
+    timedOut?: boolean;
+    timeoutSeconds?: number;
+    /** Why nothing was recorded, when nothing was. */
+    note?: string;
     operationsCovered: number;
     /** The scenario's requests whose calls are shown. Every example names its case, so one request can be followed through every module. */
     cases?: ExampleCase[];
@@ -172,8 +199,14 @@ export interface Operation {
   endLine: number;
   /** What the operation does, in a sentence or two. */
   summary?: string;
-  /** `code`: the method's doc comment. `profile`: written in the service profile, usually by the review agent. */
-  summarySource?: 'code' | 'profile';
+  /**
+   * Where the summary comes from, best first: `code` the method's doc comment; `profile` written in the service
+   * profile (usually by the review agent); `api` the API documentation of the entry point that hands the request to
+   * this operation (`@ApiOperation`); `class` the doc comment of the operation's class.
+   */
+  summarySource?: 'code' | 'profile' | 'api' | 'class';
+  /** For `api`: which entry point's documentation, e.g. `@ApiOperation on PUT /api/v1/…`. */
+  summaryFrom?: string;
   params: Param[];
   returns: TypeShape;
   /** Effects performed by this operation itself (incl. inlined non-module helpers). */
@@ -256,6 +289,11 @@ export interface EntryPoint {
   kind: EntryKind;
   /** e.g. "GET /v1/users/:userId/profile", "topic user.deleted", "cron kyc-nightly-rescreen". */
   label: string;
+  /** What it does: the handler's doc comment, else its API documentation (`@ApiOperation`). */
+  summary?: string;
+  summarySource?: 'code' | 'api';
+  /** For `api`: the decorator it came from, e.g. `@ApiOperation`. */
+  summaryFrom?: string;
   /** Read-only by protocol semantics (HTTP GET, gRPC Get*). Used by the read-path-writes rule. */
   readOnly: boolean;
   file: string;
@@ -334,6 +372,11 @@ export interface Step {
   conditionBefore?: string;
   /** The transaction the step runs in, as the code opens it (`dataSource.transaction`, `@Transactional`). */
   transaction?: string;
+  /**
+   * The step runs in the request pipeline in front of the handler, not in the handler: the item it belongs to, as
+   * `interceptor RequestTimer` or `guard AuthGuard`. The UI folds these into one "request pipeline" node.
+   */
+  pipeline?: string;
 }
 
 export interface Edge {

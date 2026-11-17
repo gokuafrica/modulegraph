@@ -1,6 +1,7 @@
 #!/usr/bin/env -S npx tsx
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, realpathSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
@@ -15,6 +16,7 @@ import { analysisIssues, issueLines } from './coverage.ts';
 import { endReview, recordRepo } from './cleanup.ts';
 import { describe, descriptionsKey } from './describe.ts';
 import { LazySession } from './lazy.ts';
+import { changeNames, jestConfigOf, recordTestExamples, type TestExamplesResult } from './test-examples.ts';
 import { type RefreshResult, serve } from './server.ts';
 import { commitMessages, currentBranch, defaultBranch, diffBetween, fetchPullRequest, filesAtRef, git, hasLocalChanges, mergeBase, repoRootOf, revParse, workingStateKey, type RawDiff } from './git.ts';
 import { architectureFindings, changeFindings, markNew, modulesOfFile, opLabel, reviewSummary } from './rules.ts';
@@ -40,7 +42,11 @@ options
                            ~/.modulegraph/configs/, then the demos' configs/)
                            modulegraph config kept OUTSIDE the analyzed repo (platform classes, owners,
                            module names/contracts). The analyzed code is never modified
-  --no-examples            don't run the profile's scenario
+  --no-examples            don't record example data (no scenario, no tests)
+  --no-tests               don't record examples from the service's tests (without a scenario, the Jest specs that
+                           reference the changed classes and their callers are run to record example data)
+  --tests                  record examples from tests for a PR too (off for --pr: it runs the PR's code)
+  --tests-timeout <s>      stop the test run after this many seconds (default 120)
   --examples <file>        scenario script (outside the repo) run against the head revision; records real
                            inputs/outputs per operation. Branches/PRs run in a temporary git worktree
   --analyzer <id>          language backend (default: detected; known: typescript)
@@ -66,6 +72,8 @@ lazy analysis (large codebases)
   --open                   with --serve: open the review in the browser
   --idle <minutes>         with --serve: stop after this many minutes with no requests (default 30; 0 = never).
                            An open review tab asks every 5 s while it is visible, so this means nobody is looking
+  --resume <file>          a saved review (<id>.json) to continue: what was explored in it is analyzed again and its
+                           recorded examples are kept (modulegraph open uses this to serve a saved review live)
 
 ending reviews (see modulegraph help): modulegraph stop [<id>] | done [<id>] | clean [--older-than <days>]
 `;
@@ -90,6 +98,9 @@ const { values: args } = parseArgs({
     check: { type: 'boolean' },
     'allow-incomplete': { type: 'boolean' },
     'no-examples': { type: 'boolean' },
+    'no-tests': { type: 'boolean' },
+    tests: { type: 'boolean' },
+    'tests-timeout': { type: 'string' },
     lazy: { type: 'boolean' },
     seeds: { type: 'string' },
     'seed-entries': { type: 'string' },
@@ -99,6 +110,7 @@ const { values: args } = parseArgs({
     idle: { type: 'string' },
     analyzer: { type: 'string' },
     frameworks: { type: 'string' },
+    resume: { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -138,6 +150,8 @@ if (profile) {
     : `profile: none found for "${profile.name}"; using defaults. To add one, write ${userConfigsDir}/${profile.name}/modulegraph.config.json (the module-review skill, step 4)`);
 }
 const configFile = args.config ? fromUser(args.config) : profile?.config;
+/** A saved review being continued (`modulegraph open`): its PR text, what was explored, its examples. */
+const resumed = args.resume ? (JSON.parse(readFileSync(fromUser(args.resume), 'utf8')) as ModuleGraph) : undefined;
 const config = loadConfig(projectDir, configFile);
 if (args.frameworks) config.frameworks = args.frameworks.split(',').map((f) => f.trim()).filter(Boolean);
 // The profile's scenario records example data unless told otherwise.
@@ -185,7 +199,16 @@ function resolveRevisions(): Revisions {
     let headRef = args.head ?? currentBranch(repo);
     let baseRef = args.base ?? defaultBranch(repo) ?? 'main';
     let title = args.title;
-    if (args.pr) {
+    if (args.pr && resumed?.source.mode === 'pr' && resumed.source.base) {
+      // Continuing a saved PR review: the PR ref it fetched is still there; no need to ask GitHub again.
+      headRef = `refs/modulegraph/pr-${Number(args.pr)}`;
+      baseRef = resumed.source.base;
+      title ??= resumed.source.title;
+      if (!intent && resumed.source.intent) {
+        intent = resumed.source.intent;
+        intentSource = resumed.source.intentSource ?? 'pr';
+      }
+    } else if (args.pr) {
       const pr = fetchPullRequest(repo, Number(args.pr));
       headRef = pr.headRef;
       baseRef = pr.baseRef;
@@ -222,6 +245,9 @@ function resolveRevisions(): Revisions {
   if (insideApp(repo)) r.source.repo = relative(appRoot, repo).replace(/\\/g, '/') || '.';
   r.source.title ??= args.title;
   r.source.analyzer = { id: analyzer.id, language: analyzer.language, frameworks: detectedFrameworks };
+  const profilePath = configFile ?? `${userConfigsDir}/${config.service}/modulegraph.config.json`;
+  r.source.profile = { path: displayHome(profilePath), exists: !!configFile && existsSync(configFile) };
+  r.source.command = reviewCommand(r.source);
   if (intent) {
     r.source.intent = intent;
     r.source.intentSource = intentSource;
@@ -275,7 +301,13 @@ if (args.lazy) {
   // Only what the review needs: the changed code, a few relevant entry points, the rest on demand.
   session = new LazySession(headProject, baseProject, repo, config, diff, source, intent, {}, analyzer.generator);
   session.init({ seedCount: Number(args.seeds ?? 2), seedHints: args['seed-entries']?.split(',').map((x) => x.trim()).filter(Boolean) });
-  if (args.examples) session.examples = recordExamples(args.examples, session.exampleTargets());
+  if (resumed) resume(session, resumed);
+  if (resumed && Object.values(resumed.operations).some((op) => op.examples?.length)) {
+    // Recorded on this code before: keep them (a refresh records them again when the code changes).
+    session.examples = Object.fromEntries(Object.values(resumed.operations).filter((op) => op.examples?.length).map((op) => [op.id, op.examples!]));
+    source.examples = resumed.source.examples;
+  } else if (args.examples) session.examples = recordExamples(args.examples, session.exampleTargets());
+  else if (testsWanted()) session.examples = recordFromTests(session.graph(), session.exampleTargets());
   output = session.graph();
   if (args.serve) output.lazy!.api = '/api';
 } else {
@@ -290,6 +322,10 @@ if (args.lazy) {
       .filter((op) => op.change !== 'removed')
       .map((op) => ({ opId: op.id, file: op.file, className: graph.modules[op.moduleId].className, method: op.name, params: op.params.map((p) => p.name) }));
     const recorded = recordExamples(args.examples, targets);
+    for (const [opId, examples] of Object.entries(recorded)) if (graph.operations[opId]) graph.operations[opId].examples = examples;
+  } else if (testsWanted()) {
+    const review = reviewSummary(graph, diff);
+    const recorded = recordFromTests({ ...graph, review }, headProject.operationTargets());
     for (const [opId, examples] of Object.entries(recorded)) if (graph.operations[opId]) graph.operations[opId].examples = examples;
   }
   let findings: Finding[] = architectureFindings(graph, config);
@@ -433,12 +469,32 @@ if (args.serve && session) {
     s.refresh({ head: headProject, base: baseProject, diff, source, intent });
     // Examples run the code: record them again only when the code that runs changed.
     if (args.examples && files.length) s.examples = recordExamples(args.examples, s.exampleTargets());
+    else if (files.length && testsWanted()) s.examples = recordFromTests(s.graph(), s.exampleTargets());
     const graph = served();
     write(graph);
     const ms = Math.round(performance.now() - t);
     console.log(`refresh: ${files.length} file${files.length === 1 ? '' : 's'} changed (${files.join(', ') || 'diff only'}), base ${base && base.analysis === baseProject && !base.changedFiles?.length ? 'kept' : 're-read'}, ${ms} ms`);
     return { changed: true, files, baseKept: !!base && !base.changedFiles?.length, ms, graph };
   }
+}
+
+/**
+ * Analyzes again what the saved review had explored: the flows that were open, the callers that were loaded, the
+ * modules drilled into. A saved full (not lazy) review had every flow analyzed.
+ */
+function resume(s: LazySession, saved: ModuleGraph): void {
+  const t = performance.now();
+  let n = 0;
+  for (const e of Object.values(saved.entryPoints)) {
+    if (e.change === 'removed' || (saved.lazy && e.analysis !== 'full')) continue;
+    s.expand('entry', e.id);
+    n++;
+  }
+  for (const op of Object.values(saved.operations)) {
+    if (op.change === 'removed' || !op.lazy) continue;
+    if (op.lazy.callersLoaded) (s.expand('callers', op.id), n++);
+  }
+  console.log(`resumed ${n} explored part${n === 1 ? '' : 's'} of the saved review (${Math.round(performance.now() - t)} ms)`);
 }
 
 /** Fingerprint of the code this review reads; changes when commits move or files in the checkout are edited. */
@@ -467,25 +523,115 @@ if (args.check && output.incomplete?.length && !args['allow-incomplete']) {
   process.exit(1);
 }
 
+/** A path as people read it: inside the modulegraph folder relative to it, under the home folder with `~`. */
+function displayHome(path: string): string {
+  const p = path.replace(/\\/g, '/');
+  if (insideApp(p)) return relative(appRoot, p).replace(/\\/g, '/');
+  const home = homedir().replace(/\\/g, '/');
+  return p.toLowerCase().startsWith(`${home.toLowerCase()}/`) ? `~${p.slice(home.length)}` : p;
+}
+
+/** `modulegraph review …` that analyzes this review again, live: what a saved review tells you to run. */
+function reviewCommand(s: Source): string {
+  const q = (x: string) => (/[\s"'$`]/.test(x) ? `"${x.replace(/"/g, '\\"')}"` : x);
+  const project = insideApp(projectDir) ? relative(appRoot, projectDir).replace(/\\/g, '/') || '.' : projectDir;
+  const mode = s.mode === 'snapshot' ? ['--snapshot']
+    : s.mode === 'uncommitted' ? ['--uncommitted']
+    : args.pr ? ['--pr', args.pr]
+    : [...(args.head ? ['--head', args.head] : []), '--base', s.base ?? 'main'];
+  const extra = [...(args.config ? ['--config', displayHome(fromUser(args.config))] : []), ...(args.committed ? ['--committed'] : []), ...(args.name ? ['--name', args.name] : [])];
+  return ['modulegraph review --project', q(project), ...mode.map(q), ...extra.map(q)].join(' ');
+}
+
 function slug(s: string): string {
   return s.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
 }
 
-/** Runs the scenario against the head revision and returns the recorded calls per operation. */
-function recordExamples(scenarioRel: string, targets: OperationTarget[]): Record<string, Example[]> {
-  const here = dirname(fileURLToPath(import.meta.url));
+/**
+ * Examples from the service's own tests when there is no scenario: on by default (it runs the service's tests, as
+ * `npm test` would), off for a PR unless `--tests` (it would run the PR's code), never for a snapshot.
+ */
+function testsWanted(): boolean {
+  if (args['no-examples'] || args['no-tests'] || args.examples || source.mode === 'snapshot') return false;
+  if (source.mode === 'pr' && !args.tests) {
+    if (!testsWanted.said) console.log('examples: not running the tests of a PR (that runs its code on this machine); pass --tests to record examples from them');
+    testsWanted.said = true;
+    return false;
+  }
+  return !!jestConfigOf(projectDir);
+}
+testsWanted.said = false;
+
+/** Runs the specs that reference the change with the service's Jest (head revision) and keeps what they recorded. */
+function recordFromTests(g: Pick<ModuleGraph, 'operations' | 'modules' | 'scopes' | 'entryPoints' | 'review'>, targets: OperationTarget[]): Record<string, Example[]> {
+  const names = changeNames(g);
+  if (!names.classes.length && !names.stems.length) return {};
+  const timeoutSeconds = Number(args['tests-timeout'] ?? 120);
+  console.log(`examples: no scenario; running the service's tests that reference ${names.classes.slice(0, 4).join(', ')}${names.classes.length > 4 ? ', …' : ''} (jest, at most ${timeoutSeconds} s; --no-tests skips this)`);
+  let result: TestExamplesResult | undefined;
+  withHeadCode((codeRoot, tmp) => {
+    result = recordTestExamples({ projectRoot: join(codeRoot, projectRel).replace(/\\/g, '/'), installedProject: projectDir, targets, codeRoot, names, tmp, timeoutSeconds });
+  });
+  const r = result!;
+  source.examples = {
+    scenario: 'unit tests (mocked dependencies)',
+    kind: 'tests',
+    operationsCovered: Object.keys(r.examples).length,
+    cases: r.cases,
+    specs: r.specs,
+    tests: r.tests,
+    ...(r.timedOut ? { timedOut: true, timeoutSeconds } : {}),
+    ...(r.note ? { note: r.note } : {}),
+  };
+  console.log(r.cases.length
+    ? `examples: ${r.cases.length} test case${r.cases.length === 1 ? '' : 's'} recorded for ${Object.keys(r.examples).length} operations, from ${r.specs.length} spec file${r.specs.length === 1 ? '' : 's'} (${(r.ms / 1000).toFixed(1)} s)${r.timedOut ? `; stopped after ${timeoutSeconds} s, so some are missing` : ''}`
+    : `examples: none recorded from tests: ${r.note}`);
+  return r.examples;
+}
+
+/**
+ * Runs `fn` with the head revision's code on disk: the checkout itself (working tree), or a temporary git worktree of
+ * the head commit in <repo>/.modulegraph-tmp/<pid>/ (so node_modules above it resolve), removed afterwards.
+ */
+function withHeadCode(fn: (codeRoot: string, tmp: string) => void): void {
   // One folder per process: several analyses (npm run live) may record examples at the same time.
   const tmp = join(repo, '.modulegraph-tmp', String(process.pid));
   mkdirSync(tmp, { recursive: true });
   let codeRoot = repo;
   let worktree: string | undefined;
-  if (headSha) {
-    worktree = join(tmp, `wt-${headSha.slice(0, 10)}`).replace(/\\/g, '/');
-    if (existsSync(worktree)) git(repo, ['worktree', 'remove', '--force', worktree]);
-    git(repo, ['worktree', 'add', '--detach', worktree, headSha]);
-    codeRoot = worktree;
-  }
   try {
+    if (headSha) {
+      worktree = join(tmp, `wt-${headSha.slice(0, 10)}`).replace(/\\/g, '/');
+      if (existsSync(worktree)) git(repo, ['worktree', 'remove', '--force', worktree]);
+      git(repo, ['worktree', 'add', '--detach', worktree, headSha]);
+      codeRoot = worktree;
+    }
+    fn(codeRoot, tmp);
+  } finally {
+    if (worktree) git(repo, ['worktree', 'remove', '--force', worktree]);
+    rmSync(tmp, { recursive: true, force: true });
+    // Leave no empty .modulegraph-tmp/ in the reviewed repo. rmdir only removes an empty folder: another run's
+    // <pid> folder (npm run live records several at once) keeps it.
+    try {
+      rmdirSync(dirname(tmp));
+    } catch {
+      // not empty, or already gone
+    }
+  }
+}
+
+/** Runs the scenario against the head revision and returns the recorded calls per operation. */
+function recordExamples(scenarioRel: string, targets: OperationTarget[]): Record<string, Example[]> {
+  const here = dirname(fileURLToPath(import.meta.url));
+  let recorded: Record<string, Example[]> = {};
+  withHeadCode((codeRoot, tmp) => {
+    recorded = runScenario(here, scenarioRel, targets, codeRoot, tmp);
+  });
+  return recorded;
+}
+
+function runScenario(here: string, scenarioRel: string, targets: OperationTarget[], codeRoot: string, tmp: string): Record<string, Example[]> {
+  {
     const scenario = fromUser(scenarioRel);
     if (!existsSync(scenario)) throw new Error(`scenario not found: ${scenarioRel}`);
     const projectRoot = join(codeRoot, projectRel).replace(/\\/g, '/');
@@ -506,15 +652,5 @@ function recordExamples(scenarioRel: string, targets: OperationTarget[]): Record
     rmSync(out, { force: true });
     rmSync(spec, { force: true });
     return recorded;
-  } finally {
-    if (worktree) git(repo, ['worktree', 'remove', '--force', worktree]);
-    rmSync(tmp, { recursive: true, force: true });
-    // Leave no empty .modulegraph-tmp/ in the reviewed repo. rmdir only removes an empty folder: another run's
-    // <pid> folder (npm run live records several at once) keeps it.
-    try {
-      rmdirSync(dirname(tmp));
-    } catch {
-      // not empty, or already gone
-    }
   }
 }

@@ -5,7 +5,7 @@
  *
  *   modulegraph review [options]    analyze the change and open the interactive review (keeps running until idle)
  *   modulegraph analyze [options]   one-shot: write the review graph and the brief, print the summary, exit
- *   modulegraph open [<id>]         show saved reviews in the browser (no analysis)
+ *   modulegraph open [<id>]         show a saved review; live again (refresh, done) while its code is still here
  *   modulegraph stop [<id>]         stop review servers (deletes nothing)
  *   modulegraph done [<id>]         end a review: stop its server, delete its graph, brief, PR ref and temp files
  *   modulegraph clean               delete old reviews and leftovers
@@ -45,7 +45,9 @@ if (command === 'open') {
   modulegraph review [options]    analyze the change and open the interactive review; keeps serving it until
                                   30 min pass with no requests (--idle <minutes>, 0 = never), Ctrl+C, or stop/done
   modulegraph analyze [options]   one-shot: write the review graph and brief, print the summary
-  modulegraph open [<id>]         show saved reviews in the browser (no analysis; also stops when idle)
+  modulegraph open [<id>]         show a saved review (no id: the latest). While its repo and branches are on this
+                                  machine it is served live again (refresh, done; what was explored is analyzed
+                                  again); --static shows only the saved file. Also stops when idle
   modulegraph setup               install dependencies, build the UI, install the agent skill
 
 Ending reviews (reviews are saved in ~/.modulegraph/reviews/ until you remove them):

@@ -50,6 +50,7 @@ and why):
 | Prisma | | `prisma.<model>.<op>()`, `$queryRaw` / `$executeRaw` |
 | Mongoose | | `Model` reads and writes; document `save()` / `deleteOne()` / `updateOne()`; collection from the model name |
 | axios, fetch | | HTTP calls; target is the URL's host |
+| Swagger (`@nestjs/swagger`) | descriptions: `@ApiOperation({ description \| summary })` describes the entry point and the operation its handler hands the request to; `@ApiProperty({ description })` describes DTO fields | |
 
 Module discovery is framework-aware too: Nest `@Injectable` providers and CQRS handlers are modules; controllers,
 resolvers, gateways, processors, listeners, `@Module` classes, guards, pipes, interceptors, entities and abstract
@@ -78,7 +79,8 @@ What runs before a handler decides who may call it, and can have side effects of
 
 The service's own guard / interceptor / middleware code (`canActivate`, `intercept`, `use`, …) runs ahead of the
 handler in the entry point's flow, so its side effects are the entry point's (an interceptor that writes an audit
-row makes a GET write). The pipeline is part of the entry point: when an item is added or removed, or its code
+row makes a GET write). Its steps are marked (`step.pipeline`), and the flow view folds them into one *request
+pipeline* node, so a global metrics interceptor doesn't push the business modules aside; a click shows them. The pipeline is part of the entry point: when an item is added or removed, or its code
 changes, every entry point behind it is changed, with `access-control-changed` (guards, middleware, metadata; an
 error unless a guard or middleware was only added) or `request-pipeline-changed` (interceptors, pipes, filters: a
 warning). The brief lists these right under the verdict, and says what guards each new entry point.
@@ -94,6 +96,15 @@ call, so it has no side effects, and its review said "not blocked". Now the back
 - `unmapped-change`: changed code in a function no operation, entry point or pipeline covers. Composition-root
   wiring (`const x = new Module(…)`) and tests / dev tooling folders (`dev/`, `scripts/`, `seeds/`, `migrations/`,
   `mocks/`, `e2e/`) don't count.
+- `missing-entry-points`: signs of handlers the analysis does not see: a message broker client in `package.json`
+  (`kafkajs`, or a package built on it) but no consumer entry point; a `Map` or object literal of classes that share
+  a method (`ConsumerHandlerMap`); `package.json` scripts that start the app with an argument (`nest start --
+  some-poller`) and the file that reads `process.argv`. The issue carries the `entryRegistries` rule that fixes it.
+- `unknown-side-effects`: dependencies whose name says producer, outbox, queue or cloud client (or that are built on
+  a broker client), imported by the service, that no adapter or `sinks` rule describes. The issue lists the calls
+  into them and carries suggested `sinks` (check the kind and the target argument).
+
+Add a name to `coverage.ignore` in the profile to stop a false alarm.
 
 `--check` fails on an incomplete analysis unless `--allow-incomplete`.
 
@@ -115,12 +126,22 @@ Adapters are mostly data, and the same data can go in a service's profile
     { "class": "SqsProducer", "module": "sqs-producer", "method": "send", "kind": "queue", "target": "injected|const:sqs" }
   ],
   "responses": [ { "class": "Context", "method": "json", "arg": 0 } ],
+  "entryRegistries": [   // handlers registered by data
+    // handler map + base class: every key of the map is an entry point, handled by its class's `method`
+    { "map": "ConsumerHandlerMap", "method": "handle", "kind": "consumer", "label": "kafka consumer {key}" },
+    // module picked by a command-line argument: main.ts boots JOBS[argv._[0]] (or `case 'x':`); what runs is the
+    // module's providers' lifecycle hooks (default onApplicationBootstrap|onModuleInit, and run)
+    { "argv": "src/main.ts", "kind": "cron", "label": "job {key}" }
+  ],
+  "docDecorators": [ { "decorator": "Doc", "from": "@acme/docs", "props": ["description"] } ],   // more description sources
+  "coverage": { "ignore": ["@acme/queue-utils"] },
   "frameworks": ["nestjs", "typeorm"]   // optional: replaces detection
 }
 ```
 
-`class` is the declaring class, interface or type alias the type checker resolves the call to; `module` is the
-npm package it comes from (`global` for built-ins). Labels fill `{0}`, `{0.prop}`, `{verb}`, `{path}`, `{class}`,
+`class` is the declaring class, interface or type alias the type checker resolves the call to, or the receiver's own
+class when the method is inherited (`KMSClient` for `kmsClient.send()`, declared on the SDK's base `Client`);
+`module` is the npm package it comes from (`global` for built-ins). Labels fill `{0}`, `{0.prop}`, `{verb}`, `{path}`, `{class}`,
 `{method}`, with `{a|b}` fallbacks. Types: `CallMatch`, `SinkRule`, `EntryRule`, `DecoratorEntryRule`,
 `ResponseRule` in [config.ts](../analyzer/src/config.ts).
 
@@ -164,3 +185,8 @@ and marks it `generator: "agent:<model>"`.
   others are `OrdersService@<file>`. Adding a class with an existing name in a file that sorts earlier renames the
   existing module's id in that review.
 - Raw SQL is classified by its leading keyword; a stored procedure call (`CALL`, `EXEC`) counts as a write.
+- Transactions through a query runner (`queryRunner.startTransaction()` … `commitTransaction()`) are not drawn as a
+  transaction box; only `….transaction(cb)` and `@Transactional()` are.
+- Examples from tests: Jest only (config in `package.json` or `jest.config.json/js/cjs`; `jest.config.ts` is not read),
+  specs picked by name (`*.spec.*` / `*.test.*` that mention a changed class or its callers, or import their files); e2e
+  specs are not run.

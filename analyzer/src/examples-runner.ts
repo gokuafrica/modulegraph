@@ -18,6 +18,7 @@ import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 import type { Example, ExampleCase } from '../../schema/modulegraph.ts';
+import { examplesFromCases } from './example-cases.ts';
 
 interface Target {
   opId: string;
@@ -27,8 +28,6 @@ interface Target {
   params: string[];
 }
 
-/** Distinct behaviours kept per operation (calls with the same input and output are one behaviour). */
-const MAX_BEHAVIOURS = 12;
 const spec = JSON.parse(readFileSync(process.argv[2], 'utf8')) as { scenario: string; projectRoot: string; out: string; targets: Target[]; tsconfig?: string };
 
 // Services that need decorator metadata (NestJS injection, TypeORM column types) are compiled by TypeScript.
@@ -134,26 +133,6 @@ const scenario = (await import(pathToFileURL(spec.scenario).href)) as {
 };
 if (typeof scenario.default === 'function') await scenario.default(spec.projectRoot, { step });
 
-// One example per distinct behaviour of an operation (its input and output), listing every case it happened in.
-// So whichever case the reviewer follows, each module that case reached shows the call it got in that case.
-const normal = (e: Example) => JSON.stringify({ ...e, cases: undefined }).replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z/g, 'T');
-const examples: Record<string, Example[]> = {};
-const byBehaviour = new Map<string, Example>();
-for (const c of cases) {
-  for (const [opId, e] of c.calls) {
-    const key = `${opId}|${normal(e)}`;
-    const known = byBehaviour.get(key);
-    if (known) {
-      known.cases!.push(c.id);
-      continue;
-    }
-    const list = (examples[opId] ??= []);
-    if (list.length >= MAX_BEHAVIOURS) continue;
-    const kept = { ...e, cases: [c.id] };
-    byBehaviour.set(key, kept);
-    list.push(kept);
-  }
-}
-const usedCases = cases.filter((c) => c.calls.size);
-writeFileSync(spec.out, JSON.stringify({ examples, cases: usedCases.map(({ id, label }) => ({ id, label })) }));
+const { examples, cases: usedCases } = examplesFromCases(cases);
+writeFileSync(spec.out, JSON.stringify({ examples, cases: usedCases }));
 console.log(`examples: ${Object.keys(examples).length} operations, ${usedCases.length} cases`);

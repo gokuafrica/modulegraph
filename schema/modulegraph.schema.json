@@ -77,6 +77,17 @@
         },
         "type": {
           "type": "string"
+        },
+        "description": {
+          "type": "string",
+          "description": "What it is, from the code's own documentation (a field's JSDoc, `@ApiProperty({ description })`)."
+        },
+        "fields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Param"
+          },
+          "description": "One level of documented fields, for an input whose type is a documented class (a DTO)."
         }
       },
       "required": [
@@ -191,9 +202,11 @@
           "enum": [
             "unresolved-imports",
             "unresolved-calls",
-            "unmapped-change"
+            "unmapped-change",
+            "missing-entry-points",
+            "unknown-side-effects"
           ],
-          "description": "`unresolved-imports`: packages the code imports are not installed, so library calls (and their side effects)\ncan't be recognised. `unresolved-calls`: many calls on injected dependencies resolve to nothing.\n`unmapped-change`: changed code that is in no flow the analyzer knows (a framework it doesn't model)."
+          "description": "`unresolved-imports`: packages the code imports are not installed, so library calls (and their side effects)\ncan't be recognised. `unresolved-calls`: many calls on injected dependencies resolve to nothing.\n`unmapped-change`: changed code that is in no flow the analyzer knows (a framework it doesn't model).\n`missing-entry-points`: signs of entry points the analysis did not find (a Kafka client but no consumer, a handler\nmap, scripts that start the app with an argument). `unknown-side-effects`: packages that look like messaging,\noutbox or cloud clients, which no adapter or profile rule describes, so their calls are not side effects."
         },
         "message": {
           "type": "string",
@@ -217,6 +230,10 @@
             "base"
           ],
           "description": "Which revision it was found on."
+        },
+        "suggestion": {
+          "type": "string",
+          "description": "Profile JSON that fixes it (keys of `modulegraph.config.json`), when the analysis can say what it would be."
         }
       },
       "required": [
@@ -387,6 +404,27 @@
           ],
           "description": "Where the intent came from: the --intent flag, the PR description, or the branch's commit messages."
         },
+        "profile": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "exists": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "path",
+            "exists"
+          ],
+          "additionalProperties": false,
+          "description": "The service profile this review used, or where to create one (`exists: false`), with the home folder as `~`:\nwhere descriptions and rules go. The UI names it in its \"add a description\" hints."
+        },
+        "command": {
+          "type": "string",
+          "description": "The command that analyzes this review again, live (`modulegraph review …`): shown when the review is only a saved file."
+        },
         "analyzer": {
           "type": "object",
           "properties": {
@@ -432,7 +470,37 @@
           "type": "object",
           "properties": {
             "scenario": {
-              "type": "string"
+              "type": "string",
+              "description": "The scenario file; for `kind: tests`, \"unit tests (mocked dependencies)\"."
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "scenario",
+                "tests"
+              ],
+              "description": "`scenario`: a profile's scenario.ts (real calls). `tests`: the service's own specs, whose data comes from mocks."
+            },
+            "specs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "`tests`: the spec files that ran, relative to the project folder, and how many tests they have."
+            },
+            "tests": {
+              "type": "number"
+            },
+            "timedOut": {
+              "type": "boolean",
+              "description": "`tests`: the run hit its time limit (`--tests-timeout`), so some cases are missing."
+            },
+            "timeoutSeconds": {
+              "type": "number"
+            },
+            "note": {
+              "type": "string",
+              "description": "Why nothing was recorded, when nothing was."
             },
             "operationsCovered": {
               "type": "number"
@@ -450,7 +518,7 @@
             "operationsCovered"
           ],
           "additionalProperties": false,
-          "description": "Scenario that was run against the head revision to capture example inputs/outputs."
+          "description": "Scenario (or the service's tests) run against the head revision to capture example inputs/outputs."
         },
         "files": {
           "type": "array",
@@ -605,9 +673,15 @@
           "type": "string",
           "enum": [
             "code",
-            "profile"
+            "profile",
+            "api",
+            "class"
           ],
-          "description": "`code`: the method's doc comment. `profile`: written in the service profile, usually by the review agent."
+          "description": "Where the summary comes from, best first: `code` the method's doc comment; `profile` written in the service\nprofile (usually by the review agent); `api` the API documentation of the entry point that hands the request to\nthis operation (`@ApiOperation`); `class` the doc comment of the operation's class."
+        },
+        "summaryFrom": {
+          "type": "string",
+          "description": "For `api`: which entry point's documentation, e.g. `@ApiOperation on PUT /api/v1/…`."
         },
         "params": {
           "type": "array",
@@ -934,6 +1008,21 @@
           "type": "string",
           "description": "e.g. \"GET /v1/users/:userId/profile\", \"topic user.deleted\", \"cron kyc-nightly-rescreen\"."
         },
+        "summary": {
+          "type": "string",
+          "description": "What it does: the handler's doc comment, else its API documentation (`@ApiOperation`)."
+        },
+        "summarySource": {
+          "type": "string",
+          "enum": [
+            "code",
+            "api"
+          ]
+        },
+        "summaryFrom": {
+          "type": "string",
+          "description": "For `api`: the decorator it came from, e.g. `@ApiOperation`."
+        },
         "readOnly": {
           "type": "boolean",
           "description": "Read-only by protocol semantics (HTTP GET, gRPC Get*). Used by the read-path-writes rule."
@@ -1217,6 +1306,10 @@
         "transaction": {
           "type": "string",
           "description": "The transaction the step runs in, as the code opens it (`dataSource.transaction`, `@Transactional`)."
+        },
+        "pipeline": {
+          "type": "string",
+          "description": "The step runs in the request pipeline in front of the handler, not in the handler: the item it belongs to, as\n`interceptor RequestTimer` or `guard AuthGuard`. The UI folds these into one \"request pipeline\" node."
         }
       },
       "required": [

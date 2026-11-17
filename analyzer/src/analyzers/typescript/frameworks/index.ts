@@ -5,11 +5,11 @@ import { bullmq, kafkajs, nodeCron } from './messaging.ts';
 import { mongoose, prisma, typeorm } from './data.ts';
 import { axios, express, fastify, fetchApi } from './http.ts';
 import { nestCqrs } from './nest-di.ts';
-import { nestjs } from './nestjs.ts';
+import { nestjs, nestSwagger } from './nestjs.ts';
 import type { Framework } from './types.ts';
 
 /** Every framework adapter the TypeScript backend knows. Add one here (and a fixture in fixtures/frameworks). */
-export const frameworks: Framework[] = [nestjs, nestCqrs, express, fastify, kafkajs, bullmq, nodeCron, typeorm, prisma, mongoose, axios, fetchApi];
+export const frameworks: Framework[] = [nestjs, nestCqrs, nestSwagger, express, fastify, kafkajs, bullmq, nodeCron, typeorm, prisma, mongoose, axios, fetchApi];
 
 /**
  * Frameworks a project uses: the profile's explicit list if it has one, else every adapter whose packages the

@@ -7,7 +7,7 @@
  * code. Hooks cover what data can't say (route prefixes from `app.use('/x', router)`, Prisma's `prisma.user.*`).
  */
 import type { CallExpression, ClassDeclaration, Decorator, MethodDeclaration, NewExpression, Node, SourceFile, Type } from 'ts-morph';
-import type { DecoratorEntryRule, EntryRule, ResponseRule, SinkRule } from '../../../config.ts';
+import type { DecoratorEntryRule, DocDecoratorRule, EntryRule, ResponseRule, SinkRule } from '../../../config.ts';
 import type { Effect, PipelineItem } from '../../../../../schema/modulegraph.ts';
 
 export interface Framework {
@@ -30,6 +30,10 @@ export interface Framework {
   notModuleImplements?: string[];
   /** Lifecycle methods that are not operations (`onModuleInit`). */
   ignoreMethods?: string[];
+  /** Decorators that document a handler or method (`@ApiOperation({ description })`): a description source after JSDoc. */
+  docDecorators?: DocDecoratorRule[];
+  /** Decorators that document a field of an input or output type (`@ApiProperty({ description })`). */
+  fieldDocDecorators?: DocDecoratorRule[];
   hooks?: FrameworkHooks;
 }
 
@@ -44,6 +48,12 @@ export interface CallSite {
   pkg: string;
   /** `this.users` in `this.users.find()`. */
   receiver?: Node;
+  /**
+   * The receiver's own class, when the method is declared further up (`kmsClient.send()` is declared on the SDK's
+   * base `Client`): rules may name either. With the package that class comes from.
+   */
+  receiverClass?: string;
+  receiverPkg?: string;
 }
 
 export interface HookContext {

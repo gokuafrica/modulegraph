@@ -16,6 +16,8 @@ export interface Actions {
   showDiff: (id: string) => void;
   /** Lazy graphs: analyze one more level of callers of these operations. */
   loadCallers: (opIds: string[]) => Promise<void>;
+  /** Show the request pipeline's steps one by one, or fold them back into one node. */
+  togglePipeline: () => void;
 }
 export const ActionsContext = createContext<Actions>(null!);
 
@@ -219,7 +221,9 @@ export function ModuleNode({ data, selected }: NodeProps) {
         {extra > 0 && <span className="chip more">+{extra} more</span>}
         {d.stub && <span className="pure">not analyzed yet: drill in to analyze</span>}
         {!d.stub && d.chips.length === 0 && !d.partial && (
-          <span className="pure">{d.compact ? `${d.totalEffects} side effects, none changed` : 'no side effects'}</span>
+          <span className="pure" title={d.compact && d.totalEffects ? 'Only what this change does to its side effects is shown here; select it to see them all.' : undefined}>
+            {d.compact ? `${d.totalEffects} side effect${d.totalEffects === 1 ? '' : 's'}, none changed` : 'no side effects'}
+          </span>
         )}
         {d.partial && !d.compact && <span className="chip more" title="Some modules below this one are not analyzed yet. Drill in to analyze them.">+ ? below, not analyzed</span>}
       </div>
@@ -450,7 +454,40 @@ export function TxGroupNode({ data }: NodeProps) {
   );
 }
 
+/**
+ * What runs in front of the handler on every request (middleware, guards, interceptors), folded: which items, how
+ * many steps, what they touch. Cross-cutting code stays out of the way of the business flow until it is asked for,
+ * or until the change touches it (then it is marked).
+ */
+export function PipelineNode({ data, selected }: NodeProps) {
+  const d = data as { items: string[]; steps: number; removed: number; modules: string[]; chips: Chip[]; changed: boolean; pipeline: { kind: string; name: string; scope: string }[] };
+  const actions = useContext(ActionsContext);
+  return (
+    <div className={`node pipeline ${d.changed ? 'c-modified' : ''} ${selected ? 'selected' : ''}`}
+      title={['Runs before the handler on every request:', ...d.pipeline.map((p) => `  ${p.kind} ${p.name} (${p.scope})`)].join('\n')}>
+      <Handles />
+      <div className="module-head">
+        <div>
+          <div className="entry-kind">request pipeline</div>
+          <div className="pipeline-items">{d.items.join(' · ')}</div>
+        </div>
+        {d.changed && <span className="badge b-modified">changed</span>}
+      </div>
+      <div className="via">{d.steps} step{d.steps === 1 ? '' : 's'}{d.removed ? ` (+${d.removed} removed)` : ''}{d.modules.length ? ` in ${d.modules.join(', ')}` : ''}</div>
+      <div className="chips">
+        {d.chips.slice(0, 4).map((c) => <EffectChip key={`${c.kind}${c.target}`} chip={c} />)}
+        {d.chips.length > 4 && <span className="chip more">+{d.chips.length - 4} more</span>}
+        {d.chips.length === 0 && <span className="pure">no side effects</span>}
+      </div>
+      <div className="node-actions">
+        <button className="link nodrag" onClick={(e) => { e.stopPropagation(); actions.togglePipeline(); }}>show the steps ▸</button>
+      </div>
+    </div>
+  );
+}
+
 export const nodeTypes = {
+  pipeline: PipelineNode,
   txgroup: TxGroupNode,
   module: ModuleNode,
   effect: EffectNode,

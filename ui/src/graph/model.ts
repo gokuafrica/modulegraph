@@ -1,6 +1,6 @@
 import type { Effect, EntryPoint, Exit, ModuleGraph, Operation, Param, Scope, Step } from '../../../schema/modulegraph.ts';
 
-export type NodeKind = 'module' | 'effect' | 'entry' | 'exit' | 'resource' | 'entrygroup' | 'code' | 'decision' | 'stop' | 'frontier' | 'txgroup';
+export type NodeKind = 'module' | 'effect' | 'entry' | 'exit' | 'resource' | 'entrygroup' | 'code' | 'decision' | 'stop' | 'frontier' | 'txgroup' | 'pipeline';
 export type EdgeKind = 'data' | 'control' | 'call' | 'read' | 'write' | 'branch' | 'removed';
 
 export interface VNode {
@@ -200,6 +200,8 @@ export interface FlowOptions {
   focusPath?: Set<string>;
   /** Draw the flow as it was on the base revision. */
   before?: boolean;
+  /** Show the request pipeline's steps (guards, interceptors, middleware) one by one instead of as one folded node. */
+  showPipeline?: boolean;
 }
 
 /**
@@ -207,12 +209,14 @@ export interface FlowOptions {
  * calls: opening an endpoint shows the controller handing the request to its module(s), and drilling into a module
  * shows its sub-modules and its own side effects. That keeps every level module-sized, however complex the API.
  */
-export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): Model & { chain: string[]; addedCount?: number } {
+export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): Model & { chain: string[]; addedCount?: number; pipelineSteps?: number } {
   const chain = [scopeId];
   const current = g.scopes[scopeId];
   const was = opts.before && current ? scopeBefore(current) : undefined;
-  const raw = was ?? current;
   const before = !!was;
+  // Cross-cutting code in front of the handler (metrics, logging, auth) is one folded node unless asked for.
+  const folded = foldPipeline(g, scopeId, was ?? current, !!opts.showPipeline);
+  const raw = folded.scope;
   const scope = raw && opts.collapsePassthrough
     ? {
         ...raw,
@@ -226,6 +230,7 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
   const nodes: VNode[] = [];
   const edges: VEdge[] = [];
   if (!scope) return { nodes, edges, chain };
+  if (folded.node) nodes.push(folded.node);
   const via = chain.slice(1).map((id) => opTitle(g, id));
   const rootEntry = g.entryPoints[scopeId];
   const innerOp = g.operations[chain.at(-1)!];
@@ -410,7 +415,58 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
       }
     }
   }
-  return { nodes, edges: [...new Map(edges.map((e) => [e.id, e])).values()], chain, addedCount: was?.addedCount };
+  return { nodes, edges: [...new Map(edges.map((e) => [e.id, e])).values()], chain, addedCount: was?.addedCount, pipelineSteps: folded.count };
+}
+
+export const PIPELINE_NODE = '__pipeline';
+
+/**
+ * The steps of an entry point's request pipeline (guards, interceptors, middleware: `step.pipeline`) as one node:
+ * what runs in front of every handler is rarely what a reviewer of the handler wants to read step by step (a metrics
+ * interceptor's eight calls were longer than the business path). Folded unless `show`; the node says which items,
+ * how many steps, what they touch, and whether the change touched them.
+ */
+export function foldPipeline(g: ModuleGraph, scopeId: string, scope: Scope | undefined, show: boolean): { scope: Scope | undefined; node?: VNode; count?: number } {
+  if (!scope || !g.entryPoints[scopeId]) return { scope };
+  const steps = scope.steps.filter((s) => s.pipeline);
+  const ghosts = (scope.removedSteps ?? []).filter((s) => s.pipeline);
+  const count = steps.length + ghosts.length;
+  if (!count || show) return { scope, count: count || undefined };
+  const ids = new Set([...steps, ...ghosts].map((s) => s.id));
+  const remap = (es: Scope['edges'] | undefined) => {
+    const out = new Map<string, Scope['edges'][number]>();
+    for (const e of es ?? []) {
+      const from = ids.has(e.from) ? PIPELINE_NODE : e.from;
+      const to = ids.has(e.to) ? PIPELINE_NODE : e.to;
+      if (from === to) continue;
+      const key = `${from}->${to}`;
+      const prev = out.get(key);
+      out.set(key, prev ? { ...prev, kind: prev.kind === 'data' || e.kind === 'data' ? 'data' : 'control', label: undefined } : { ...e, from, to });
+    }
+    return [...out.values()];
+  };
+  const entry = g.entryPoints[scopeId];
+  // Every item in front of the handler (a guard with no steps of its own included), as the entry point lists them.
+  const items = [...new Set([...(entry.pipeline ?? []).map((p) => `${p.kind} ${p.name}`), ...steps.map((s) => s.pipeline!)])];
+  const modules = [...new Set(steps.flatMap((s) => (s.target ? [g.modules[g.operations[s.target]?.moduleId ?? s.target.split('.')[0]]?.name ?? s.target.split('.')[0]] : [])))];
+  const chips = new Map<string, Chip>();
+  for (const s of steps) {
+    const fx = s.effect ? [s.effect] : s.target ? g.operations[s.target]?.effects ?? [] : [];
+    for (const e of fx) chips.set(effectKey(e), { kind: e.kind, target: e.target, direct: !!s.effect, delta: s.delta === 'added' ? '+' : undefined });
+  }
+  const changed = steps.some((s) => s.delta === 'added' || s.conditionBefore !== undefined) || ghosts.length > 0 || !!entry.pipelineDelta;
+  const lines = Math.ceil(items.join(' · ').length / 38);
+  return {
+    scope: { ...scope, steps: scope.steps.filter((s) => !s.pipeline), removedSteps: scope.removedSteps?.filter((s) => !s.pipeline), edges: remap(scope.edges), removedEdges: scope.removedEdges && remap(scope.removedEdges) },
+    count,
+    node: {
+      id: PIPELINE_NODE,
+      type: 'pipeline',
+      width: 270,
+      height: 78 + lines * 16 + Math.min(chips.size, 4) * 24 + (changed ? 18 : 0),
+      data: { items, steps: steps.length, removed: ghosts.length, modules, chips: [...chips.values()], changed, pipeline: entry.pipeline ?? [] },
+    },
+  };
 }
 
 /**
@@ -632,7 +688,9 @@ export function impactModel(g: ModuleGraph, index: CallerIndex, opId: string, op
         compact: true,
         ops: ops.map((o) => g.operations[o].name),
         opIds: ops,
+        // Only what the change did to the effects is drawn; the count is of all of them, direct or via submodules.
         chipsOverride: [...chips.values()],
+        totalEffects: effectCount(g, ops),
         reach: reach.size,
       }),
     );
@@ -662,6 +720,11 @@ export function impactModel(g: ModuleGraph, index: CallerIndex, opId: string, op
     entriesShown: entries.length,
     entriesTotal: reachOf(starts).size,
   };
+}
+
+/** Side effects of these operations now (direct and via submodules), each table / topic / service once. */
+export function effectCount(g: ModuleGraph, opIds: string[]): number {
+  return new Set(opIds.flatMap((o) => (g.operations[o]?.effects ?? []).map(effectKey))).size;
 }
 
 /** Lines an example value takes in a node: one per top-level key (objects) or one line. */

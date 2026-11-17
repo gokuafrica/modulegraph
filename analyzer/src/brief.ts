@@ -40,6 +40,11 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://127.0.0.
       for (const item of (issue.items ?? []).slice(0, 8)) out.push(`  - ${item}`);
       if ((issue.items?.length ?? 0) > 8) out.push(`  - … ${issue.items!.length - 8} more`);
       if (issue.hint) out.push(`  - What to do: ${issue.hint}`);
+      if (issue.suggestion) {
+        // The rule, ready to paste into the profile (the module-review skill writes it on a first run).
+        out.push(`  - Add to the profile, \`${s.profile?.path ?? `~/.modulegraph/configs/${g.service}/modulegraph.config.json`}\`${s.profile?.exists ? '' : ` (create it with \`"service": "${g.service}"\`)`}:`, '');
+        out.push('    ```json', ...issue.suggestion.split('\n').map((l) => `    ${l}`), '    ```', '');
+      }
     }
   } else {
     out.push(errors.length
@@ -50,6 +55,19 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://127.0.0.
   out.push(s.intent
     ? `Stated intent (${s.intentSource ?? 'given'}): ${quote(s.intent)}`
     : 'Stated intent: **none**. The undisclosed-effect check did not run; ask the author what the change is for.');
+  const ex = s.examples;
+  if (ex) {
+    out.push('');
+    const covered = Object.values(g.operations).filter((op) => op.examples?.length).map((op) => `\`${opLabel(g, op.id)}\``);
+    if (ex.kind === 'tests') {
+      const n = ex.cases?.length ?? 0;
+      out.push(n
+        ? `Example data: ${n} test case${n === 1 ? '' : 's'} recorded **from unit tests (mocked dependencies)**, so inputs and outputs are what the tests' mocks made them, for ${covered.length} operation${covered.length === 1 ? '' : 's'} (${covered.slice(0, 8).join(', ')}${covered.length > 8 ? ', …' : ''}), from ${ex.specs?.length ?? 0} spec file${ex.specs?.length === 1 ? '' : 's'}: ${(ex.specs ?? []).map((f) => `\`${f}\``).join(', ')}.${ex.timedOut ? ` The run stopped after ${ex.timeoutSeconds} s (\`--tests-timeout\`): some cases are missing.` : ''}`
+        : `Example data: none from unit tests (${ex.note ?? 'no case recorded'})${ex.specs?.length ? `; ran ${ex.specs.map((f) => `\`${f}\``).join(', ')}` : ''}.`);
+    } else {
+      out.push(`Example data: ${ex.cases?.length ?? 0} request${ex.cases?.length === 1 ? '' : 's'} of the scenario \`${ex.scenario}\`, for ${covered.length} operation${covered.length === 1 ? '' : 's'}.`);
+    }
+  }
   if (partial) {
     const st = g.lazy!.stats;
     out.push('');
@@ -179,28 +197,50 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://127.0.0.
   out.push('');
 
   // ---------- descriptions the reviewer will see ----------
-  // Changed operations and every module they call: the ones the reviewer meets in the flows. Most code has no doc
-  // comment; the agent reads each one and writes a sentence into the profile, which the UI shows as agent-written.
+  // Changed operations and every module they call: the ones the reviewer meets in the flows. A description comes
+  // from the method's doc comment, the API docs of an endpoint that hands to it (@ApiOperation), its class's doc
+  // comment, or the profile. What has none of those is listed: the changed ones first, as a required step.
   const met = new Set<string>();
   for (const q of g.review.queue) {
     met.add(q.operation);
     for (const step of g.scopes[q.operation]?.steps ?? []) if (step.target) met.add(step.target);
   }
-  const undescribed = [...met].map((id) => g.operations[id]).filter((op) => op && !op.summary && op.change !== 'removed');
-  if (undescribed.length) {
+  const metOps = [...met].map((id) => g.operations[id]).filter((op) => op && op.change !== 'removed');
+  const undescribed = metOps.filter((op) => !op.summary);
+  const changedUndescribed = undescribed.filter((op) => op.change !== 'unchanged');
+  const fromDocs = metOps.filter((op) => op.summarySource === 'api' || op.summarySource === 'class');
+  const profilePath = s.profile?.path ?? `~/.modulegraph/configs/${g.service}/modulegraph.config.json`;
+  if (undescribed.length || fromDocs.length) {
     out.push('## Needs a description', '');
-    out.push(`No doc comment: read each and write one or two sentences (what it does, not how) into the profile, \`configs/${g.service}/modulegraph.config.json\` → \`modules.overrides.<Class>.operations.<method>\`. Then refresh.`, '');
-    for (const op of undescribed.slice(0, 20)) out.push(`- \`${op.id}\` (${op.file}:${op.line})${op.change !== 'unchanged' ? `, ${op.change}` : ''}`);
-    if (undescribed.length > 20) out.push(`- … ${undescribed.length - 20} more`);
-    out.push('');
+    if (fromDocs.length) {
+      out.push(`Described from the code's own documentation (no doc comment on the method): ${fromDocs.map((op) => `\`${op.id}\` (${op.summarySource === 'api' ? op.summaryFrom ?? 'API docs' : "its class's doc comment"})`).join(', ')}.`, '');
+    }
+    if (!undescribed.length) out.push('Every operation this review meets has a description.', '');
   }
+  if (undescribed.length) {
+    out.push(`No doc comment, no API docs, nothing in the profile. Read each and write one or two sentences (what it does, not how) into the profile, \`${profilePath}\`${s.profile?.exists ? '' : ' (it does not exist yet: create it with `"service": "' + g.service + '"`)'}, under \`modules.overrides.<Class>.operations.<method>\`, then refresh:`, '');
+    const first = changedUndescribed[0] ?? undescribed[0];
+    out.push('```json', `"modules": { "overrides": { "${g.modules[first.moduleId].className}": { "operations": { "${first.name}": "…" } } } }`, '```', '');
+    if (changedUndescribed.length) {
+      out.push(`**Required: ${changedUndescribed.length} changed operation${changedUndescribed.length > 1 ? 's' : ''}** (the reviewer starts here):`, '');
+      for (const op of changedUndescribed) out.push(`- \`${op.id}\` (${op.file}:${op.line}), ${op.change}`);
+      out.push('');
+    }
+    const called = undescribed.filter((op) => op.change === 'unchanged');
+    if (called.length) {
+      out.push(`${changedUndescribed.length ? 'Also met in the flows' : 'Met in the flows'} (called by the change):`, '');
+      for (const op of called.slice(0, 20)) out.push(`- \`${op.id}\` (${op.file}:${op.line})`);
+      if (called.length > 20) out.push(`- … ${called.length - 20} more`);
+      out.push('');
+    }
+  } else if (fromDocs.length) out.push('');
 
   // ---------- routing and links ----------
   out.push('## Request review from', '');
   out.push(g.review.reviewers.length ? g.review.reviewers.join(', ') : 'No owners configured for the changed modules.');
   out.push('');
   out.push('## Open in the UI', '');
-  out.push(`Served by \`modulegraph review\` while it runs, or \`modulegraph open ${graphId}\` for the saved review.`, '');
+  out.push(`Served live by \`modulegraph review\` while it runs. \`modulegraph open ${graphId}\` serves it live again later (refresh and done work) while the repo and its branches are on this machine.`, '');
   const top = g.review.changes[0]?.root;
   if (top) out.push(`- Zoom out from the riskiest change: ${uiBase}/#g=${graphId}&v=impact&op=${encodeURIComponent(top)}&d=1`);
   const firstFlow = g.lazy?.seeds[0]?.id ?? (top ? [...(reach.get(top) ?? [])][0] : undefined);

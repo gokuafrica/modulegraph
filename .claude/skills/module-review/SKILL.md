@@ -47,7 +47,13 @@ tree (the brief says "with its uncommitted edits"); `--committed` reads the comm
 the UI, tell them to run `modulegraph review` with the same arguments in their terminal (or run it in the
 background yourself): it opens the review in their browser and keeps serving, and the UI's refresh button
 re-analyzes only what changed after each edit. It stops by itself after 30 minutes with no requests (an open,
-visible review tab keeps it alive). `modulegraph open <id>` shows a saved review without analyzing.
+visible review tab keeps it alive). After `analyze`, `modulegraph open <id>` serves the saved review live again (it
+re-analyzes what was explored; `--static` shows the file only).
+
+**When the user will look at the graph, hand over a live link, never a saved file**: start `modulegraph review` with
+the same arguments in the background (or `modulegraph open <id> --no-open` after `analyze`), wait for its
+`open the review: http://127.0.0.1:5174/#g=<id>` line, and give them that link. A saved file has no refresh or done
+button; its top bar says so.
 
 - `<service dir>` is the folder with the service's `package.json`; in a monorepo, the one package that changed
   (run once per changed package).
@@ -60,7 +66,14 @@ visible review tab keeps it alive). `modulegraph open <id>` shows a saved review
   `analyzer: typescript` and `frameworks: NestJS (package.json depends on @nestjs/core), TypeORM (…)`.
   Framework adapters (NestJS, Express, Fastify, KafkaJS, BullMQ, node-cron, TypeORM, Prisma, Mongoose, axios,
   fetch) find entry points and side effects without any profile rules.
-- If the output says `profile: none found`, stop and do step 4 first. Never copy another service's profile.
+- If the output says `profile: none found`, read the brief: on a first run its **Analysis incomplete** section often
+  says what the analysis can't see yet (`missing-entry-points`: consumers in a handler map, jobs started with a
+  command-line argument; `unknown-side-effects`: in-house producer, outbox or cloud packages) and gives the profile
+  JSON that fixes it. Check it against the code, write the profile (step 4, starting from that JSON), and analyze
+  again. Never copy another service's profile.
+- Example data: without a scenario, the analyzer runs the service's Jest specs that reference the changed classes and
+  their callers, and records what the real (unmocked) classes were called with; the brief and the UI say "from unit
+  tests (mocked dependencies)". `--no-tests` skips it; for `--pr` it is off unless `--tests` (it runs the PR's code).
 - If it says `analyzer: no static analyzer for <language>`, use "Services no backend understands" below.
 
 The last lines print two paths: `<id>.json` (for the UI) and **`<id>.brief.md` (the facts: read this one)**.
@@ -91,8 +104,10 @@ For each contract change, open the changed functions it lists (`file:line`) and 
 
 ### Fill in missing descriptions
 
-If the brief has a **Needs a description** section, the reviewer will meet those operations in the graph with
-no explanation. Read each one (and what it calls), then write one or two sentences into the service's profile,
+Descriptions come from the code first: doc comments, the API docs of the endpoint that hands a request to an
+operation (`@ApiOperation`), the class's doc comment. If the brief's **Needs a description** section lists operations
+with none of those, the reviewer will meet them in the graph with no explanation. **The changed operations it marks
+"Required" are a required step of this review, not an option**: describe them before writing the brief. Read each one (and what it calls), then write one or two sentences into the service's profile,
 the file the analyzer printed on its `profile:` line (none yet: create it as in step 4), never into the code:
 
 ```json
@@ -147,12 +162,16 @@ there is none) and set `"service"` to the package name; that's how the analyzer 
 service's repo. Templates, in the modulegraph folder: `configs/order-service/` (NestJS: no platform rules, the
 adapters cover them) and `configs/identity-profile-service/` (in-house platform classes described by rules).
 
-1. **Run a snapshot first**: `modulegraph analyze --project <dir> --snapshot`. Read the `frameworks:` line and
-   the brief's module and entry point counts. Compare them with the code: every route, consumer, queue worker and
+1. **Start from what the first review found**: the brief's "Analysis incomplete" rules (`entryRegistries`, `sinks`),
+   checked against the code. Then run a snapshot: `modulegraph analyze --project <dir> --snapshot`. Read the
+   `frameworks:` line and the brief's module and entry point counts. Compare them with the code: every route, consumer, queue worker and
    scheduled job should be an entry point; every service with logic should be a module.
 2. **Only add rules for what is missing** (in-house platform classes, frameworks without an adapter). Syntax and
    examples: `docs/analyzers.md` in the modulegraph folder, "Teaching it a framework without writing code".
    - `entryPoints`: registration calls (class or module + method, which argument is the handler, the label).
+   - `entryRegistries`: handlers registered by data: a handler map + base class (`{ "map": "ConsumerHandlerMap",
+     "method": "handle", "kind": "consumer", "label": "kafka consumer {key}" }`), or modules a bootstrap file starts
+     per command-line argument (`{ "argv": "src/main.ts", "kind": "cron", "label": "job {key}" }`).
    - `decoratorEntries`: decorated handler methods (decorator, the package it comes from, the label).
    - `sinks`: DB, outbox, broker, queue and HTTP client methods, and how to name their target.
    - `responses`: calls whose argument is what a handler answers (`ctx.json(x)`).

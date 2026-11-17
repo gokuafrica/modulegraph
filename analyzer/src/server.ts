@@ -155,7 +155,7 @@ export function serve(session: LazySession, opts: ServeOptions): void {
  * Serves saved reviews and the built UI, with no analysis behind them (`modulegraph open`). Lazy graphs show what
  * was explored when they were saved.
  */
-export function serveStatic(opts: StaticOptions & { port: number; open?: string }): void {
+export function serveStatic(opts: StaticOptions & { port: number; open?: string; noBrowser?: boolean; savedReasons?: Record<string, string> }): void {
   const idleMinutes = opts.idleMinutes ?? DEFAULT_IDLE_MINUTES;
   let stop: (reason: string) => void = () => undefined;
   const touch = idleShutdown(idleMinutes, (why) => stop(why));
@@ -168,7 +168,12 @@ export function serveStatic(opts: StaticOptions & { port: number; open?: string 
       res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ ok: true }));
       return stop('asked to stop (modulegraph stop)');
     }
-    if (url.pathname.startsWith('/api/')) return void res.writeHead(404, { 'content-type': 'application/json' }).end(JSON.stringify({ error: 'saved reviews only: run `modulegraph review` to analyze live' }));
+    if (url.pathname.startsWith('/api/')) {
+      // The page asks for its review live; say why this one is only a saved file, so it can tell the reviewer.
+      const id = /^\/api\/graphs\/([^/]+)/.exec(url.pathname)?.[1];
+      const reason = id ? opts.savedReasons?.[decodeURIComponent(id)] : undefined;
+      return void res.writeHead(404, { 'content-type': 'application/json', 'cache-control': 'no-store' }).end(JSON.stringify({ error: 'saved reviews only', saved: true, ...(reason ? { reason } : {}) }));
+    }
     sendFile(res, url.pathname, opts);
   });
   stop = shutdownOnSignals(server, 'modulegraph open');
@@ -185,7 +190,7 @@ export function serveStatic(opts: StaticOptions & { port: number; open?: string 
       console.log(`modulegraph is showing saved reviews on ${link} (only this machine can connect)`);
       console.log(`It stops ${stopsWhen(idleMinutes)}, on Ctrl+C, or with \`modulegraph stop\`.`);
       registerServer({ port: actual, ids: [], kind: 'open', idleMinutes });
-      openBrowser(link);
+      if (!opts.noBrowser) openBrowser(link);
     });
 }
 

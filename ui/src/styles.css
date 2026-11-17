@@ -153,7 +153,10 @@ input, select { font: inherit; border: 1px solid var(--line); border-radius: 6px
 }
 .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; padding: 0 14px; background: var(--topbar-bg); color: var(--topbar-fg); border-bottom: 1px solid var(--line); }
 .topbar .muted { color: #94a3b8; }
-.review-title { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.review-title { display: flex; flex-direction: column; min-width: 0; flex: 0 1 auto; line-height: 1.25; }
+/* The toggles and buttons keep their one line; the review title gives way (ellipsis) when space runs out. */
+.topbar > label, .topbar > button, .topbar > .lazy-badge { white-space: nowrap; flex-shrink: 0; }
+.topbar > .lazy-badge.saved { flex-shrink: 0; }
 .review-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 520px; }
 .review-title .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 520px; }
 .refresh { background: transparent; color: var(--topbar-fg); border-color: #334155; font-size: 12px; white-space: nowrap; }
@@ -161,7 +164,8 @@ input, select { font: inherit; border: 1px solid var(--line); border-radius: 6px
 .refresh:disabled { opacity: 0.6; }
 .refresh.done:hover:not(:disabled) { border-color: #22c55e; color: #86efac; }
 .theme-toggle { background: transparent; color: var(--topbar-fg); border-color: #334155; }
-.brand { font-weight: 700; letter-spacing: 0.2px; }
+.brand { font-weight: 700; letter-spacing: 0.2px; white-space: nowrap; flex-shrink: 0; }
+@media (max-width: 1599px) { .brand .muted { display: none; } }
 .spacer { flex: 1; }
 
 .inspector { background: var(--panel); overflow-y: auto; }
@@ -490,7 +494,12 @@ h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color:
 .diff-nav-fn .fn-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .diff-main { overflow: auto; padding: 8px 14px; }
 .fn-row { display: flex; gap: 4px; align-items: baseline; width: 100%; background: transparent; border: 0; text-align: left; padding: 2px 0; color: var(--text); cursor: pointer; font-size: 12px; }
-.fn-row .counts { margin-left: auto; }
+.fn-row .counts { margin-left: auto; flex-shrink: 0; white-space: nowrap; }
+/* Long helper names: ellipsis (full name on hover), and the file and +/- counts always stay visible. */
+.fn-row .fn-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
+.fn-row .fn-file { flex-shrink: 1; min-width: 3em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fn-row .st { flex-shrink: 0; }
+.badge.contract-risk { background: transparent; border: 1px solid var(--line-strong); color: var(--muted); }
 .fn-row:hover b { text-decoration: underline; }
 .diff-crumb { color: var(--mod-fg); border-color: var(--mod-border); }
 
@@ -555,3 +564,15 @@ h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color:
 .seg button.on.before { background: var(--rem-bg); color: var(--rem-fg); }
 .before-note { font-size: 11.5px; color: var(--rem-fg); background: var(--rem-bg); border-radius: 4px; padding: 2px 8px; }
 .node.step-removed { outline: 2px dashed var(--rem-border); outline-offset: 3px; }
+
+/* The folded request pipeline: quieter than a module, it is not the business flow. */
+.node.pipeline { border-style: dashed; background: var(--panel-2); }
+.node.pipeline .pipeline-items { font-size: 12px; font-weight: 600; margin-top: 2px; }
+.node.pipeline.c-modified { border-color: #f59e0b; border-style: solid; }
+.node.pipeline .entry-kind { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+.lazy-badge.saved code { font-size: 11px; background: rgba(148, 163, 184, 0.15); padding: 0 4px; border-radius: 4px; }
+.param-doc { color: var(--muted); font-family: system-ui, sans-serif; font-size: 11px; margin: 0 0 3px 10px; white-space: normal; }
+.missing-doc p { margin: 0 0 6px; }
+.missing-doc code, .missing-doc pre { font-size: 11px; }
+.missing-doc pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 0 6px; }
+.tests-tag { border: 1px dashed var(--line-strong); border-radius: 4px; padding: 0 4px; margin-right: 4px; }

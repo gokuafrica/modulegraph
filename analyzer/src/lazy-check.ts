@@ -41,10 +41,17 @@ for (const [projectRel, profile, branch, intent, fix] of [
   ['sample-birth-service', 'birth-info-service', 'feature/enforce-document-birth-info', 'BirthInfo: enforce document birth info on KYC submissions.',
     // a new event after a verified submission
     ['sample-birth-service/src/birth-info/birth-info.service.ts', '      await this.kyc.save(userId, submitted, manager);', "      await this.kyc.save(userId, submitted, manager);\n      this.events.emit('kyc.birth_info.verified', { userId, enforced: check.enforced });"]],
+  // A realistic in-house service: no profile (the first run), then with the rules that run suggests.
+  ['sample-legacy-nest-service', '', 'fix/scope-manual-data-to-row', 'fix: scope manual data to each user record row',
+    // normalize the agent's data before merging it (a new call)
+    ['sample-legacy-nest-service/src/manual-review/services/manual-review.service.ts', 'const merged = { ...row.data, ...agentData };', 'const merged = { ...row.data, ...this.userRecordDataTransformer.normalize(agentData) };']],
+  ['sample-legacy-nest-service', 'user-records-service.rules', 'fix/scope-manual-data-to-row', 'fix: scope manual data to each user record row',
+    ['sample-legacy-nest-service/src/manual-review/services/manual-review.service.ts', 'const merged = { ...row.data, ...agentData };', 'const merged = { ...row.data, ...this.userRecordDataTransformer.normalize(agentData) };']],
 ] as const satisfies readonly (readonly [string, string, string, string, Fix])[]) {
   console.log(`\n${projectRel} ${branch}`);
   const projectDir = join(repo, projectRel).replace(/\\/g, '/');
-  const config = loadConfig(projectDir, join(repo, `configs/${profile}/modulegraph.config.json`));
+  const config = loadConfig(projectDir, profile ? join(repo, `configs/${profile}/modulegraph.config.json`) : undefined);
+  if (!profile) console.log('  (no profile)');
   const project = (files: Map<string, string>) => typescript.open({ repo, projectDir, config, files });
   const mb = mergeBase(repo, 'main', branch);
   const headFiles = filesAtRef(repo, revParse(repo, branch), projectRel);
