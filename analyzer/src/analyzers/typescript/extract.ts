@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { basename, join, relative } from 'node:path';
+import { builtinModules } from 'node:module';
+import { basename, dirname, join, relative } from 'node:path';
 import {
   Node,
   Project,
@@ -16,7 +17,7 @@ import {
   type NewExpression,
   type Type,
 } from 'ts-morph';
-import type { Edge, Effect, EntryPoint, Exit, Param, Scope, Step, TypeShape } from '../../../../schema/modulegraph.ts';
+import type { AnalysisIssue, Edge, Effect, EntryPoint, Exit, Param, Scope, Step, TypeShape } from '../../../../schema/modulegraph.ts';
 import type { CallMatch, Config, DecoratorEntryRule, EntryRule, ResponseRule, SinkRule } from '../../config.ts';
 import { dedupeEffects } from '../../effects.ts';
 import type { OperationTarget, Part, RevisionAnalysis, Snapshot } from '../types.ts';
@@ -100,6 +101,11 @@ export class Extractor implements RevisionAnalysis {
   snapshot: Snapshot = { modules: {}, operations: {}, entryPoints: {}, scopes: {}, fingerprints: {}, parts: {} };
   private stepCounter = 0;
   private currentClass?: ClassDeclaration;
+  /** npm packages of the framework adapters in use: when these don't resolve, the analysis is blind. */
+  private frameworkPackages: Set<string>;
+  /** Calls on injected dependencies (`this.repo.save()`) analyzed so far, and those that resolved to nothing. */
+  private injectedCalls = new Set<Node>();
+  private unresolvedInjected = new Map<Node, string>();
 
   constructor(
     readonly project: Project,
@@ -108,6 +114,7 @@ export class Extractor implements RevisionAnalysis {
     private config: Config,
     frameworks: Framework[] = [],
   ) {
+    this.frameworkPackages = new Set(frameworks.flatMap((f) => f.packages));
     const all = <T>(own: T[], pick: (f: Framework) => T[] | undefined) => [...own, ...frameworks.flatMap((f) => pick(f) ?? [])];
     const entries = all(config.entryPoints, (f) => f.entryPoints);
     this.rules = {
@@ -330,6 +337,121 @@ export class Extractor implements RevisionAnalysis {
 
   private isOperation(m: MethodDeclaration): boolean {
     return m.getScope() === MemberScope.Public && !m.getName().startsWith('#') && !m.isStatic() && !this.rules.ignoreMethods.has(m.getName());
+  }
+
+  // ---------- completeness ----------
+
+  /** `this.dep.method()`: counted, and remembered when it resolved to nothing (an untyped or missing package). */
+  private noteInjectedCall(call: Invocation, resolved: Resolved, fn: Fn): void {
+    const expr = call.getExpression();
+    if (!Node.isPropertyAccessExpression(expr)) return;
+    const receiver = expr.getExpression();
+    if (!Node.isPropertyAccessExpression(receiver) || receiver.getExpression().getKind() !== SyntaxKind.ThisKeyword) return;
+    this.injectedCalls.add(call);
+    if (resolved.kind === 'unknown' && !this.site(call)) {
+      this.unresolvedInjected.set(call, `${fnName(fn)}: ${short(expr.getText(), 50)}`);
+    }
+  }
+
+  /**
+   * What may have made this analysis miss things. Imports of packages that aren't installed (or path aliases
+   * that don't resolve) turn every call into them into "unknown": no side effects, no entry points, and no error.
+   * Calls on injected dependencies that resolve to nothing say the same from the other side.
+   */
+  issues(): AnalysisIssue[] {
+    const out: AnalysisIssue[] = [];
+    const missing = this.missingImports ??= this.findMissingImports();
+    if (missing.size) {
+      const fw = [...missing.keys()].filter((p) => this.frameworkPackages.has(p));
+      const packages = [...fw, ...[...missing.keys()].filter((p) => !fw.includes(p)).sort()];
+      const n = missing.size;
+      out.push({
+        kind: 'unresolved-imports',
+        message: `${n} imported package${n > 1 ? 's are' : ' is'} not installed${fw.length ? ` (${fw.length} of them used by the framework adapters)` : ''}: ${packages.slice(0, 8).join(', ')}${packages.length > 8 ? ', …' : ''}. Calls into ${n > 1 ? 'them' : 'it'} resolve to nothing, so their side effects and entry points are missing from this review.`,
+        hint: `Install the service's dependencies (npm install in ${this.rel(this.projectDir) || '.'}), or fix the tsconfig paths if these are path aliases, then analyze again.`,
+        items: packages.map((p) => `${p} (imported in ${[...missing.get(p)!].slice(0, 2).join(', ')}${missing.get(p)!.size > 2 ? ', …' : ''})`),
+      });
+    }
+    const unresolved = [...this.unresolvedInjected.values()];
+    if (unresolved.length >= 3 && unresolved.length >= 0.2 * this.injectedCalls.size) {
+      out.push({
+        kind: 'unresolved-calls',
+        message: `${unresolved.length} of ${this.injectedCalls.size} calls on injected dependencies resolve to nothing (untyped or missing packages, \`any\`): their side effects are unknown.`,
+        hint: 'Install typed dependencies, or describe these clients as sinks in the profile.',
+        items: unresolved.slice(0, 8),
+      });
+    }
+    return out;
+  }
+
+  private missingImports?: Map<string, Set<string>>;
+
+  /** Packages (by name) imported somewhere in the project but not installed, with the files importing them. */
+  private findMissingImports(): Map<string, Set<string>> {
+    const missing = new Map<string, Set<string>>();
+    for (const file of this.projectFiles()) {
+      for (const decl of [...file.getImportDeclarations(), ...file.getExportDeclarations()]) {
+        const spec = decl.getModuleSpecifierValue();
+        if (!spec || spec.startsWith('.') || spec.startsWith('/') || decl.getModuleSpecifierSourceFile()) continue;
+        const builtin = spec.startsWith('node:') || builtinModules.includes(spec.split('/')[0]);
+        const pkg = builtin ? '@types/node' : packageRoot(spec);
+        // Installed but untyped (plain JavaScript): calls into it are unresolved, which the call count below catches.
+        if (installed(this.projectDir, pkg)) continue;
+        if (!missing.has(pkg)) missing.set(pkg, new Set());
+        missing.get(pkg)!.add(this.rel(file.getFilePath()));
+      }
+    }
+    return missing;
+  }
+
+  /** Changed lines of executable code that no scope covers: code the graph would silently leave out of the review. */
+  unmappedChanges(absPath: string, ranges: [number, number][]): string[] {
+    // Tests and dev tooling (seed data, scripts, migrations) run outside the service's flows.
+    if (/\.(spec|test|e2e-spec)\.[cm]?[jt]sx?$|\.d\.ts$/.test(absPath) || !this.isProjectFile(absPath)) return [];
+    if (/\/(__tests__|__mocks__|tests?|e2e|dev|scripts?|seeds?|seeders?|migrations?|mocks?|fixtures?|bench(marks?)?)\//.test(`/${this.rel(absPath)}`)) return [];
+    const sf = this.project.getSourceFile(absPath);
+    if (!sf) return [];
+    const out = new Map<Node, string>();
+    const memo = new Map<Node, boolean>();
+    const lines = sf.getFullText().split('\n');
+    for (const [from, to] of ranges) {
+      for (let line = from; line <= Math.min(to, lines.length); line++) {
+        const text = lines[line - 1] ?? '';
+        if (!text.trim() || /^\s*(\/\/|\/?\*)/.test(text)) continue;
+        const node = sf.getDescendantAtPos(sf.compilerNode.getPositionOfLineAndCharacter(line - 1, text.length - text.trimStart().length));
+        const fn = node && (isFnNode(node) ? node : node.getFirstAncestor(isFnNode));
+        if (!node || !fn || this.isWiring(node)) continue;
+        // The named function this code belongs to (a callback's enclosing method).
+        let named: Node = fn;
+        while (isAnonymous(named) && !Node.isVariableDeclaration(named.getParent()) && named.getFirstAncestor(isFnNode)) named = named.getFirstAncestor(isFnNode)!;
+        if (out.has(named)) continue;
+        if (!memo.has(named)) memo.set(named, this.scopesOfChange(node).length > 0);
+        if (memo.get(named)) continue;
+        out.set(named, `${fnName(named)} (${this.rel(absPath)}:${named.getStartLineNumber()})`);
+      }
+    }
+    return [...out.values()];
+  }
+
+  /**
+   * A line of composition-root wiring: `const x = new BirthInfoModule(new Store(db), outbox)` or a factory's
+   * `() => new EmailNotifier()`. Calls are resolved by type, so constructing modules changes no flow.
+   */
+  private isWiring(node: Node): boolean {
+    const stmt = node.getFirstAncestor((n) => Node.isStatement(n) || isFnNode(n));
+    let values: (Node | undefined)[] = [];
+    if (stmt && Node.isVariableStatement(stmt)) values = stmt.getDeclarations().map((d) => d.getInitializer());
+    else if (stmt && Node.isExpressionStatement(stmt)) {
+      const e = stmt.getExpression();
+      values = [Node.isBinaryExpression(e) && e.getOperatorToken().getKind() === SyntaxKind.EqualsToken ? e.getRight() : e];
+    } else if (stmt && Node.isReturnStatement(stmt)) values = [stmt.getExpression()];
+    else if (stmt && Node.isArrowFunction(stmt) && !Node.isBlock(stmt.getBody())) values = [stmt.getBody()];
+    return values.length > 0 && values.every((v) => {
+      const value = v && unwrap(v);
+      if (!value || !Node.isNewExpression(value)) return false;
+      const cls = this.resolveDeclaration(value.getExpression());
+      return !!cls && Node.isClassDeclaration(cls) && this.isProjectFile(cls.getSourceFile().getFilePath());
+    });
   }
 
   // ---------- modules & operations ----------
@@ -625,6 +747,7 @@ export class Extractor implements RevisionAnalysis {
 
     const handleCall = (call: Invocation) => {
       const resolved = this.resolve(call);
+      this.noteInjectedCall(call, resolved, fn);
       if (resolved.kind === 'response') {
         if (resolved.arg) {
           mergeInto(returns, prodOf(resolved.arg));
@@ -1374,3 +1497,23 @@ function globToRegex(glob: string): RegExp {
   return new RegExp(`^${re}(/.*)?$`);
 }
 
+/** A package is installed when node_modules/<pkg> exists in the project folder or above it. */
+function installed(projectDir: string, pkg: string): boolean {
+  for (let dir = projectDir; ; dir = dirname(dir)) {
+    if (existsSync(join(dir, 'node_modules', pkg))) return true;
+    if (dirname(dir) === dir) return false;
+  }
+}
+
+/** `OrdersService.cancel`, `bootstrap`, `handler` (an arrow in a variable). */
+function fnName(fn: Node): string {
+  if (Node.isMethodDeclaration(fn)) {
+    const cls = fn.getParent();
+    return `${Node.isClassDeclaration(cls) ? `${cls.getName() ?? 'class'}.` : ''}${fn.getName()}`;
+  }
+  if (Node.isFunctionDeclaration(fn)) return fn.getName() ?? 'function';
+  const parent = fn.getParent();
+  if (parent && Node.isVariableDeclaration(parent)) return parent.getName();
+  const outer = fn.getFirstAncestor(isFnNode);
+  return outer ? `callback in ${fnName(outer)}` : 'anonymous function';
+}

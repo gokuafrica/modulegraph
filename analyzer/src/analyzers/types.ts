@@ -5,7 +5,7 @@
  * a `Snapshot` per revision. A backend turns one revision of a codebase into that snapshot. To support another
  * language, implement `LanguageAnalyzer` and register it in ./index.ts. Nothing else in modulegraph changes.
  */
-import type { CodeChange, EntryPoint, ModuleInfo, Operation, Scope } from '../../../schema/modulegraph.ts';
+import type { AnalysisIssue, CodeChange, EntryPoint, ModuleInfo, Operation, Scope } from '../../../schema/modulegraph.ts';
 import type { Config } from '../config.ts';
 
 export interface Snapshot {
@@ -55,6 +55,16 @@ export interface RevisionAnalysis {
   knownOperations(): string[];
   operationTargets(): OperationTarget[];
   computeTransitiveEffects(): void;
+  /**
+   * Optional: what may have made this analysis miss things (packages that don't resolve, calls on injected
+   * dependencies that resolve to nothing), so the review can say it is incomplete instead of "no findings".
+   */
+  issues?(): AnalysisIssue[];
+  /**
+   * Optional: changed lines of executable code that are in no scope (no operation, entry point or anything that
+   * reaches one), as "Class.method (file:line)". The review lists them as code the graph does not cover.
+   */
+  unmappedChanges?(absPath: string, ranges: [number, number][]): string[];
 }
 
 /** A framework or library the backend recognised, and why (shown in the report and the brief). */

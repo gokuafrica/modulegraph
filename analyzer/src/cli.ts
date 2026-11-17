@@ -11,6 +11,7 @@ import { compare } from './compare.ts';
 import { findProfile, loadConfig } from './config.ts';
 import { appRoot, graphsDirFor, insideApp, profileDirs, uiDistDir, userConfigsDir } from './home.ts';
 import { brief } from './brief.ts';
+import { analysisIssues, issueLines } from './coverage.ts';
 import { endReview, recordRepo } from './cleanup.ts';
 import { describe, descriptionsKey } from './describe.ts';
 import { LazySession } from './lazy.ts';
@@ -49,7 +50,9 @@ options
   --name <id>              output id (default derived from mode)
   --out <file>             output path (default: ~/.modulegraph/reviews/<id>.json, also updates index.json;
                            the demo services write to ui/public/graphs/)
-  --check                  exit 1 when the change introduces new error-level findings (CI gate)
+  --check                  exit 1 when the change introduces new error-level findings (CI gate), or when the
+                           analysis is incomplete (packages not installed, changed code in no known flow)
+  --allow-incomplete       with --check: don't fail only because the analysis is incomplete
 
 lazy analysis (large codebases)
   --lazy                   start at the changed code; analyze only the few entry points that matter for
@@ -83,6 +86,7 @@ const { values: args } = parseArgs({
     name: { type: 'string' },
     out: { type: 'string' },
     check: { type: 'boolean' },
+    'allow-incomplete': { type: 'boolean' },
     'no-examples': { type: 'boolean' },
     lazy: { type: 'boolean' },
     seeds: { type: 'string' },
@@ -297,6 +301,8 @@ if (args.lazy) {
     findings,
     review: reviewSummary(graph, diff),
   };
+  const incomplete = analysisIssues(headProject, baseProject, diff, repo);
+  if (incomplete.length) output.incomplete = incomplete;
 }
 
 describe(output, config);
@@ -331,6 +337,11 @@ const base = baseProject;
 const r = output.review;
 const ops = Object.keys(output.operations).length;
 console.log(`\n${config.service}: ${Object.keys(output.modules).length} modules, ${ops} operations, ${Object.keys(output.entryPoints).length} entry points (${Date.now() - started} ms)`);
+if (output.incomplete?.length) {
+  // Before anything else: an incomplete analysis that reads like a clean one is how changes slip through.
+  console.log('\nANALYSIS INCOMPLETE: what follows may be missing side effects, entry points or changes.');
+  for (const line of issueLines(output.incomplete)) console.log(line);
+}
 if (base) {
   console.log(`change: ${r.stats.files} files, +${r.stats.linesAdded}/−${r.stats.linesRemoved}, ${r.stats.contractChanges} contract changes, ${r.stats.entryPointsAffected} entry points affected`);
   if (r.changes.length) console.log(`\nchanges (riskiest first): ${r.changes.length}, from ${r.queue.length} changed operations`);
@@ -442,6 +453,11 @@ ${profileText}`;
 
 if (args.check && findings.some((f) => f.isNew && f.severity === 'error')) {
   console.error('\nmodulegraph check failed: the change introduces error-level findings');
+  process.exit(1);
+}
+// A gate that passes because the analysis saw nothing is worse than no gate.
+if (args.check && output.incomplete?.length && !args['allow-incomplete']) {
+  console.error('\nmodulegraph check failed: the analysis is incomplete (see ANALYSIS INCOMPLETE above; --allow-incomplete to pass anyway)');
   process.exit(1);
 }
 

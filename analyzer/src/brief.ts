@@ -25,9 +25,27 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://127.0.0.
   }
   out.push(`Change: ${g.review.stats.files} files, +${g.review.stats.linesAdded}/−${g.review.stats.linesRemoved}, ${g.review.stats.contractChanges} contract changes, ${g.review.stats.entryPointsAffected}${partial ? '+' : ''} entry points affected.`);
   out.push('');
-  out.push(errors.length
-    ? `**Verdict: BLOCKING.** ${errors.length} new error-level finding${errors.length > 1 ? 's' : ''} (\`--check\` fails). ${warnings.length} new warnings.`
-    : `**Verdict: not blocked by checks.** No new errors (\`--check\` passes). ${warnings.length} new warning${warnings.length === 1 ? '' : 's'}.`);
+  const incomplete = g.incomplete ?? [];
+  const warned = `${warnings.length} new warning${warnings.length === 1 ? '' : 's'}`;
+  const errored = `${errors.length} new error-level finding${errors.length > 1 ? 's' : ''}`;
+  if (incomplete.length) {
+    // "No findings" from an analysis that could not see the code is not a pass.
+    out.push(errors.length
+      ? `**Verdict: BLOCKING, and the analysis is INCOMPLETE.** ${errored} (\`--check\` fails), and more may be hidden: see "Analysis incomplete". ${warned}.`
+      : `**Verdict: INCOMPLETE analysis, not a pass.** No new errors were found, but the analysis could not see everything (below), so \`--check\` fails. ${warned}.`);
+    out.push('', '## Analysis incomplete', '');
+    out.push('What follows may be missing side effects, entry points or changes. Fix these and analyze again, or review what they name by hand:', '');
+    for (const issue of incomplete) {
+      out.push(`- **${issue.kind}**${issue.side === 'base' ? ' (base revision)' : ''}: ${issue.message}`);
+      for (const item of (issue.items ?? []).slice(0, 8)) out.push(`  - ${item}`);
+      if ((issue.items?.length ?? 0) > 8) out.push(`  - … ${issue.items!.length - 8} more`);
+      if (issue.hint) out.push(`  - What to do: ${issue.hint}`);
+    }
+  } else {
+    out.push(errors.length
+      ? `**Verdict: BLOCKING.** ${errored} (\`--check\` fails). ${warned}.`
+      : `**Verdict: not blocked by checks.** No new errors (\`--check\` passes). ${warned}.`);
+  }
   out.push('');
   out.push(s.intent
     ? `Stated intent (${s.intentSource ?? 'given'}): ${quote(s.intent)}`

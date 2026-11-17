@@ -1,8 +1,9 @@
 import { join } from 'node:path';
-import type { Example, ModuleGraph, Source } from '../../schema/modulegraph.ts';
+import type { AnalysisIssue, Example, ModuleGraph, Source } from '../../schema/modulegraph.ts';
 import type { RevisionAnalysis } from './analyzers/types.ts';
 import { compare } from './compare.ts';
 import type { Config } from './config.ts';
+import { changeIssues, revisionIssues } from './coverage.ts';
 import { describe } from './describe.ts';
 import { hunks, type RawDiff } from './git.ts';
 import { architectureFindings, changeFindings, markNew, modulesOfFile, reviewSummary } from './rules.ts';
@@ -50,6 +51,8 @@ export class LazySession {
   /** What the reviewer opened (and the seeds), replayed after a refresh so the graph keeps what was explored. */
   private explored: { action: ExpandAction; id: string }[] = [];
   private initialized = new WeakSet<RevisionAnalysis>();
+  /** Changed code no flow covers: depends only on the code and the diff, so found once per (re)start. */
+  private unmapped: AnalysisIssue[] = [];
 
   constructor(
     head: RevisionAnalysis,
@@ -110,6 +113,7 @@ export class LazySession {
     const isEntry = (id: string) => !!(this.head.snapshot.entryPoints[id] ?? this.base?.snapshot.entryPoints[id]);
     for (const id of changed) if (!isEntry(id)) this.loadCallers(id);
     this.pickSeeds(changed, this.opts);
+    this.unmapped = changeIssues(this.head, this.base, this.diff, this.repo);
   }
 
   /** Every module method, for recording example calls (cheap: no analysis). */
@@ -162,6 +166,7 @@ export class LazySession {
       findings.push(...changeFindings(g, this.diff!, this.config, this.intent));
     }
     const entries = Object.values(g.entryPoints);
+    const incomplete = [...revisionIssues(this.head, this.base), ...this.unmapped];
     return {
       schema: 'modulegraph/v1',
       service: this.config.service,
@@ -171,6 +176,7 @@ export class LazySession {
       ...g,
       findings,
       review: reviewSummary(g, this.diff),
+      ...(incomplete.length ? { incomplete } : {}),
       lazy: {
         seeds: this.seeds,
         stats: {
