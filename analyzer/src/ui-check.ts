@@ -13,7 +13,7 @@
  * usage: npm run ui-check --workspace analyzer [-- --shots <dir>]
  */
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
-import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -36,6 +36,8 @@ const fail = (msg: string) => {
 };
 const ok = (msg: string) => console.log(`  ✓ ${msg}`);
 const children: ChildProcess[] = [];
+/** The refresh check makes .worktrees/ when there is none; it removes it again then. */
+const hadWorktrees = existsSync(join(repo, '.worktrees'));
 
 async function launch(): Promise<Browser | undefined> {
   for (const channel of ['msedge', 'chrome']) {
@@ -233,14 +235,15 @@ try {
 } finally {
   for (const c of children) if (c.exitCode === null) c.kill();
   rmSync(home, { recursive: true, force: true });
-  if (existsSync(join(repo, '.worktrees')) && !git(repo, ['worktree', 'list']).includes('.worktrees')) {
+  if (existsSync(join(repo, '.worktrees')) && !git(repo, ['worktree', 'list']).includes('.worktrees/mg-ui-check')) {
     try {
       rmSync(join(repo, '.worktrees', 'mg-ui-check'), { recursive: true, force: true });
+      // The folder itself only when this check made it (rmdir removes an empty folder only).
+      if (!hadWorktrees) rmdirSync(join(repo, '.worktrees'));
     } catch {
-      // in use
+      // in use, or someone else's worktrees are there
     }
   }
 }
-appendFileSync(process.stdout.fd, '');
 console.log(failures ? `\n${failures} UI problem(s)` : '\nthe review UI works as a reviewer uses it');
 process.exit(failures ? 1 : 0);
