@@ -10,10 +10,12 @@ side effects.
 lives in a config file kept outside the repo, which an agent can write.
 
 **Pluggable analyzers.** The review pipeline (diffing, rules, brief, UI) is language-neutral. Language backends
-turn code into the graph; today's TypeScript backend recognises **NestJS, Express, Fastify, KafkaJS, BullMQ,
-node-cron, TypeORM, Prisma, Mongoose, axios and fetch** from `package.json`, so a NestJS service needs no
-platform rules at all. See [docs/analyzers.md](docs/analyzers.md) for adding a framework (often just profile
-data) or a language.
+turn code into the graph; today's TypeScript backend recognises **NestJS (with its request pipeline, CQRS,
+GraphQL and WebSockets), Express, Fastify, KafkaJS, BullMQ, node-cron, TypeORM, Prisma, Mongoose, axios and
+fetch** from `package.json`, so a NestJS service needs no platform rules at all. When it can't see something
+(packages not installed, changed code in no flow it knows), the review says the analysis is **incomplete** instead
+of reporting nothing. See [docs/analyzers.md](docs/analyzers.md) for adding a framework (often just profile data)
+or a language.
 
 - **Flow view**: an API / gRPC / Kafka consumer / cron entry point → the modules it hands the request to → the
   response. Every level is module-sized: an endpoint shows the module(s) its controller calls (each node lists the
@@ -174,7 +176,9 @@ npm run analyze -- --project sample-service --config $C/modulegraph.config.json 
 
 Each run writes `~/.modulegraph/reviews/<id>.json` (the demo services write to `ui/public/graphs/`); `modulegraph
 open <id>` shows it. It also writes `<id>.brief.md`, the **review facts** as plain Markdown:
-- the verdict (blocking or not);
+- the verdict: blocking, not blocked, or **incomplete** (what the analysis could not see, and what to do about it);
+- access-control changes: guards, middleware or auth metadata added, removed or edited, with every entry point
+  behind them;
 - every contract change with the behaviour changes inside it (new and removed steps, changed guards) and the
   changed functions;
 - entry points that now touch something different;
@@ -306,12 +310,12 @@ base + head sources        steps, data edges, side effects      modulegraph/v1  
 | Path | What |
 |---|---|
 | `schema/` | `modulegraph.ts` (types) and generated `modulegraph.schema.json` |
-| `analyzer/` | CLI: `cli.ts`; `analyzers/` (backend contract `types.ts`, registry; `typescript/extract.ts` with `frameworks/` adapters); `compare.ts` + `compare-steps.ts` (base vs head, per-function and per-step deltas), `rules.ts` (guardrails), `brief.ts`, `lazy.ts` + `server.ts` (lazy analysis, live expansion); `servers.ts` (idle shutdown, server registry), `cleanup.ts` + `end.ts` (`stop`, `done`, `clean`); checks `framework-check.ts`, `lazy-check.ts`, `changes-check.ts`, `mentions-check.ts`, `lifecycle-check.ts` |
+| `analyzer/` | CLI: `cli.ts`; `analyzers/` (backend contract `types.ts`, registry; `typescript/extract.ts` with `frameworks/` adapters); `compare.ts` + `compare-steps.ts` (base vs head, per-function and per-step deltas), `rules.ts` (guardrails), `coverage.ts` (what makes a review incomplete), `brief.ts`, `lazy.ts` + `server.ts` (lazy analysis, live expansion); `servers.ts` (idle shutdown, server registry), `cleanup.ts` + `end.ts` (`stop`, `done`, `clean`); checks `framework-check.ts`, `regression-check.ts`, `lazy-check.ts`, `changes-check.ts`, `mentions-check.ts`, `lifecycle-check.ts` |
 | `ui/` | Vite + React + `@xyflow/react` + `elkjs` |
 | `sample-service/` | demo microservice, an ordinary codebase with no modulegraph markers. Branches `feature/birthinfo-consent` and `feature/kyc-risk-tiers` hold the demo changes |
 | `sample-nest-service/` | NestJS demo (order-service): REST, Kafka events, gRPC, BullMQ, cron, TypeORM. Branch `feature/order-fraud-hold` |
 | `sample-birth-service/` | NestJS demo (birth-info-service): document vs KYC birth info, with a scenario. Branch `feature/enforce-document-birth-info` |
-| `fixtures/frameworks/` | small Express + Prisma + KafkaJS + node-cron and Fastify + Mongoose + BullMQ services for `framework-check` |
+| `fixtures/frameworks/` | small Express + Prisma + KafkaJS + node-cron and Fastify + Mongoose + BullMQ services, and `nest/` (request pipeline, CQRS, custom providers, GraphQL, WebSockets, …) for `framework-check` and `regression-check` |
 | `configs/` | the demo services' profiles (config + scenario); yours go in `~/.modulegraph/configs/` |
 | `bin/`, `scripts/` | the `modulegraph` command; `setup.mjs` (install, build the UI, install the skill, self-check) |
 | `docs/` | feasibility, research summary, review conventions |
@@ -319,8 +323,12 @@ base + head sources        steps, data edges, side effects      modulegraph/v1  
 ## Limits of the MVP
 
 TypeScript is the only static backend so far (other languages through the agent path, or a new backend).
-Effects come from framework adapters and configured sink methods; in-house data access or raw SQL needs sink
-rules in the profile. Module discovery relies on
-constructor injection; codebases built from plain functions need `modules.include` in the profile. Dynamic
-dispatch with several implementations is left unresolved. Example data needs a runnable scenario. No
-persistence or auth: it is a local tool, and the review server accepts connections from this machine only.
+Effects come from framework adapters and configured sink methods; in-house data access, and libraries without an
+adapter yet (AWS SDK, Redis, RabbitMQ, SQS), need sink rules in the profile. Raw SQL through TypeORM's `query()`
+is classified by its statement; SQL that isn't a literal counts as a write. The analyzer needs the service's
+dependencies installed: without them the review says it is incomplete rather than guessing. Module discovery
+relies on constructor injection; codebases built from plain functions need `modules.include` in the profile.
+Dynamic dispatch with several implementations is left unresolved unless dependency injection binds one (Nest
+`providers`). Code in an Nx `libs/` folder outside `--project` is not analyzed. More in
+[docs/analyzers.md](docs/analyzers.md#known-limits). Example data needs a runnable scenario. No persistence or
+auth: it is a local tool, and the review server accepts connections from this machine only.
