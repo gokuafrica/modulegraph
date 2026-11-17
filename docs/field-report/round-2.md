@@ -1,4 +1,4 @@
-# Field report, round 2: R2-1 … R2-9
+# Field report, round 2: R2-1 … R2-10
 
 The re-test of the F1–F8 fixes on the real service ([round 1](README.md)) found nine more problems. Each was first
 reproduced on `sample-legacy-nest-service`, grown with the shape the real service has and the sample lacked, then
@@ -24,6 +24,49 @@ worker's inspector with the facade's context ([1440](round-2/after/r2-9-inspecto
 | R2-7 setup misses the branch | **fixed** | one branch list for setup and checks |
 | R2-8 false alarms | **fixed** | type-only `@nestjs/microservices` import, `.local/scripts/` |
 | R2-9 descriptions one layer down | **fixed** (as suggested: context) | controller → facade → worker |
+| R2-10 bogus consumer `topic ?` | **fixed** | (fixtures/frameworks: consumers started in a loop) |
+
+## Your acceptance check (`acceptance/round-2`)
+
+The second version of the report came with its own fixture and check, written on your side. They are in the repo
+unchanged ([acceptance/](../../acceptance/README.md)) and run with `npm run accept:r2`.
+
+- **Red first.** On `3b811d5` (a fresh clone of the pushed `main`, `npm run setup`), this Windows machine printed
+  exactly your baseline: 9/33, the same lines failing, the four `[setup]` checks green (top-level `lru-cache` 5.1.1,
+  nested 10.4.3). Only one number differs: `approve` needs 46 px here, 50 px on your Mac (fonts).
+  [red-3b811d5-windows.txt](round-2/red-3b811d5-windows.txt).
+- **Green.** On the round-2 code, 33/33 and exit 0, `--ui` and `--fresh-clone` included. Before the push, the
+  fresh clone was taken from this local repo; after it, from GitHub. [green.txt](round-2/green.txt). The two
+  optional notes resolve too: `publishRaw` gets `KAFKA_TOPICS.MANUAL_REVIEW_AUDIT` through its only caller, and
+  the worker's `approve` shows the facade's "Approve user record" as context.
+- **No expectation was changed or left failing**: none looked wrong.
+- **No fixture names in modulegraph**: `names-check` (first in `npm test`) fails on any of `ConsumerHandlerMap`,
+  `handleMessages`, `KAFKA_TOPICS`, `RecordEventsProducer`, `records-review-service`, `SyncFeature`, `.local`, and
+  the in-repo sample's names, in `analyzer/src` and `ui/src` (checks excluded), comments included. It failed on 7
+  comment lines first (examples taken from the sample); they now use made-up names.
+- **Name families, not words.** The handler method is picked by family: `handle*`, then `process*` / `consume*`,
+  then `on*` (lifecycle hooks excluded), then `execute` / `run`; within a family a batch method (array
+  parameter) wins, and an abstract method of the handlers' common base wins over all. Factories and lifecycle
+  calls never become suggested sinks: `producer`, `consumer`, `connect`, `disconnect`, `is*`, `forRoot*`,
+  `register*`, `on*`, plus `shutdown`, `destroy`, `configure`, `build`, `new*`, `create{Producer,Consumer,Client,
+  Connection,Pool,Admin,Channel,Session,Subscriber}`.
+
+### R2-10 bogus consumer `topic ?`: fixed
+
+- A consumer started where no topic can be read (`kafka.consumer({ groupId })` + `run()` in a loop over registered
+  handlers, or `subscribe({ topic: handler.topic })`) used to become an entry point labelled `topic ?` or
+  `topic <handler.topic>`. Now it is no entry point. When no consumer was found, the "broker client but no consumer"
+  sign says "consumers are created dynamically in `<file>:<line>`"; with other consumers but no registry rule, that
+  is a sign of its own. With the profile's registry rule it is covered: 29 consumers, no 30th.
+- In the repo: `fixtures/frameworks` got the loop shape (`handler-consumers.ts`); framework-check failed on it first
+  (`unexpected entry consumer:topic <handler.topic>`) and now expects the missing-entry-points sign instead.
+
+### Module counts (your "also check")
+
+The brief now says what it counted: `Counted: N modules, M entry points`, and, when the profile has
+`entryRegistries`, that their handler classes are counted as entry points, not modules (a run without the rules
+counts them as modules). That is the 112 vs 135: the profile, not lazy vs full.
+
 
 ## The sample (commit "sample-legacy-nest-service: the shapes a real service still had")
 
@@ -170,7 +213,8 @@ to check that the warning and the Required list are gone after it writes them.
 ## Also noticed
 
 - *112 modules (full, with rules) vs 135 (lazy, no profile)*: with the registry rules, handler classes are entry
-  points, not modules (22 vs 43 on the sample). The CLI line now says so when the profile has `entryRegistries`.
+  points, not modules (22 vs 43 on the sample). The CLI line and the brief now say so when the profile has
+  `entryRegistries`.
 
 ## Checks
 

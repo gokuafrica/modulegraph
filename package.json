@@ -28,6 +28,7 @@
     "demo": "npm run demo --workspace analyzer && npm run dev --workspace ui",
     "live": "npm run live --workspace analyzer --",
     "check": "npm run typecheck --workspaces --if-present && npm run typecheck --prefix sample-legacy-nest-service",
-    "test": "npm test --workspace analyzer"
+    "test": "npm test --workspace analyzer",
+    "accept:r2": "node acceptance/run-r2.mjs"
   }
 }

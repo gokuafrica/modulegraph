@@ -31,7 +31,10 @@ export const kafkajs: Framework = {
           if (p && Node.isPropertyAssignment(p)) topics.push(ctx.literal(p.getInitializer()));
         }
       }
-      return { topics: topics.join(', ') || '?' };
+      // A topic known only at run time (`subscribe({ topic: handler.topic })`) names nothing: with no readable topic
+      // the label says `?`, and the consumer is reported as created dynamically instead of being an entry point.
+      const known = topics.filter((t) => t && !t.startsWith('<') && t !== '?');
+      return { topics: known.join(', ') || '?' };
     },
   },
 };

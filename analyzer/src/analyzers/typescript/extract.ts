@@ -98,6 +98,10 @@ interface Rules {
 }
 
 const MAX_TYPE = 110;
+/** Handler method names, best first: families, not words one service happens to use. */
+const HANDLER_FAMILIES = [/^handle/, /^(process|consume)/, /^on[A-Z]/, /^(execute|run)$/];
+/** Framework lifecycle hooks: called by the framework at start and stop, never a message or job handler. */
+const LIFECYCLE_HOOK = /^on(Module|Application)(Init|Bootstrap|Destroy|Shutdown)$|^beforeApplicationShutdown$/;
 
 export function extract(project: Project, repoRoot: string, projectDir: string, config: Config, frameworks: Framework[] = []): Snapshot {
   return new Extractor(project, repoRoot, projectDir, config, frameworks).run();
@@ -133,6 +137,11 @@ export class Extractor implements RevisionAnalysis {
   /** Code that applies a pipeline item, or runs as one (`canActivate`), → the entry points it is in front of. */
   private pipelineAt = new Map<Node, Set<string>>();
   private listed = false;
+  /**
+   * Registration calls that matched an entry rule but name nothing this analysis can read (a consumer started in a
+   * loop over registered handlers, with no topic in sight): not entry points, reported as a coverage sign instead.
+   */
+  private dynamicEntries = new Map<string, { kind: EntryPoint['kind']; at: string }>();
   private hookMemo = new Map<string, unknown>();
   /** Class names more than one module has. */
   private sharedNames = new Set<string>();
@@ -187,7 +196,7 @@ export class Extractor implements RevisionAnalysis {
   /**
    * The service's own source files, without its tests: an e2e spec's `app.useGlobalPipes(…)` or `setGlobalPrefix`
    * sets up a test app, not the service's pipeline, and a spec's classes and mocks are not modules. Developer scripts
-   * (`.local/scripts/publish-message.ts`, a top-level `scripts/`) are not the service either.
+   * (a dot-folder such as `.dev/scripts/seed.ts`, a top-level `scripts/`) are not the service either.
    */
   private projectFiles() {
     return (this.projectFileList ??= this.project.getSourceFiles().filter((f) => {
@@ -427,7 +436,7 @@ export class Extractor implements RevisionAnalysis {
 
   /**
    * Handler methods the profile's registry rules make entry points, with their labels. Computed once. Several
-   * handler classes may share one method they inherit from a base class (`handleMessages` on a feature-sync base):
+   * handler classes may share one method they inherit from a base class (`handleBatch` on a shared base):
    * each class is an entry point of its own.
    */
   private registryIndex(): Map<MethodDeclaration, RegistryEntry[]> {
@@ -603,7 +612,7 @@ export class Extractor implements RevisionAnalysis {
     const ignore = new Set(this.config.coverage?.ignore ?? []);
     const pkg = readPackageJson(this.projectDir);
     // Only packages the service's own code uses for their values: a type-only import (`import type`, or a name used
-    // only in types) runs nothing, and a developer script (`.local/`, `scripts/`) is not the service.
+    // only in types) runs nothing, and a developer script (a dot-folder, `scripts/`) is not the service.
     const deps = Object.keys({ ...pkg.dependencies, ...pkg.peerDependencies }).filter((d) => !ignore.has(d) && this.valueImporters(d).length);
     const entries = Object.values(this.snapshot.entryPoints);
     const items: string[] = [];
@@ -612,9 +621,13 @@ export class Extractor implements RevisionAnalysis {
     // 1. A broker client, directly or through a wrapper, and no consumer.
     const brokers = deps.flatMap((d) => (CONSUMER_PACKAGES.has(d) ? [{ dep: d, via: '' }] : wraps(this.projectDir, d).filter((m) => CONSUMER_PACKAGES.has(m)).map((m) => ({ dep: m, via: d }))));
     const consumers = entries.filter((e) => e.kind === 'consumer').length;
+    const dynamic = [...this.dynamicEntries.values()].filter((d) => d.kind === 'consumer').map((d) => d.at);
+    const dynamicText = dynamic.length ? `consumers are created dynamically in ${dynamic.slice(0, 3).join(', ')}${dynamic.length > 3 ? ', …' : ''}, with no topic this analysis can read (one per registered handler, say)` : '';
     if (brokers.length && !consumers) {
       const names = [...new Set(brokers.map((b) => (b.via ? `${b.via} (wraps ${b.dep})` : b.dep)))];
-      items.push(`package.json depends on ${names.join(', ')}, but no consumer entry point was found: consumers registered through a wrapper or a handler map are not seen, nor anything they reach`);
+      items.push(`package.json depends on ${names.join(', ')}, but no consumer entry point was found${dynamicText ? ` (${dynamicText})` : ''}: consumers registered through a wrapper or a handler map are not seen, nor anything they reach`);
+    } else if (dynamicText && !this.rules.registries.some((r) => r.kind === 'consumer')) {
+      items.push(`${dynamicText.charAt(0).toUpperCase()}${dynamicText.slice(1)}: they are not entry points, nor anything they reach`);
     }
     // 2. Handler maps: a Map / object literal of classes that share a method, own or inherited.
     const covered = new Set(this.rules.registries.flatMap((r) => (r.map ? [r.map] : [])));
@@ -639,7 +652,7 @@ export class Extractor implements RevisionAnalysis {
         rules.push(`{ "map": "${name}", "method": "${method ?? 'handle'}", "kind": "${kind}", "label": "${label}" }`);
       }
     }
-    // 2b. Handlers that register themselves (`manager.addHandler(this)` in a base class constructor), in no map.
+    // 2b. Handlers that register themselves (`registry.add(this)` in a base class constructor), in no map.
     const ruledBases = new Set(this.rules.registries.flatMap((r) => (r.extends ? [r.extends] : [])));
     for (const file of this.projectFiles()) {
       for (const base of file.getClasses()) {
@@ -741,7 +754,9 @@ export class Extractor implements RevisionAnalysis {
 
   /**
    * The method handler classes share, own or inherited: an abstract method of their common base class first (the
-   * base says what every handler implements), else a usual handler name (`handleMessages`, `handle`, …).
+   * base says what every handler implements), else a usual handler name. Handler names come in families
+   * (`handle*`, `process*`, `consume*`, `on*` other than lifecycle hooks, `execute`, `run`); within one, a method
+   * that takes a batch (an array parameter) wins.
    */
   private sharedHandler(classes: ClassDeclaration[]): { method?: string; base?: ClassDeclaration; inherited: number } {
     const ancestors = (c: ClassDeclaration) => {
@@ -752,15 +767,17 @@ export class Extractor implements RevisionAnalysis {
     const base = ancestors(classes[0]).find((b) => classes.every((c) => ancestors(c).includes(b)));
     const names = (c: ClassDeclaration) => new Set([c, ...ancestors(c)].flatMap((k) => k.getMethods().filter((m) => this.isOperation(m)).map((m) => m.getName())));
     const common = classes.map(names).reduce((a, b) => new Set([...a].filter((x) => b.has(x))));
-    const PREFERRED = ['handleMessages', 'handleMessage', 'handleBatch', 'handle', 'process', 'execute', 'run', 'consume', 'onMessage'];
-    const pick = (list: string[]) => PREFERRED.find((p) => list.includes(p)) ?? list[0];
+    const declOf = (n: string) => [classes[0], ...ancestors(classes[0])].map((k) => k.getMethod(n)).find(Boolean);
+    const batch = (n: string) => !!declOf(n)?.getParameters().some((p) => p.getType().isArray());
+    const family = (n: string) => (HANDLER_FAMILIES.findIndex((re) => re.test(n)) + 1 || 99) * 2 - (batch(n) ? 1 : 0);
+    const pick = (list: string[]) => [...list].sort((a, b) => family(a) - family(b))[0];
     const abstract = base ? [base, ...ancestors(base)].flatMap((k) => k.getMethods().filter((m) => m.isAbstract() && common.has(m.getName())).map((m) => m.getName())) : [];
-    const method = pick(abstract) ?? pick([...common].filter((n) => !/^(on[A-Z]|constructor$)/.test(n)));
+    const method = pick(abstract) ?? pick([...common].filter((n) => n !== 'constructor' && !LIFECYCLE_HOOK.test(n)));
     const inherited = method ? classes.filter((c) => !c.getMethod(method)).length : 0;
     return { method, base, inherited };
   }
 
-  /** `manager.addHandler(this)` in the constructor of this class (or, with `up`, a base class): how it says so. */
+  /** `registry.add(this)` in the constructor of this class (or, with `up`, a base class): how it says so. */
   private selfRegistration(cls: ClassDeclaration, up = true): string | undefined {
     for (let k: ClassDeclaration | undefined = cls, d = 0; k && d < 8; k = up ? k.getBaseClass() : undefined, d++) {
       for (const ctor of k.getConstructors()) {
@@ -1012,6 +1029,12 @@ export class Extractor implements RevisionAnalysis {
     };
     for (const h of this.rules.hooks) Object.assign(vars, h.entryVars?.(site, ctx));
     const label = this.fill(rule.label, args, vars);
+    // An adapter marks a name it could not read with `?` (`topic ?`): such an entry point would name nothing.
+    if (/(^|[\s(,])\?($|[\s),])/.test(label)) {
+      const at = `${this.rel(call.getSourceFile().getFilePath())}:${call.getStartLineNumber()}`;
+      this.dynamicEntries.set(at, { kind: rule.kind, at });
+      return undefined;
+    }
     return this.addEntry(`${rule.kind}:${label}`, rule.kind, label, rule.readOnly, { at: call, handler });
   }
 
@@ -1468,9 +1491,9 @@ export class Extractor implements RevisionAnalysis {
 
   /**
    * What a side effect's target argument names, followed back to where the value is made: a local variable or a
-   * `this.x` field set in the constructor to its value, `config.get('KAFKA_TOPICS').X` to the config key
-   * (`KAFKA_TOPICS.X`), a message built by a factory to the string the factory was given
-   * (`createSyncedMessage(guid, id, 'RecordApproved')`), an object to its `topic` / `type`, and a parameter to what
+   * `this.x` field set in the constructor to its value, `config.get('TOPICS').X` to the config key
+   * (`TOPICS.X`), a message built by a factory to the string the factory was given
+   * (`buildMessage(id, 'OrderShipped')`), an object to its `topic` / `type`, and a parameter to what
    * the service's callers pass. Else `<the expression>`.
    */
   private targetText(node: Node | undefined, depth = 0, seen = new Set<Node>()): string {
@@ -1929,8 +1952,8 @@ function lastName(node: Node): string {
 }
 
 /**
- * `config.get('KAFKA_TOPICS').RECORD_CREATED`, `this.configService.get<T>('kafka.topics.created')`: the config key
- * (`KAFKA_TOPICS.RECORD_CREATED`). A `get` on something called `config…`, with a constant key.
+ * `config.get('TOPICS').ORDER_CREATED`, `this.configService.get<T>('kafka.topics.created')`: the config key
+ * (`TOPICS.ORDER_CREATED`). A `get` on something called `config…`, with a constant key.
  */
 function configKey(node: Node, literal: (n: Node) => string): string | undefined {
   const path: string[] = [];
@@ -2153,7 +2176,7 @@ export function isTestFile(relPath: string): boolean {
   return /\.(spec|test|e2e-spec|e2e)\.[cm]?[jt]sx?$/.test(relPath) || /(^|\/)(__tests__|__mocks__|tests?|e2e)\//.test(relPath);
 }
 
-/** Developer tooling next to the service: dot-folders (`.local/`, `.github/`) and a top-level `scripts/` or `tools/`. */
+/** Developer tooling next to the service: dot-folders (`.dev/`, `.github/`) and a top-level `scripts/` or `tools/`. */
 export function isDevFile(relPath: string): boolean {
   return /(^|\/)\.[^/]+\//.test(relPath) || /^(scripts|tools)\//.test(relPath);
 }

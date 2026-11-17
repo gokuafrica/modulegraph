@@ -140,7 +140,11 @@ export interface Source {
    * The service profile this review read (or would read). `unmatched`: descriptions in it that name no class or
    * method of the service (a typo, or a display name instead of the class name): they are not shown anywhere.
    */
-  profile?: { path: string; exists: boolean; unmatched?: string[] };
+  /**
+   * The service's profile. `registries`: how many `entryRegistries` rules it has (their handler classes are counted as
+   * entry points, not modules, so a run with them counts fewer modules than one without, for the same code).
+   */
+  profile?: { path: string; exists: boolean; unmatched?: string[]; registries?: number };
   /** The command that analyzes this review again, live (`modulegraph review …`): shown when the review is only a saved file. */
   command?: string;
   /** Which backend produced the graph and which framework adapters it used. */

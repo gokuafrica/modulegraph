@@ -17,7 +17,7 @@ export const EFFECT_NAME = /kafka|outbox|queue|producer|publisher|pubsub|\bsqs\b
 export const EFFECT_METHOD = /^(send|publish|produce|emit|write|enqueue|add|put|dispatch|notify|insert|upsert|update|delete|remove|encrypt|decrypt|sign|upload|invoke|execute)/i;
 
 /** Factories, lifecycle and reads: a client's `producer()`, `connect()`, `isHealthy()` publish nothing themselves. */
-const NOT_EFFECT = /^(producer|consumer|admin|connect|disconnect|close|init|start|stop|is[A-Z]|has[A-Z]|get|find|list|read|fetch|consume|subscribe|run$|forRoot|forFeature|register|on[A-Z]|health|ping|describe)/;
+const NOT_EFFECT = /^(producer|consumer|admin|connect|disconnect|close|init|start|stop|is[A-Z]|has[A-Z]|get|find|list|read|fetch|consume|subscribe|run$|forRoot|forFeature|register|on[A-Z]|health|ping|describe|shutdown|destroy|configure|build|new[A-Z]|create(Producer|Consumer|Client|Connection|Pool|Admin|Channel|Session|Subscriber)(?![a-z]))/;
 
 /** A client method that writes, publishes or calls out (`send`, `createOutboxMessage`, `encrypt`), for a suggested sink. */
 export function isEffectMethod(method: string): boolean {
@@ -73,7 +73,7 @@ export function installedPackage(projectDir: string, pkg: string): PackageJson |
   }
 }
 
-/** Messaging packages a dependency is built on (`@acme/nestjs-kafkajs` → kafkajs). */
+/** Messaging packages a dependency is built on (`@corp/kafka-client` → kafkajs). */
 export function wraps(projectDir: string, pkg: string): string[] {
   const p = installedPackage(projectDir, pkg);
   if (!p) return [];

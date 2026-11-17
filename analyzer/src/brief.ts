@@ -23,6 +23,9 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://127.0.0.
     // Entry points and side effects come from these adapters; anything else (custom platform code) needs profile rules.
     out.push(`Analyzed as ${s.analyzer.language}${fw ? ` with ${fw}` : ' (no framework adapters: only the profile\'s rules)'}.`);
   }
+  const registered = Object.values(g.entryPoints).filter((e) => e.kind === 'consumer' || e.kind === 'cron').length;
+  // Module counts differ between runs with and without registry rules: say what this one counted.
+  out.push(`Counted: ${Object.keys(g.modules).length} modules, ${Object.keys(g.entryPoints).length} entry points${s.profile?.registries && registered ? `. Handler classes the profile's \`entryRegistries\` list are counted as entry points, not modules: a run without those rules counts them as modules, for the same code` : ''}.`);
   out.push(`Change: ${g.review.stats.files} files, +${g.review.stats.linesAdded}/−${g.review.stats.linesRemoved}, ${g.review.stats.contractChanges} contract changes, ${g.review.stats.entryPointsAffected}${partial ? '+' : ''} entry points affected.`);
   out.push('');
   const incomplete = g.incomplete ?? [];

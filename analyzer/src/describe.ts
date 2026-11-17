@@ -45,8 +45,8 @@ export function describe<G extends Pick<ModuleGraph, 'modules' | 'operations'> &
 }
 
 /**
- * The profile entry for a module: keyed by its class name (`ConcludeManualReviewDecisionService`), or by the module id
- * or display name the review shows (`ConcludeManualReviewDecision`), in any case. An agent copying a name from the
+ * The profile entry for a module: keyed by its class name (`ShipmentPlanningService`), or by the module id
+ * or display name the review shows (`ShipmentPlanning`), in any case. An agent copying a name from the
  * brief's change headlines must not be silently ignored. Several keys for one module are merged (the class name wins).
  */
 function overrideFor(config: Config, mod: Pick<ModuleInfo, 'className' | 'id' | 'name'>): ModuleOverride | undefined {

@@ -1,0 +1,51 @@
+
+0. fixture
+  ✓ [setup] fixture is outside the modulegraph checkout
+  ✓ [setup] own node_modules: top-level lru-cache 5.x (got 5.1.1), nested lru-cache 10.x under path-scurry/typeorm (got 10.4.3)
+  ✓ [setup] branch fix/conclude-review-row-scope checked out
+  ✓ [setup] the fixture's own `npx jest` passes (10 tests)
+
+1. no profile, --head, lazy
+  ✓ [R2-1] examples recorded from Jest (not "Tests: 0 total")
+  ✓ [R2-1] ≥5 cases from conclude-manual-review-decision-service.spec.ts
+  ✓ [R2-1] ConcludeManualReviewDecisionService.approve has an approved case and a NotFoundException case
+  ✓ [F5] INCOMPLETE with missing-entry-points and unknown-side-effects
+  ✓ [R2-3] suggests { "map": "ConsumerHandlerMap", "method": "handleMessages", "kind": "consumer" }
+  ✓ [R2-4] suggests { "argv": "src/main.ts", "kind": "cron" }
+  ✓ [R2-5] suggests AvroProducer.send with "target": "arg:0.topic"
+  ✓ [R2-5] suggests TypeORMOutboxService.createOutboxMessage as kind outbox
+  ✓ [R2-5] suggests no factory / lifecycle method (producer, consumer, connect, disconnect, isHealthy, forRootAsync, register)
+  ✓ [R2-5] suggests no "const:<package name>" target
+  ✓ [R2-8] @nestjs/microservices is not flagged (its only import is a type)
+  ✓ [R2-8] nothing under .local/ is counted
+  ✓ [R2-10] no entry point with an unknown label ("topic ?")
+
+2. no profile, working tree
+  ✓ [R2-1] working-tree run records examples too
+
+3. with the profile, full
+  ✓ [R2-3] exactly the 29 handler-map consumers (got 29)
+  ✓ [R2-4] exactly the 7 jobs (got 7)
+  ✓ [R2-3/4] the 5 inherited sync handlers, review-decision-requested and 2 jobs reach the change
+  ✓ [R2-5] RecordEventsProducer.publishDuplicateFound → kafka KAFKA_TOPICS.RECORD_DUPLICATE_FOUND
+  ✓ [R2-5] RecordEventsProducer.publishReviewConcluded → kafka KAFKA_TOPICS.REVIEW_CONCLUDED
+  ✓ [R2-5] NotificationsOutboxService.notifyReviewConcluded → outbox ReviewConcludedNotification
+  ✓ [R2-5] no Kafka / outbox target is a code expression
+  · [R2-5] publishRaw (topic from a parameter) resolved through its only caller: KAFKA_TOPICS.MANUAL_REVIEW_AUDIT
+  ✓ [R2-8] no effect from .local/ (topic local-test)
+  ✓ [F5] with the profile nothing is incomplete
+  · [R2-9] worker approve shows the facade/endpoint description as context
+
+4. with the profile, lazy
+  ✓ [lazy] lazy lists the same consumers and jobs as full (29/29, 7/7)
+
+5. UI (1440×900)
+  ✓ [R2-2] top bar / checks button of the no-profile review say "incomplete" and not "all clear"
+  ✓ [R2-2] after opening it, the page lists the missing entry points and the unknown side effects, with the profile JSON to add
+  ✓ [R2-6] inspector of ConcludeManualReviewDecisionService.approve: every changed function name shown uncut at 1440 px
+  ✓ [R2-2] with the profile (nothing incomplete) the top bar does not say "incomplete"
+
+6. fresh clone
+  ✓ [R2-7] git clone → npm run setup → npm test passes
+
+33/33 checks pass

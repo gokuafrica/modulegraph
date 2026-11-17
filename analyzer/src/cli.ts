@@ -246,7 +246,7 @@ function resolveRevisions(): Revisions {
   r.source.title ??= args.title;
   r.source.analyzer = { id: analyzer.id, language: analyzer.language, frameworks: detectedFrameworks };
   const profilePath = configFile ?? `${userConfigsDir}/${config.service}/modulegraph.config.json`;
-  r.source.profile = { path: displayHome(profilePath), exists: !!configFile && existsSync(configFile) };
+  r.source.profile = { path: displayHome(profilePath), exists: !!configFile && existsSync(configFile), ...(config.entryRegistries?.length ? { registries: config.entryRegistries.length } : {}) };
   r.source.command = reviewCommand(r.source);
   if (intent) {
     r.source.intent = intent;

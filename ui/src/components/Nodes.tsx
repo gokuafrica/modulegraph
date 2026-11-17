@@ -28,7 +28,7 @@ export const ActionsContext = createContext<Actions>(null!);
 export const ExampleContext = createContext<{ caseId?: string; setCase: (id: string) => void; cases: Record<string, string> }>({ setCase: () => {}, cases: {} });
 
 /** The requests an example happened in. Graphs recorded before cases existed: one per example position. */
-/** A long CamelCase name (`ConcludeManualReviewDecision`) may wrap between its words, never inside one. */
+/** A long CamelCase name (`ShipmentPlanningCoordinator`) may wrap between its words, never inside one. */
 export function breakable(name: string): ReactNode[] {
   return name.split(/(?=[A-Z][a-z])/).flatMap((part, i) => (i ? [<wbr key={i} />, part] : [part]));
 }

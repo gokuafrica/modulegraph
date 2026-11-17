@@ -3,10 +3,11 @@ import express from 'express';
 import { Kafka } from 'kafkajs';
 import cron from 'node-cron';
 import { PrismaClient } from '../../generated/prisma/client.ts';
+import { startHandlerConsumers, type MessageHandler } from './handler-consumers.ts';
 import { invoicesRouter } from './routes/invoices.ts';
 import { InvoiceService, PaymentGateway } from './services.ts';
 
-export async function main(options: ConstructorParameters<typeof PrismaClient>[0]): Promise<void> {
+export async function main(options: ConstructorParameters<typeof PrismaClient>[0], handlers: MessageHandler[] = []): Promise<void> {
   const kafka = new Kafka({ clientId: 'billing', brokers: ['localhost:9092'] });
   const producer = kafka.producer();
   const invoices = new InvoiceService(new PrismaClient(options), new PaymentGateway(axios.create({ baseURL: 'https://pay.example.com' })), producer);
@@ -25,6 +26,8 @@ export async function main(options: ConstructorParameters<typeof PrismaClient>[0
       await invoices.markSettled(String(message.key));
     },
   });
+
+  await startHandlerConsumers(kafka, handlers);
 
   cron.schedule('0 6 * * *', () => invoices.remindOverdue(), { name: 'overdue-reminders' });
   app.listen(3000);

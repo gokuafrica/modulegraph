@@ -18,5 +18,6 @@ People review it as an interactive graph.
   itself and prints which ones it used.
 - Changing modulegraph itself: `npm run check` (types), `npm test` (intent matching, framework adapters vs
   hand-checked services, change grouping, lazy == full),
-  `npm run validate --workspace analyzer -- <graph.json>` (schema). The UI dev server is `npm run dev`
+  `npm run validate --workspace analyzer -- <graph.json>` (schema). Before answering a field report, run the testers'
+  own acceptance check, `npm run accept:r2` ([acceptance/](acceptance/README.md)), and never edit it to pass. The UI dev server is `npm run dev`
   (http://localhost:5173); `npm run setup` rebuilds the UI that `modulegraph review` serves.

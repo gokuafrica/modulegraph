@@ -418,6 +418,9 @@
               "items": {
                 "type": "string"
               }
+            },
+            "registries": {
+              "type": "number"
             }
           },
           "required": [
@@ -425,7 +428,7 @@
             "exists"
           ],
           "additionalProperties": false,
-          "description": "The service profile this review used, or where to create one (`exists: false`), with the home folder as `~`:\nwhere descriptions and rules go. The UI names it in its \"add a description\" hints. The service profile this review read (or would read). `unmatched`: descriptions in it that name no class or\nmethod of the service (a typo, or a display name instead of the class name): they are not shown anywhere."
+          "description": "The service profile this review used, or where to create one (`exists: false`), with the home folder as `~`:\nwhere descriptions and rules go. The UI names it in its \"add a description\" hints. The service profile this review read (or would read). `unmatched`: descriptions in it that name no class or\nmethod of the service (a typo, or a display name instead of the class name): they are not shown anywhere. The service's profile. `registries`: how many `entryRegistries` rules it has (their handler classes are counted as\nentry points, not modules, so a run with them counts fewer modules than one without, for the same code)."
         },
         "command": {
           "type": "string",

@@ -177,6 +177,7 @@ const cases: Expected[] = [
   {
     project: 'fixtures/frameworks',
     frameworks: ['express', 'fastify', 'kafkajs', 'bullmq', 'node-cron', 'prisma', 'mongoose', 'axios'],
+    issues: ['missing-entry-points'],
     modules: ['PaymentGateway', 'InvoiceService', 'SearchIndexer', 'CatalogService'],
     entries: {
       // Express: mounted router from a factory, router.route() chain, wrapped handler, app route
@@ -184,7 +185,8 @@ const cases: Expected[] = [
       'api:POST /v1/invoices': ['db.read customer', 'db.write invoice', 'kafka invoices.issued'],
       'api:POST /v1/invoices/:id/pay': ['db.read invoice', 'db.write invoice', 'http /v1/charges'],
       'api:GET /health': [],
-      // KafkaJS consumer.run with topics from consumer.subscribe; node-cron
+      // KafkaJS consumer.run with topics from consumer.subscribe; node-cron. The consumers started in a loop, one per
+      // handler with a topic known only at run time (handler-consumers.ts), are no entry point: a coverage sign.
       'consumer:topic payments.settled': ['db.write invoice'],
       'cron:cron overdue-reminders (0 6 * * *)': ['db.read invoice', 'kafka invoices.reminder'],
       // Fastify: plugin prefix, shorthand with options, route({ method, url, handler }); BullMQ Worker

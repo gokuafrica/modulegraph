@@ -74,7 +74,7 @@ export interface DocDecoratorRule {
 /**
  * Entry points registered the in-house way, by data instead of decorators or registration calls:
  * - handler map + base class: `map` names a `Map` or object literal whose values are handler classes
- *   (`ConsumerHandlerMap = new Map([['user-created', UserCreatedHandler], …])`); each entry is an entry point named by
+ *   (`EventHandlers = new Map([['user-created', UserCreatedHandler], …])`); each entry is an entry point named by
  *   its key, handled by the class's `method` (`handle`). `extends` adds every class that extends that base class
  *   (named by class) that no map lists.
  * - module chosen by a command-line argument: `argv` names the file that boots a different Nest module per argument
