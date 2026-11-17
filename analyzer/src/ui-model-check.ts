@@ -40,20 +40,20 @@ const index = buildIndex(g);
 
 console.log(`\n${projectRel} ${branch}: impact view`);
 {
-  // UserRecordDataUpdatedHandler.handle reaches the changed updateUserRecordData; all its effects come through it.
+  // UserRecordDataUpdatedHandler.handleMessages reaches the changed correctData through the facade; all its effects come through it.
   const model = impactModel(g, index, 'ManualReviewService.updateUserRecordData', { depth: 1, groupThreshold: 12, expandedGroups: new Set() });
   const node = model.nodes.find((n) => n.id === 'mod:UserRecordDataUpdatedHandler');
   if (!node) fail('the Kafka handler is not drawn as a caller of updateUserRecordData');
   else {
-    const want = effectCount(g, ['UserRecordDataUpdatedHandler.handle']);
+    const want = effectCount(g, ['UserRecordDataUpdatedHandler.handleMessages']);
     const d = node.data as { totalEffects: number; chips: unknown[] };
     if (want === 0) fail('the handler has no side effects through its submodule: the sample changed?');
     if (d.totalEffects !== want) fail(`handler node counts ${d.totalEffects} side effects, not ${want} (the ones it has through ManualReview)`);
     if (d.chips.length) fail(`handler node shows ${d.chips.length} chips; only what the change did to its effects (nothing) should be drawn`);
     console.log(`  caller UserRecordDataUpdatedHandler: "${d.totalEffects} side effects, none changed"`);
   }
-  // A caller with direct effects as well: EscalationsService.resolve → approve.
-  const m2 = impactModel(g, index, 'ManualReviewService.approve', { depth: 1, groupThreshold: 12, expandedGroups: new Set() });
+  // A caller with direct effects as well: EscalationsService.resolve → the facade's approveUserRecord.
+  const m2 = impactModel(g, index, 'ManualReviewService.approveUserRecord', { depth: 1, groupThreshold: 12, expandedGroups: new Set() });
   const esc = m2.nodes.find((n) => n.id === 'mod:EscalationsService')?.data as { totalEffects: number } | undefined;
   if (!esc || esc.totalEffects !== effectCount(g, ['EscalationsService.resolve'])) fail(`EscalationsService caller counts ${esc?.totalEffects} side effects, not ${effectCount(g, ['EscalationsService.resolve'])}`);
 }

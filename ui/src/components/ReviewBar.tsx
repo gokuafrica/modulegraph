@@ -1,5 +1,5 @@
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
-import type { Finding, ModuleGraph, ReviewChange } from '../../../schema/modulegraph.ts';
+import type { AnalysisIssue, Finding, ModuleGraph, ReviewChange } from '../../../schema/modulegraph.ts';
 import { opTitle } from '../graph/model.ts';
 import { ActionsContext } from './Nodes.tsx';
 
@@ -106,15 +106,29 @@ function Checks({ g, focus }: { g: ModuleGraph; focus: (f: Finding) => void }) {
   const errors = current.filter((f) => f.severity === 'error').length;
   const warnings = current.filter((f) => f.severity === 'warning').length;
   const summary = [errors && `${errors} error${errors > 1 ? 's' : ''}`, warnings && `${warnings} warning${warnings > 1 ? 's' : ''}`].filter(Boolean).join(', ');
+  // The brief's verdict: an analysis that could not see everything is not "all clear", whatever the rules found.
+  const incomplete = g.incomplete ?? [];
+  const state = errors ? 'sev-error' : incomplete.length ? 'sev-incomplete' : warnings ? 'sev-warning' : 'ok';
+  const label = incomplete.length
+    ? `◐ incomplete analysis${summary ? `, ${summary}` : ''}`
+    : `${errors ? '✖' : warnings ? '⚠' : '✓'} checks${summary ? `: ${summary}` : current.length ? `: ${current.length} note${current.length > 1 ? 's' : ''}` : ': all clear'}`;
   return (
     <div className="checks-menu" ref={ref}>
-      <button className={`checks-button ${errors ? 'sev-error' : warnings ? 'sev-warning' : 'ok'}`} onClick={() => setOpen(!open)}
-        title="What the machine checked: architecture rules, undeclared and undisclosed side effects">
-        {errors ? '✖' : warnings ? '⚠' : '✓'} checks{summary ? `: ${summary}` : current.length ? `: ${current.length} note${current.length > 1 ? 's' : ''}` : ': all clear'}
+      <button className={`checks-button ${state}`} onClick={() => setOpen(!open)}
+        title={incomplete.length
+          ? `The analysis could not see everything (${incomplete.map((i) => i.kind).join(', ')}): "no findings" means nothing here. Click for what is missing and the profile rules that fix it.`
+          : 'What the machine checked: architecture rules, undeclared and undisclosed side effects'}>
+        {label}
       </button>
       {open && (
         <div className="checks-pop">
-          {current.length === 0 && <div className="muted small">Nothing new{hasDiff ? ' from this change' : ''}.</div>}
+          {incomplete.length > 0 && (
+            <div className="incomplete-block">
+              <div className="incomplete-title">Analysis incomplete: what follows may be missing side effects, entry points or changes</div>
+              {incomplete.map((issue, i) => <IncompleteRow key={i} issue={issue} profile={g.source.profile?.path} />)}
+            </div>
+          )}
+          {current.length === 0 && <div className="muted small">{incomplete.length ? 'No findings from the parts the analysis sees.' : `Nothing new${hasDiff ? ' from this change' : ''}.`}</div>}
           {current.map((f, i) => <CheckRow key={i} f={f} onClick={() => { focus(f); setOpen(false); }} />)}
           {old.length > 0 && (
             <div className="small clickable muted" onClick={() => setShowOld(!showOld)}>
@@ -122,6 +136,29 @@ function Checks({ g, focus }: { g: ModuleGraph; focus: (f: Finding) => void }) {
             </div>
           )}
           {showOld && old.map((f, i) => <CheckRow key={`o${i}`} f={f} onClick={() => { focus(f); setOpen(false); }} />)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** One thing the analysis could not see, what to do about it, and the profile JSON that fixes it (copyable). */
+function IncompleteRow({ issue, profile }: { issue: AnalysisIssue; profile?: string }) {
+  const [details, setDetails] = useState(false);
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="incomplete-issue" data-kind={issue.kind}>
+      <div className="incomplete-head"><code>{issue.kind}</code> {issue.message}</div>
+      {issue.hint && <div className="small muted">{issue.hint}</div>}
+      {(issue.items?.length ?? 0) > 0 && (
+        <div className="small clickable muted" onClick={() => setDetails(!details)}>{details ? '▾' : '▸'} {issue.items!.length} sign{issue.items!.length > 1 ? 's' : ''}</div>
+      )}
+      {details && <ul className="incomplete-items">{issue.items!.map((it, i) => <li key={i}>{it}</li>)}</ul>}
+      {issue.suggestion && (
+        <div className="incomplete-suggestion">
+          <div className="small muted">Add to the profile{profile ? <>, <code>{profile}</code></> : ''}:</div>
+          <pre>{issue.suggestion}</pre>
+          <button className="small" onClick={() => { void navigator.clipboard?.writeText(issue.suggestion!); setCopied(true); }}>{copied ? 'copied' : 'copy'}</button>
         </div>
       )}
     </div>

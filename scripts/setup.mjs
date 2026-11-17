@@ -5,7 +5,7 @@
  *   node scripts/setup.mjs [--no-skill] [--force-skill]
  *
  * 1. checks Node and git;
- * 2. installs the dependencies and builds the review UI;
+ * 2. installs the dependencies (and the standalone demo service's own) and builds the review UI;
  * 3. creates local branches for the demo changes (a fresh clone has them only as origin/feature/…);
  * 4. creates your modulegraph home, ~/.modulegraph (MODULEGRAPH_HOME moves it): configs/ for your services'
  *    profiles, reviews/ for the review graphs and briefs. Nothing in it is part of this repo;
@@ -24,15 +24,11 @@ const flags = new Set(process.argv.slice(2));
 const home = resolve(process.env.MODULEGRAPH_HOME ?? join(homedir(), '.modulegraph'));
 const skillsDir = resolve(process.env.MODULEGRAPH_SKILLS_DIR ?? join(homedir(), '.claude', 'skills'));
 const MARKER = '<!-- installed by modulegraph setup: re-run it to update; edits here are overwritten -->';
-// main too: a CI checkout of a pull request has no local main.
-const DEMO_BRANCHES = [
-  'main',
-  'feature/birthinfo-consent',
-  'feature/kyc-risk-tiers',
-  'feature/order-fraud-hold',
-  'feature/enforce-document-birth-info',
-  'feature/residency-declaration',
-];
+// One list, shared with the checks (analyzer/src/branches-check.ts). main too: a CI checkout of a pull request has
+// no local main.
+const DEMO_BRANCHES = JSON.parse(readFileSync(join(root, 'scripts/demo-branches.json'), 'utf8')).branches;
+// Demo services installed on their own, like a real repo (own lockfile, not a workspace).
+const STANDALONE = ['sample-legacy-nest-service'];
 
 const step = (n, text) => console.log(`\n[${n}/6] ${text}`);
 const fail = (text) => {
@@ -63,6 +59,11 @@ console.log(`  Node ${process.versions.node}, ${gitVersion.stdout.trim()}`);
 // 2. dependencies and the UI
 step(2, 'installing dependencies and building the review UI (a minute or two the first time)');
 if (npm('install --no-audit --no-fund').status !== 0) fail('npm install failed (output above).');
+for (const dir of STANDALONE) {
+  const ci = existsSync(join(root, dir, 'package-lock.json')) ? 'ci' : 'install';
+  const r = spawnSync(`npm ${ci} --no-audit --no-fund`, { cwd: join(root, dir), stdio: 'inherit', shell: true });
+  if (r.status !== 0) fail(`npm ${ci} in ${dir} failed (output above).`);
+}
 if (npm('run build --workspace ui').status !== 0) fail('building the UI failed (output above).');
 
 // 3. demo branches

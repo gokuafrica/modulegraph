@@ -61,6 +61,12 @@ function OpCard({ g, op }: { g: ModuleGraph; op: Operation }) {
         </div>
         {op.summary && <p className="summary">{op.summary} <SummarySource source={op.summary && op.summarySource} from={op.summaryFrom} /></p>}
         {mod.summary && mod.summary !== op.summary && <p className="summary module-summary"><b>{mod.name}:</b> {mod.summary} <SummarySource source={mod.summarySource} /></p>}
+        {!op.summary && op.context && (
+          <p className="summary context-summary">
+            <span className="context-label">Called through {opTitle(g, op.context.from)}:</span> {op.context.summary}{' '}
+            <span className="summary-src" title={`${op.context.from} only hands over to this operation; this is its description, not one of this operation's own.`}>context, not its own description</span>
+          </p>
+        )}
         {!op.summary && <MissingDescription g={g} op={op} />}
         <div className="file" title="The diagram shows this revision of the code">{op.file}:{op.line} <span className="muted">· {revisionNote(g)}</span></div>
         <div className="insp-actions">

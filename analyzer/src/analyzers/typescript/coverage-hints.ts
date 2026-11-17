@@ -5,6 +5,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { Node } from 'ts-morph';
 
 /** Message brokers and queues: a service that depends on one usually consumes from it too. */
 export const MESSAGING_PACKAGES = ['kafkajs', '@confluentinc/kafka-javascript', 'node-rdkafka', 'amqplib', 'amqp-connection-manager', 'bullmq', 'bull', 'nats', '@aws-sdk/client-sqs', '@aws-sdk/client-sns', '@google-cloud/pubsub', '@azure/service-bus', 'ioredis', 'redis'];
@@ -14,6 +15,32 @@ export const CONSUMER_PACKAGES = new Set(['kafkajs', '@confluentinc/kafka-javasc
 export const EFFECT_NAME = /kafka|outbox|queue|producer|publisher|pubsub|\bsqs\b|\bsns\b|rabbit|amqp|\bnats\b|event-?bus|kinesis|\bmq\b|@aws-sdk\/client-|@google-cloud\/|@azure\//i;
 /** Method names that do something outside the process (as opposed to connect, consume, get, …). */
 export const EFFECT_METHOD = /^(send|publish|produce|emit|write|enqueue|add|put|dispatch|notify|insert|upsert|update|delete|remove|encrypt|decrypt|sign|upload|invoke|execute)/i;
+
+/** Factories, lifecycle and reads: a client's `producer()`, `connect()`, `isHealthy()` publish nothing themselves. */
+const NOT_EFFECT = /^(producer|consumer|admin|connect|disconnect|close|init|start|stop|is[A-Z]|has[A-Z]|get|find|list|read|fetch|consume|subscribe|run$|forRoot|forFeature|register|on[A-Z]|health|ping|describe)/;
+
+/** A client method that writes, publishes or calls out (`send`, `createOutboxMessage`, `encrypt`), for a suggested sink. */
+export function isEffectMethod(method: string): boolean {
+  return !NOT_EFFECT.test(method) && (EFFECT_METHOD.test(method) || /^(create|save|store|persist|record|log|push|post|schedule|trigger|fire|commit)/i.test(method));
+}
+
+/**
+ * Which argument of a client method names its target, for a suggested sink: the `topic` of an object argument
+ * (`send({ subject, topic, messages })` → `arg:0.topic`), else the first string (`send(topic, …)`), else a message or
+ * event object (the analyzer follows it to the factory that built it), else the package's name.
+ */
+export function suggestedTarget(decl: Node, dep: string): string {
+  const params = Node.isMethodDeclaration(decl) || Node.isMethodSignature(decl) ? decl.getParameters() : [];
+  for (const [i, p] of params.entries()) {
+    const type = p.getType();
+    if (!type.isString() && type.getProperty('topic')) return `arg:${i}.topic`;
+  }
+  const s = params.findIndex((p) => p.getType().isString() || p.getType().isStringLiteral());
+  if (s >= 0) return `arg:${s}`;
+  const o = params.findIndex((p) => p.getType().isObject() && /message|event|record|payload/i.test(p.getName()));
+  if (o >= 0) return `arg:${o}`;
+  return `const:${dep.replace(/^@[^/]+\//, '').replace(/^client-/, '')}`;
+}
 
 export interface PackageJson {
   name?: string;

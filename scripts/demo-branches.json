@@ -1,0 +1,12 @@
+{
+  "//": "Branches the demos and npm test analyze. scripts/setup.mjs creates them from origin/; analyzer/src/branches-check.ts checks that every branch the checks name is listed here.",
+  "branches": [
+    "main",
+    "feature/birthinfo-consent",
+    "feature/kyc-risk-tiers",
+    "feature/order-fraud-hold",
+    "feature/enforce-document-birth-info",
+    "feature/residency-declaration",
+    "fix/scope-manual-data-to-row"
+  ]
+}

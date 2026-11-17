@@ -1,5 +1,5 @@
-import type { ModuleGraph } from '../../schema/modulegraph.ts';
-import type { Config } from './config.ts';
+import type { ModuleGraph, ModuleInfo } from '../../schema/modulegraph.ts';
+import type { Config, ModuleOverride } from './config.ts';
 
 /**
  * Descriptions for modules and operations the code doesn't describe, best source first:
@@ -8,17 +8,20 @@ import type { Config } from './config.ts';
  *   3. the API documentation of the entry point that hands the request to the operation (`api`: a controller method
  *      with `@ApiOperation({ description })` whose handler only calls this operation);
  *   4. the doc comment of the operation's class (`class`, set by the backend).
+ * An operation with none of these that a described operation only hands over to (controller → facade → worker) gets
+ * the facade's description as `context`: shown as "called through …", never as its own, so it still needs one.
  * Applied to the finished graph, so any language backend gets them and a refresh picks up profile edits.
  */
 export function describe<G extends Pick<ModuleGraph, 'modules' | 'operations'> & Partial<Pick<ModuleGraph, 'entryPoints' | 'scopes'>>>(g: G, config: Config): G {
-  const byClass = config.modules.overrides;
   for (const mod of Object.values(g.modules)) {
-    const o = byClass[mod.className];
+    const o = overrideFor(config, mod);
     if (o?.summary) Object.assign(mod, { summary: o.summary.replace(/\s+/g, ' '), summarySource: 'profile' });
   }
   for (const op of Object.values(g.operations)) {
+    op.context = undefined;
     if (op.summarySource === 'code') continue;
-    const written = byClass[g.modules[op.moduleId]?.className ?? '']?.operations?.[op.name];
+    const mod = g.modules[op.moduleId];
+    const written = mod ? operationText(overrideFor(config, mod), op.name) : undefined;
     if (written) Object.assign(op, { summary: written.replace(/\s+/g, ' '), summarySource: 'profile', summaryFrom: undefined });
     else if (op.summarySource === 'profile' || op.summarySource === 'api') Object.assign(op, { summary: undefined, summarySource: undefined, summaryFrom: undefined });
   }
@@ -30,7 +33,61 @@ export function describe<G extends Pick<ModuleGraph, 'modules' | 'operations'> &
     if (!op || (op.summary && op.summarySource !== 'class')) continue;
     Object.assign(op, { summary: entry.summary, summarySource: 'api', summaryFrom: `${entry.summaryFrom ?? 'API docs'} on ${entry.label}` });
   }
+  // A described operation that only hands over to another (a facade): context for the one doing the work.
+  for (const facade of Object.values(g.operations)) {
+    if (!facade.summary || facade.change === 'removed') continue;
+    const steps = g.scopes?.[facade.id]?.steps ?? [];
+    const worker = steps.length === 1 && steps[0].kind === 'call' ? g.operations[steps[0].target!] : undefined;
+    if (!worker || worker.summary || worker.id === facade.id) continue;
+    worker.context = { from: facade.id, summary: facade.summary };
+  }
   return g;
+}
+
+/**
+ * The profile entry for a module: keyed by its class name (`ConcludeManualReviewDecisionService`), or by the module id
+ * or display name the review shows (`ConcludeManualReviewDecision`), in any case. An agent copying a name from the
+ * brief's change headlines must not be silently ignored. Several keys for one module are merged (the class name wins).
+ */
+function overrideFor(config: Config, mod: Pick<ModuleInfo, 'className' | 'id' | 'name'>): ModuleOverride | undefined {
+  const order = [mod.className, mod.id, mod.name].map((k) => k.toLowerCase());
+  const keys = Object.keys(config.modules.overrides)
+    .filter((k) => order.includes(k.toLowerCase()))
+    .sort((a, b) => order.indexOf(b.toLowerCase()) - order.indexOf(a.toLowerCase()) || (a === mod.className ? 1 : -1));
+  if (!keys.length) return undefined;
+  const merged: ModuleOverride = {};
+  for (const k of keys) {
+    const o = config.modules.overrides[k];
+    Object.assign(merged, o, { operations: { ...merged.operations, ...o.operations } });
+  }
+  return merged;
+}
+
+function operationText(o: ModuleOverride | undefined, name: string): string | undefined {
+  const ops = o?.operations ?? {};
+  return ops[name] ?? Object.entries(ops).find(([k]) => k.toLowerCase() === name.toLowerCase())?.[1];
+}
+
+/**
+ * Profile descriptions that describe nothing: a class or method no module has. Said in the brief and on the console,
+ * so a typo or a wrong key in what the review agent wrote doesn't just vanish. `known` = every module's public
+ * methods (`<module id>.<method>`), analyzed or not.
+ */
+export function unmatchedDescriptions(config: Config, modules: Pick<ModuleInfo, 'className' | 'id' | 'name'>[], known: string[]): string[] {
+  const out: string[] = [];
+  for (const [key, o] of Object.entries(config.modules.overrides)) {
+    if (!o.summary && !Object.keys(o.operations ?? {}).length) continue;
+    const mod = modules.find((m) => overrideFor({ ...config, modules: { ...config.modules, overrides: { [key]: o } } }, m));
+    if (!mod) {
+      out.push(`\`${key}\`: no module of this service has that class name`);
+      continue;
+    }
+    const methods = known.filter((id) => id.startsWith(`${mod.id}.`)).map((id) => id.slice(mod.id.length + 1));
+    for (const name of Object.keys(o.operations ?? {})) {
+      if (!methods.some((m) => m.toLowerCase() === name.toLowerCase())) out.push(`\`${key}.${name}\`: ${mod.className} has no public method \`${name}\`${methods.length ? ` (it has ${methods.slice(0, 8).join(', ')})` : ''}`);
+    }
+  }
+  return out;
 }
 
 /** What `describe` reads from a profile: equal keys = nothing to re-apply. */

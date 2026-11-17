@@ -62,6 +62,7 @@ const LEGACY_API: Record<string, string[]> = {
   'api:GET /health': ['db.read raw sql'],
   'api:GET /metrics': [],
   'api:GET /api/v1/internal/manual-review/queue': ['db.read user_records'],
+  // controller → ManualReviewService (facade) → ConcludeManualReviewDecisionService (the work)
   'api:PUT /api/v1/internal/manual-review/approve/:guid': LEGACY_APPROVE,
   'api:PUT /api/v1/internal/manual-review/update/:guid': ['db.read user_records', 'db.write user_records', 'db.write manual_review_decisions'],
   'api:PUT /api/v1/internal/manual-review/reject/:guid': LEGACY_APPROVE,
@@ -73,14 +74,25 @@ const LEGACY_API: Record<string, string[]> = {
   'api:POST /api/v1/internal/user-records': ['db.write user_records'],
 };
 const LEGACY_MODULES = [
-  'AssignmentsService', 'AuditLogService', 'CommentsService', 'DateService', 'DocumentsService', 'EscalationsService', 'KmsService', 'ManualReviewService',
-  'MetricsService', 'NotificationsService', 'OutboxEventsService', 'ReportsService', 'RequestContextService', 'TagsService', 'UserRecordDataTransformer',
-  'UserRecordStatusService', 'UserRecordService',
+  'AssignmentsService', 'AuditEventsPublisher', 'AuditLogService', 'CommentsService', 'ConsumersManagerService', 'DateService', 'DocumentsService',
+  'DuplicateRecordsService', 'EscalationsService', 'KmsService', 'ConcludeManualReviewDecisionService', 'ManualReviewService', 'MetricsService',
+  'NotificationsService', 'OutboxEventsService', 'SyncedMessageService', 'ReportsService', 'RequestContextService', 'TagsService',
+  'UserRecordDataTransformer', 'UserRecordStatusService', 'UserRecordService',
+];
+/** Handler classes in the map that declare `handleMessages` themselves: modules until a profile rule makes them consumers. */
+const LEGACY_HANDLERS = [
+  'AddressVerifiedHandler', 'AgentAssignedHandler', 'CommentAddedHandler', 'ConsentWithdrawnHandler', 'DocumentDeletedHandler', 'DocumentUploadedHandler',
+  'EscalationRequestedHandler', 'IdentityVerifiedHandler', 'RecordDuplicateDetectedHandler', 'RecordLockedHandler', 'RecordUnlockedHandler',
+  'ReviewEscalatedHandler', 'ReviewNoteAddedHandler', 'ReviewReopenedHandler', 'RiskScoreChangedHandler', 'TagAddedHandler', 'TagRemovedHandler',
+  'UserDeletedHandler', 'UserMergedHandler', 'UserRecordCreatedHandler', 'UserRecordDataUpdatedHandler',
 ];
 const LEGACY_OPS: Record<string, string[]> = {
   // the changed one, on main: copies one record's data onto every row with update()
-  'ManualReviewService.approve': ['db.write user_records', 'db.write manual_review_decisions'],
-  'ManualReviewService.reject': ['db.write manual_review_decisions'],
+  'ConcludeManualReviewDecisionService.approve': ['db.write user_records', 'db.write manual_review_decisions'],
+  'ConcludeManualReviewDecisionService.reject': ['db.write manual_review_decisions'],
+  'ConcludeManualReviewDecisionService.correctData': ['db.write user_records', 'db.write manual_review_decisions'],
+  // the facade only hands over
+  'ManualReviewService.approveUserRecord': [],
   'UserRecordStatusService.setStatus': ['db.write user_records', 'db.write user_record_statuses'],
   'UserRecordService.getByGuid': ['db.read user_records'],
   'UserRecordService.create': ['db.write user_records'],
@@ -92,9 +104,11 @@ const LEGACY_SUMMARIES: Record<string, string> = {
   'api:PUT /api/v1/internal/manual-review/approve/:guid': 'api',
   'api:PUT /api/v1/internal/manual-review/update/:guid': 'api',
   'api:GET /health': 'none',
-  'ManualReviewService.approve': 'api',
+  'ManualReviewService.approveUserRecord': 'api',
   'ManualReviewService.updateUserRecordData': 'api',
   'ManualReviewService.getQueue': 'api',
+  // the worker behind the facade: the facade's description is context, not its own
+  'ConcludeManualReviewDecisionService.approve': 'none',
   'UserRecordStatusService.getHistory': 'api',
   // its endpoint calls two operations (getByGuidOrFail, then toDto): no single one to describe
   'UserRecordService.getByGuidOrFail': 'none',
@@ -104,6 +118,7 @@ const LEGACY_SUMMARIES: Record<string, string> = {
   'KmsService.encryptString': 'none',
   'UserRecordStatusService.setStatus': 'none',
 };
+const LEGACY_AUDIT = ['db.write audit_log'];
 
 const cases: Expected[] = [
   {
@@ -267,21 +282,24 @@ const cases: Expected[] = [
     // jobs picked by a command-line argument and in-house producer / outbox packages are reported as missing.
     project: LEGACY,
     frameworks: ['nestjs', 'nestjs-swagger', 'kafkajs', 'typeorm'],
-    modules: [...LEGACY_MODULES, 'UserRecordDataUpdatedHandler', 'UserRecordCreatedHandler', 'CommentAddedHandler', 'ReviewEscalatedHandler'],
+    modules: [...LEGACY_MODULES, ...LEGACY_HANDLERS],
     entries: LEGACY_API,
-    operations: { ...LEGACY_OPS, 'KmsService.encryptString': [], 'NotificationsService.notifyEscalation': [], 'OutboxEventsService.publish': [], 'UserRecordDataUpdatedHandler.handle': [] },
+    operations: { ...LEGACY_OPS, 'KmsService.encryptString': [], 'NotificationsService.notifyEscalation': [], 'OutboxEventsService.publish': [], 'DuplicateRecordsService.reportDuplicate': [], 'UserRecordDataUpdatedHandler.handleMessages': [] },
     pipelines: {
       'api:PUT /api/v1/internal/manual-review/approve/:guid': LEGACY_PIPELINE,
       // the e2e spec's app.useGlobalPipes() is the test app's, not the service's
       'api:GET /health': ['middleware RequestContextMiddleware (global)', 'interceptor RequestTimer (global)', 'pipe ValidationPipe (global)'],
     },
     summaries: LEGACY_SUMMARIES,
-    fieldDocs: { 'ManualReviewService.approve': ['decision.data', 'decision.checklist', 'decision.reason', 'returns.status', 'returns.recordsUpdated'] },
+    fieldDocs: { 'ManualReviewService.approveUserRecord': ['decision.data', 'decision.checklist', 'decision.reason', 'returns.status', 'returns.recordsUpdated'] },
     issues: ['missing-entry-points', 'unknown-side-effects'],
   },
   {
-    // The same service with the profile rules the first run suggests: consumers and jobs are entry points (their
-    // handler classes are no longer modules), producer, outbox and KMS calls are side effects.
+    // The same service with the profile rules the first run suggests: all 26 consumers of the handler map (5 inherit
+    // handleMessages from a feature-sync base and run their own syncFeature) and all 7 jobs (dynamic modules picked
+    // from a local object in bootstrap()) are entry points; the consumer names main.ts also reads from argv are not
+    // jobs. Producer, outbox and KMS calls are side effects, their targets followed back to the config key, the
+    // constructor field, the callers' argument or the factory that built the message.
     project: LEGACY,
     config: 'configs/user-records-service.rules/modulegraph.config.json',
     frameworks: ['nestjs', 'nestjs-swagger', 'kafkajs', 'typeorm'],
@@ -290,24 +308,61 @@ const cases: Expected[] = [
       ...LEGACY_API,
       'api:POST /api/v1/internal/assignments/:recordGuid': ['db.write review_assignments', 'kafka review-tools.agent-assigned.v1'],
       'api:POST /api/v1/internal/escalations/:recordGuid': ['db.write escalations', 'kafka review-tools.record-escalated.v1', 'db.write audit_log'],
-      'api:PUT /api/v1/internal/escalations/:id/resolve': ['db.read escalations', 'db.write escalations', ...LEGACY_APPROVE, 'http aws-kms', 'outbox <eventType>'],
-      'api:PUT /api/v1/internal/manual-review/approve/:guid': [...LEGACY_APPROVE, 'http aws-kms', 'outbox <eventType>'],
+      'api:PUT /api/v1/internal/escalations/:id/resolve': ['db.read escalations', 'db.write escalations', ...LEGACY_APPROVE, 'http aws-kms', 'outbox UserRecordApprovedNotification', 'outbox user_record.status_changed'],
+      'api:PUT /api/v1/internal/manual-review/approve/:guid': [...LEGACY_APPROVE, 'http aws-kms', 'outbox UserRecordApprovedNotification', 'outbox user_record.status_changed'],
       'api:PUT /api/v1/internal/manual-review/update/:guid': ['db.read user_records', 'db.write user_records', 'db.write manual_review_decisions', 'http aws-kms'],
-      'api:PUT /api/v1/internal/manual-review/reject/:guid': [...LEGACY_APPROVE, 'outbox <eventType>'],
-      'consumer:kafka consumer user-record-data-updated': ['db.read user_records', 'db.write user_records', 'db.write manual_review_decisions', 'http aws-kms'],
-      'consumer:kafka consumer user-record-created': ['db.write user_records'],
+      'api:PUT /api/v1/internal/manual-review/reject/:guid': [...LEGACY_APPROVE, 'outbox UserRecordRejectedNotification', 'outbox user_record.status_changed'],
+      'consumer:kafka consumer address-verified': LEGACY_AUDIT,
+      'consumer:kafka consumer agent-assigned': ['db.write review_assignments', 'kafka review-tools.agent-assigned.v1'],
       'consumer:kafka consumer comment-added': ['db.write comments', 'db.write audit_log'],
+      'consumer:kafka consumer consent-withdrawn': LEGACY_AUDIT,
+      'consumer:kafka consumer document-deleted': LEGACY_AUDIT,
+      'consumer:kafka consumer document-uploaded': LEGACY_AUDIT,
+      'consumer:kafka consumer escalation-requested': ['db.write escalations', 'kafka review-tools.record-escalated.v1', 'db.write audit_log'],
+      'consumer:kafka consumer identity-verified': LEGACY_AUDIT,
+      // topic: configService.get<KafkaTopicsConfig>('KAFKA_TOPICS').RECORD_DUPLICATE_FOUND, in a local const
+      'consumer:kafka consumer record-duplicate-detected': ['db.read user_records', 'kafka KAFKA_TOPICS.RECORD_DUPLICATE_FOUND'],
+      'consumer:kafka consumer record-locked': LEGACY_AUDIT,
+      'consumer:kafka consumer record-unlocked': LEGACY_AUDIT,
       'consumer:kafka consumer review-escalated': ['db.write escalations', 'kafka review-tools.record-escalated.v1', 'db.write audit_log'],
+      'consumer:kafka consumer review-note-added': ['db.write comments', 'db.write audit_log'],
+      'consumer:kafka consumer review-reopened': ['db.write comments', 'db.write audit_log'],
+      // topic: this.topic, set in the constructor
+      'consumer:kafka consumer risk-score-changed': ['kafka KAFKA_TOPICS.AUDIT_EVENTS'],
+      // inherited handleMessages → this.syncFeature() of each class
+      'consumer:kafka consumer sync-feature-assignments': ['db.write review_assignments', 'kafka review-tools.agent-assigned.v1', 'db.write audit_log'],
+      'consumer:kafka consumer sync-feature-comments': ['db.write comments', 'db.write audit_log'],
+      'consumer:kafka consumer sync-feature-documents': ['http {base}/v2/records/{recordGuid}/documents', 'db.write audit_log'],
+      'consumer:kafka consumer sync-feature-escalations': ['db.write escalations', 'kafka review-tools.record-escalated.v1', 'db.write audit_log'],
+      'consumer:kafka consumer sync-feature-tags': ['db.write record_tags', 'db.write audit_log'],
+      'consumer:kafka consumer tag-added': ['db.write record_tags'],
+      'consumer:kafka consumer tag-removed': ['db.write record_tags'],
+      'consumer:kafka consumer user-deleted': LEGACY_AUDIT,
+      'consumer:kafka consumer user-merged': LEGACY_AUDIT,
+      'consumer:kafka consumer user-record-created': ['db.write user_records'],
+      'consumer:kafka consumer user-record-data-updated': ['db.read user_records', 'db.write user_records', 'db.write manual_review_decisions', 'http aws-kms'],
       'cron:job stale-review-poller': ['db.read review_assignments', 'db.write escalations', 'kafka review-tools.record-escalated.v1', 'db.write audit_log', 'kafka review-tools.stale-reviews.v1'],
       'cron:job record-status-backfill': ['db.read user_records', 'db.write user_record_statuses'],
+      'cron:job duplicate-scan': ['db.read user_records', 'kafka KAFKA_TOPICS.RECORD_DUPLICATE_FOUND'],
+      'cron:job audit-log-retention': ['db.write audit_log'],
+      // topic: publishRaw(parameters) → parameters.topic → what its one caller passes
+      'cron:job manual-data-reencrypt': ['db.read user_records', 'http aws-kms', 'db.write user_records', 'kafka KAFKA_TOPICS.MANUAL_DATA_REENCRYPTED'],
+      'cron:job escalation-digest': ['db.read review_assignments', 'kafka review-tools.stale-reviews.v1'],
+      'cron:job tag-cleanup': ['db.read record_tags', 'db.write record_tags'],
     },
     operations: {
       ...LEGACY_OPS,
+      // outbox message built by SyncedMessageService.createSyncedMessage(guid, id, 'UserRecordApprovedNotification')
+      'ConcludeManualReviewDecisionService.approve': ['db.write user_records', 'db.write manual_review_decisions', 'outbox UserRecordApprovedNotification'],
+      'ConcludeManualReviewDecisionService.reject': ['db.write manual_review_decisions', 'outbox UserRecordRejectedNotification'],
       'KmsService.encryptString': ['http aws-kms'],
       'NotificationsService.notifyEscalation': ['kafka review-tools.record-escalated.v1'],
       'NotificationsService.notifyStaleReviews': ['kafka review-tools.stale-reviews.v1'],
-      // a wrapper: the event type is its parameter (docs/analyzers.md, known limits)
-      'OutboxEventsService.publish': ['outbox <eventType>'],
+      // a wrapper: the event type is its parameter; its one caller passes 'user_record.status_changed'
+      'OutboxEventsService.publish': ['outbox user_record.status_changed'],
+      'DuplicateRecordsService.reportDuplicate': ['kafka KAFKA_TOPICS.RECORD_DUPLICATE_FOUND'],
+      'AuditEventsPublisher.publish': ['kafka KAFKA_TOPICS.AUDIT_EVENTS'],
+      'AuditEventsPublisher.publishRaw': ['kafka KAFKA_TOPICS.MANUAL_DATA_REENCRYPTED'],
     },
     summaries: LEGACY_SUMMARIES,
     issues: [],

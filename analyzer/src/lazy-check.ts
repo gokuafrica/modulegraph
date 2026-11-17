@@ -44,9 +44,9 @@ for (const [projectRel, profile, branch, intent, fix] of [
   // A realistic in-house service: no profile (the first run), then with the rules that run suggests.
   ['sample-legacy-nest-service', '', 'fix/scope-manual-data-to-row', 'fix: scope manual data to each user record row',
     // normalize the agent's data before merging it (a new call)
-    ['sample-legacy-nest-service/src/manual-review/services/manual-review.service.ts', 'const merged = { ...row.data, ...agentData };', 'const merged = { ...row.data, ...this.userRecordDataTransformer.normalize(agentData) };']],
+    ['sample-legacy-nest-service/src/manual-review/services/conclude-manual-review-decision-service.ts', 'const merged = { ...row.data, ...agentData };', 'const merged = { ...row.data, ...this.userRecordDataTransformer.normalize(agentData) };']],
   ['sample-legacy-nest-service', 'user-records-service.rules', 'fix/scope-manual-data-to-row', 'fix: scope manual data to each user record row',
-    ['sample-legacy-nest-service/src/manual-review/services/manual-review.service.ts', 'const merged = { ...row.data, ...agentData };', 'const merged = { ...row.data, ...this.userRecordDataTransformer.normalize(agentData) };']],
+    ['sample-legacy-nest-service/src/manual-review/services/conclude-manual-review-decision-service.ts', 'const merged = { ...row.data, ...agentData };', 'const merged = { ...row.data, ...this.userRecordDataTransformer.normalize(agentData) };']],
 ] as const satisfies readonly (readonly [string, string, string, string, Fix])[]) {
   console.log(`\n${projectRel} ${branch}`);
   const projectDir = join(repo, projectRel).replace(/\\/g, '/');

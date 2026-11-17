@@ -493,11 +493,12 @@ h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color:
 .diff-nav-fn:hover, .diff-nav-fn.on { background: var(--hover); }
 .diff-nav-fn .fn-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .diff-main { overflow: auto; padding: 8px 14px; }
-.fn-row { display: flex; gap: 4px; align-items: baseline; width: 100%; background: transparent; border: 0; text-align: left; padding: 2px 0; color: var(--text); cursor: pointer; font-size: 12px; }
+.fn-row { display: flex; flex-wrap: wrap; gap: 0 4px; align-items: baseline; width: 100%; background: transparent; border: 0; text-align: left; padding: 2px 0; color: var(--text); cursor: pointer; font-size: 12px; }
 .fn-row .counts { margin-left: auto; flex-shrink: 0; white-space: nowrap; }
 /* Long helper names: ellipsis (full name on hover), and the file and +/- counts always stay visible. */
-.fn-row .fn-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
-.fn-row .fn-file { flex-shrink: 1; min-width: 3em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The function name never gives way: the file name ellipsizes first, or the file and counts go to a second line. */
+.fn-row .fn-name { flex: 0 0 auto; max-width: 100%; overflow-wrap: anywhere; }
+.fn-row .fn-file { flex: 1 1 0; min-width: 7em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fn-row .st { flex-shrink: 0; }
 .badge.contract-risk { background: transparent; border: 1px solid var(--line-strong); color: var(--muted); }
 .fn-row:hover b { text-decoration: underline; }
@@ -529,7 +530,17 @@ h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color:
 .checks-button { font-size: 12px; white-space: nowrap; background: transparent; color: var(--text); border: 1px solid var(--line-strong); }
 .checks-button.sev-error { border-color: var(--rem-border); color: var(--rem-fg); background: var(--rem-bg); }
 .checks-button.sev-warning { border-color: var(--mod-border); color: var(--mod-fg); background: var(--mod-bg); }
-.checks-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; width: 440px; max-height: 60vh; overflow: auto; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); }
+.checks-button.sev-incomplete { border-color: var(--mod-border); color: var(--mod-fg); background: var(--mod-bg); border-style: dashed; }
+.incomplete-block { border: 1px dashed var(--mod-border); border-radius: 6px; padding: 6px 8px; margin-bottom: 8px; background: var(--mod-bg); }
+.incomplete-title { font-weight: 600; font-size: 12px; margin-bottom: 6px; color: var(--mod-fg); }
+.incomplete-issue { margin: 6px 0 10px; font-size: 11.5px; }
+.incomplete-head { margin-bottom: 3px; }
+.incomplete-head code { font-size: 11px; padding: 0 4px; border-radius: 3px; background: var(--panel); }
+.incomplete-items { margin: 4px 0 4px 16px; padding: 0; font-size: 11px; overflow-wrap: anywhere; }
+.incomplete-suggestion { position: relative; margin-top: 4px; }
+.incomplete-suggestion pre { font-size: 10.5px; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 4px; padding: 6px; overflow-x: auto; margin: 3px 0 0; white-space: pre; }
+.incomplete-suggestion button { position: absolute; right: 4px; bottom: 4px; }
+.checks-pop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; width: min(620px, 80vw); max-height: 60vh; overflow: auto; background: var(--panel); border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); }
 
 /* Path: how you got here from the change, one click per step. */
 .path-step { display: inline-flex; align-items: center; gap: 6px; }
@@ -576,3 +587,6 @@ h4 { font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color:
 .missing-doc code, .missing-doc pre { font-size: 11px; }
 .missing-doc pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 0 6px; }
 .tests-tag { border: 1px dashed var(--line-strong); border-radius: 4px; padding: 0 4px; margin-right: 4px; }
+
+.context-summary { font-size: 12px; border-left: 3px dashed var(--line-strong); padding-left: 6px; color: var(--muted, inherit); }
+.context-summary .context-label { font-weight: 600; }

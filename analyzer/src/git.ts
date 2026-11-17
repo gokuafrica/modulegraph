@@ -108,7 +108,7 @@ export function diffBetween(repo: string, base: string, head: string | undefined
     });
 
   if (!head) {
-    const untracked = git(repo, ['ls-files', '--others', '--exclude-standard', '--', projectRel]).split('\n').filter(Boolean);
+    const untracked = git(repo, ['ls-files', '--others', '--exclude-standard', '--', projectRel, ...NOT_SOURCE]).split('\n').filter(Boolean);
     for (const path of untracked) {
       const text = readFileSync(join(repo, path), 'utf8');
       const lines = text.split('\n');
@@ -164,9 +164,15 @@ export function currentBranch(repo: string): string {
   return name === 'HEAD' ? 'HEAD' : name;
 }
 
+/**
+ * Never code under review, even in a repo whose .gitignore forgets them: installed packages and modulegraph's own
+ * temporary folder. (Untracked, a node_modules folder would make every installed file an added file.)
+ */
+const NOT_SOURCE = [':(exclude,glob)**/node_modules/**', ':(exclude,glob)**/.modulegraph-tmp/**'];
+
 /** Uncommitted edits (incl. untracked files) under `path` in the checkout. */
 export function hasLocalChanges(repo: string, path: string): boolean {
-  return git(repo, ['status', '--porcelain', '--untracked-files=all', '--', path]).trim().length > 0;
+  return git(repo, ['status', '--porcelain', '--untracked-files=all', '--', path, ...NOT_SOURCE]).trim().length > 0;
 }
 
 /**
@@ -176,7 +182,7 @@ export function hasLocalChanges(repo: string, path: string): boolean {
 export function workingStateKey(repo: string, refs: string[], path: string, workingTree: boolean): string {
   const shas = refs.map((r) => { try { return revParse(repo, r); } catch { return r; } });
   if (!workingTree) return shas.join(' ');
-  const status = git(repo, ['status', '--porcelain', '--untracked-files=all', '--', path]).split('\n').filter(Boolean);
+  const status = git(repo, ['status', '--porcelain', '--untracked-files=all', '--', path, ...NOT_SOURCE]).split('\n').filter(Boolean);
   const stamps = status.map((line) => {
     const file = line.slice(3).replace(/^.* -> /, '').replace(/^"|"$/g, '');
     try {

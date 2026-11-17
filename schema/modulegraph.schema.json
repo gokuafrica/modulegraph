@@ -412,6 +412,12 @@
             },
             "exists": {
               "type": "boolean"
+            },
+            "unmatched": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
             }
           },
           "required": [
@@ -419,7 +425,7 @@
             "exists"
           ],
           "additionalProperties": false,
-          "description": "The service profile this review used, or where to create one (`exists: false`), with the home folder as `~`:\nwhere descriptions and rules go. The UI names it in its \"add a description\" hints."
+          "description": "The service profile this review used, or where to create one (`exists: false`), with the home folder as `~`:\nwhere descriptions and rules go. The UI names it in its \"add a description\" hints. The service profile this review read (or would read). `unmatched`: descriptions in it that name no class or\nmethod of the service (a typo, or a display name instead of the class name): they are not shown anywhere."
         },
         "command": {
           "type": "string",
@@ -682,6 +688,23 @@
         "summaryFrom": {
           "type": "string",
           "description": "For `api`: which entry point's documentation, e.g. `@ApiOperation on PUT /api/v1/…`."
+        },
+        "context": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "from",
+            "summary"
+          ],
+          "additionalProperties": false,
+          "description": "No description of its own, but a described operation only hands over to this one (controller → facade → worker):\nthat operation and its description, shown as \"called through …\". Not this operation's description."
         },
         "params": {
           "type": "array",

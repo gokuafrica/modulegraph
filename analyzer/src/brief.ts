@@ -219,21 +219,35 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://127.0.0.
   }
   if (undescribed.length) {
     out.push(`No doc comment, no API docs, nothing in the profile. Read each and write one or two sentences (what it does, not how) into the profile, \`${profilePath}\`${s.profile?.exists ? '' : ' (it does not exist yet: create it with `"service": "' + g.service + '"`)'}, under \`modules.overrides.<Class>.operations.<method>\`, then refresh:`, '');
-    const first = changedUndescribed[0] ?? undescribed[0];
-    out.push('```json', `"modules": { "overrides": { "${g.modules[first.moduleId].className}": { "operations": { "${first.name}": "…" } } } }`, '```', '');
+    // The exact JSON, keyed by class name (not the shorter name the change headlines show), for every required one.
+    const byClass = new Map<string, string[]>();
+    for (const op of changedUndescribed.length ? changedUndescribed : undescribed.slice(0, 1)) {
+      const cls = g.modules[op.moduleId]?.className ?? op.moduleId;
+      byClass.set(cls, [...(byClass.get(cls) ?? []), op.name]);
+    }
+    const json = [...byClass].map(([cls, names]) => `    "${cls}": { "operations": { ${names.map((n) => `"${n}": "…"`).join(', ')} } }`).join(',\n');
+    out.push('```json', `"modules": {\n  "overrides": {\n${json}\n  }\n}`, '```', '');
+    const context = (op: (typeof undescribed)[number]) => (op.context ? `; only called through \`${op.context.from}\` ("${short(op.context.summary, 90)}"): say what this one adds` : '');
     if (changedUndescribed.length) {
       out.push(`**Required: ${changedUndescribed.length} changed operation${changedUndescribed.length > 1 ? 's' : ''}** (the reviewer starts here):`, '');
-      for (const op of changedUndescribed) out.push(`- \`${op.id}\` (${op.file}:${op.line}), ${op.change}`);
+      for (const op of changedUndescribed) out.push(`- \`${op.id}\` (${op.file}:${op.line}), ${op.change}${context(op)}`);
       out.push('');
     }
     const called = undescribed.filter((op) => op.change === 'unchanged');
     if (called.length) {
       out.push(`${changedUndescribed.length ? 'Also met in the flows' : 'Met in the flows'} (called by the change):`, '');
-      for (const op of called.slice(0, 20)) out.push(`- \`${op.id}\` (${op.file}:${op.line})`);
+      for (const op of called.slice(0, 20)) out.push(`- \`${op.id}\` (${op.file}:${op.line})${context(op)}`);
       if (called.length > 20) out.push(`- … ${called.length - 20} more`);
       out.push('');
     }
   } else if (fromDocs.length) out.push('');
+  const unmatched = s.profile?.unmatched ?? [];
+  if (unmatched.length) {
+    out.push('## Profile descriptions not applied', '');
+    out.push(`\`${profilePath}\` describes ${unmatched.length === 1 ? 'something' : `${unmatched.length} things`} this service does not have, so ${unmatched.length === 1 ? 'it shows' : 'they show'} nowhere. Key them by class name and method, as in the JSON above:`, '');
+    for (const u of unmatched) out.push(`- ${u}`);
+    out.push('');
+  }
 
   // ---------- routing and links ----------
   out.push('## Request review from', '');
@@ -312,3 +326,8 @@ function viaWhom(g: ModuleGraph, op: Operation, e: Effect): string {
 const sig = (ps: { name: string; type: string }[]) => ps.map((p) => `${p.name}: ${p.type}`).join(', ');
 const list = (xs: string[], n: number) => (xs.length > n ? `${xs.slice(0, n).join(', ')}, … ${xs.length - n} more` : xs.join(', ') || 'none found');
 const quote = (t: string) => `“${t.trim().replace(/\s+/g, ' ').slice(0, 600)}”`;
+
+/** At most `max` characters, with an ellipsis. */
+function short(text: string, max: number): string {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}

@@ -13,7 +13,7 @@
  * prune`, which would also drop the user's own worktrees whose folder is missing (on a detached drive, say).
  * The shipped demo graphs (ui/public/graphs) are never deleted.
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import type { ModuleGraph } from '../../schema/modulegraph.ts';
 import { git } from './git.ts';
@@ -121,6 +121,8 @@ export function endReview(files: ReviewFiles, opts: EndOptions = {}): string[] {
       removed.push(display(file));
     };
     del(files.json);
+    // Jest's output from recording examples (written next to the graph when the tests ran).
+    del(files.json.replace(/[.]json$/, '.tests.log'));
     if (!opts.keepBrief) del(files.brief);
     if (files.indexFile) removed.push(...dropFromIndex(files.indexFile, [files.id], opts.dryRun));
   }
@@ -154,6 +156,23 @@ function dropFromIndex(indexFile: string, ids: string[], dryRun?: boolean): stri
 
 // ---------- leftovers in a reviewed repo ----------
 
+/** Removes the `node_modules` links an analysis put into a temporary worktree (never what they point to). */
+function unlinkModuleLinks(dir: string, depth = 0): void {
+  if (depth > 6 || !existsSync(dir)) return;
+  for (const name of readdirSync(dir)) {
+    const path = join(dir, name);
+    let stat;
+    try {
+      stat = lstatSync(path);
+    } catch {
+      continue;
+    }
+    if (stat.isSymbolicLink()) {
+      if (name === 'node_modules') unlinkSync(path);
+    } else if (stat.isDirectory() && name !== 'node_modules' && name !== '.git') unlinkModuleLinks(path, depth + 1);
+  }
+}
+
 /** Paths of the repo's git worktrees, from git's own list (including those whose folder is gone). */
 function worktrees(repo: string): string[] {
   const out = tryGit(repo, ['worktree', 'list', '--porcelain']) ?? '';
@@ -173,6 +192,8 @@ export function cleanRepoTemp(repo: string, dryRun?: boolean): string[] {
   const pidOf = (p: string) => relative(norm(tmpRoot), norm(p)).replace(/\\/g, '/').split('/')[0];
   // Worktrees first (git must forget them), also those whose folder was deleted by hand.
   for (const wt of worktrees(repo).filter((w) => inside(tmpRoot, w) && deadPid(pidOf(w)))) {
+    // The checkout's node_modules are linked into it: unlink them first, so removing it never reaches into them.
+    if (!dryRun) unlinkModuleLinks(wt);
     if (!dryRun && tryGit(repo, ['worktree', 'remove', '--force', wt]) === undefined && existsSync(wt)) rmSync(wt, { recursive: true, force: true });
     removed.push(`git worktree ${wt}`);
   }

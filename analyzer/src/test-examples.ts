@@ -29,6 +29,8 @@ export interface TestExamplesResult {
   timedOut: boolean;
   /** Why nothing was recorded, when nothing was. */
   note?: string;
+  /** Jest's whole output (stderr, then stdout), for `<id>.tests.log`; empty when Jest did not run. */
+  log: string;
   ms: number;
 }
 
@@ -39,6 +41,7 @@ interface JestConfig {
   transform?: Record<string, string | [string, Record<string, unknown>]>;
   setupFilesAfterEnv?: string[];
   moduleDirectories?: string[];
+  modulePaths?: string[];
   [key: string]: unknown;
 }
 
@@ -133,7 +136,7 @@ export interface TestRunInput {
 /** Runs the selected specs with the service's Jest and turns what the instrumented module calls did into examples. */
 export function recordTestExamples(input: TestRunInput): TestExamplesResult {
   const started = Date.now();
-  const none = (note: string): TestExamplesResult => ({ examples: {}, cases: [], specs: [], tests: 0, timedOut: false, note, ms: Date.now() - started });
+  const none = (note: string): TestExamplesResult => ({ examples: {}, cases: [], specs: [], tests: 0, timedOut: false, note, log: '', ms: Date.now() - started });
   const found = jestConfigOf(input.projectRoot);
   if (!found) return none('no Jest config (package.json "jest" or jest.config.json/js) in the project');
   let jestBin: string;
@@ -157,14 +160,17 @@ export function recordTestExamples(input: TestRunInput): TestExamplesResult {
   const transform = Object.fromEntries(
     Object.entries(found.config.transform ?? { '^.+\\.[jt]sx?$': 'babel-jest' }).map(([pattern, inner]): [string, [string, Record<string, unknown>]] => [pattern, [join(here, 'test-examples/transformer.cjs'), { inner, from: input.installedProject, targets: targetsFile }]]),
   );
-  // In a worktree the service's own node_modules are not above the code: look there first.
+  // In a worktree, the checkout's node_modules are linked in (cli.ts), so modules resolve as they do there. As a last
+  // resort only, the installed folder: `modulePaths` is searched after normal resolution. Never put it first in
+  // `moduleDirectories`: an absolute folder there is searched before every nested node_modules, so a package gets
+  // the top-level copy of its dependency instead of its own (`path-scurry` getting `lru-cache` 5 instead of 10).
   const installedModules = join(input.installedProject, 'node_modules');
   const config: JestConfig = {
     ...found.config,
     rootDir,
     transform,
     setupFilesAfterEnv: [...(found.config.setupFilesAfterEnv ?? []), join(here, 'test-examples/setup.cjs')],
-    ...(resolve(input.projectRoot) !== resolve(input.installedProject) && existsSync(installedModules) ? { moduleDirectories: [installedModules, ...(found.config.moduleDirectories ?? ['node_modules'])] } : {}),
+    ...(resolve(input.projectRoot) !== resolve(input.installedProject) && existsSync(installedModules) ? { modulePaths: [...(found.config.modulePaths ?? []), installedModules] } : {}),
     collectCoverage: false,
   };
   const configFile = join(input.tmp, 'jest.config.json');
@@ -197,7 +203,25 @@ export function recordTestExamples(input: TestRunInput): TestExamplesResult {
     specs: ran.length ? ran : specs.map((s) => relative(input.projectRoot, s).replace(/\\/g, '/')),
     tests,
     timedOut,
-    ...(!used.length ? { note: timedOut ? `the tests did not finish within ${input.timeoutSeconds} s` : run.status !== 0 && !ran.length ? `jest failed: ${(run.stderr || String(run.error ?? '')).trim().split('\n').slice(-3).join(' ').slice(0, 300)}` : 'the selected tests call no module operation for real (everything is mocked)' } : {}),
+    ...(!used.length ? { note: timedOut ? `the tests did not finish within ${input.timeoutSeconds} s` : run.status !== 0 && !ran.length ? `jest failed: ${jestFailure(run.stderr || String(run.error ?? ''))}` : 'the selected tests call no module operation for real (everything is mocked)' } : {}),
+    log: `${run.stderr ?? ''}${run.stdout ? `\n--- stdout ---\n${run.stdout}` : ''}`,
     ms: Date.now() - started,
   };
+}
+
+/**
+ * Why Jest failed, in one line: the first suite that failed to run and its first error (`● … › Test suite failed to
+ * run` then `TypeError: Class extends value undefined …`), not the summary at the end, which says nothing.
+ */
+export function jestFailure(stderr: string): string {
+  const lines = stderr.split('\n').map((l) => l.trim());
+  const at = lines.findIndex((l) => /^●/.test(l));
+  if (at >= 0) {
+    const title = lines[at].replace(/^●\s*/, '');
+    const error = lines.slice(at + 1).find((l) => l && !/^(at |\d+ \||>|\^|\|)/.test(l) && l !== 'Test suite failed to run');
+    const spec = lines.slice(0, at).reverse().find((l) => /^FAIL /.test(l))?.slice(5);
+    return `${spec ? `${spec}: ` : ''}${title}${error ? `: ${error}` : ''}`.slice(0, 300);
+  }
+  const error = lines.find((l) => /(Error|error):/.test(l));
+  return (error ?? lines.filter(Boolean).slice(-3).join(' ')).slice(0, 300);
 }

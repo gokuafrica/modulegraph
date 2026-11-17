@@ -1,6 +1,6 @@
 #!/usr/bin/env -S npx tsx
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, realpathSync, rmdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, realpathSync, rmdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,7 +14,7 @@ import { appRoot, graphsDirFor, insideApp, profileDirs, uiDistDir, userConfigsDi
 import { brief } from './brief.ts';
 import { analysisIssues, issueLines } from './coverage.ts';
 import { endReview, recordRepo } from './cleanup.ts';
-import { describe, descriptionsKey } from './describe.ts';
+import { describe, descriptionsKey, unmatchedDescriptions } from './describe.ts';
 import { LazySession } from './lazy.ts';
 import { changeNames, jestConfigOf, recordTestExamples, type TestExamplesResult } from './test-examples.ts';
 import { type RefreshResult, serve } from './server.ts';
@@ -348,6 +348,15 @@ if (args.lazy) {
 }
 
 describe(output, config);
+{
+  // Descriptions the profile has for nothing (a wrong key) would vanish without a word: say which.
+  const unmatched = unmatchedDescriptions(config, Object.values(output.modules), headProject.knownOperations());
+  if (unmatched.length) {
+    output.source.profile = { ...(output.source.profile ?? { path: '', exists: true }), unmatched };
+    console.warn(`profile: ${unmatched.length} description${unmatched.length > 1 ? 's describe' : ' describes'} nothing in this service (use the class name, as in the brief's JSON):`);
+    for (const u of unmatched) console.warn(`  ${u}`);
+  }
+}
 
 // ---------- write ----------
 const briefFile = outFile.replace(/\.json$/, '') + '.brief.md';
@@ -378,7 +387,11 @@ const base = baseProject;
 // ---------- report ----------
 const r = output.review;
 const ops = Object.keys(output.operations).length;
-console.log(`\n${config.service}: ${Object.keys(output.modules).length} modules, ${ops} operations, ${Object.keys(output.entryPoints).length} entry points (${Date.now() - started} ms)`);
+// Registry handlers (consumers, jobs) are entry points, not modules: a run with those profile rules counts fewer
+// modules than one without, for the same code.
+const registered = Object.values(output.entryPoints).filter((e) => e.kind === 'consumer' || e.kind === 'cron').length;
+const counted = config.entryRegistries?.length && registered ? ` (handler classes the profile's entryRegistries list are counted as entry points, not modules)` : '';
+console.log(`\n${config.service}: ${Object.keys(output.modules).length} modules, ${ops} operations${output.lazy ? ' analyzed' : ''}, ${Object.keys(output.entryPoints).length} entry points${counted} (${Date.now() - started} ms)`);
 if (output.incomplete?.length) {
   // Before anything else: an incomplete analysis that reads like a clean one is how changes slip through.
   console.log('\nANALYSIS INCOMPLETE: what follows may be missing side effects, entry points or changes.');
@@ -573,6 +586,13 @@ function recordFromTests(g: Pick<ModuleGraph, 'operations' | 'modules' | 'scopes
     result = recordTestExamples({ projectRoot: join(codeRoot, projectRel).replace(/\\/g, '/'), installedProject: projectDir, targets, codeRoot, names, tmp, timeoutSeconds });
   });
   const r = result!;
+  // Jest's whole output next to the review: when nothing was recorded, the reason is in there.
+  const logFile = outFile.replace(/\.json$/, '') + '.tests.log';
+  if (r.log) {
+    mkdirSync(dirname(logFile), { recursive: true });
+    writeFileSync(logFile, r.log);
+  }
+  const note = r.note && r.log && !r.cases.length ? `${r.note} (Jest's output: ${logFile.replace(/\\/g, '/')})` : r.note;
   source.examples = {
     scenario: 'unit tests (mocked dependencies)',
     kind: 'tests',
@@ -581,17 +601,20 @@ function recordFromTests(g: Pick<ModuleGraph, 'operations' | 'modules' | 'scopes
     specs: r.specs,
     tests: r.tests,
     ...(r.timedOut ? { timedOut: true, timeoutSeconds } : {}),
-    ...(r.note ? { note: r.note } : {}),
+    ...(note ? { note } : {}),
   };
   console.log(r.cases.length
     ? `examples: ${r.cases.length} test case${r.cases.length === 1 ? '' : 's'} recorded for ${Object.keys(r.examples).length} operations, from ${r.specs.length} spec file${r.specs.length === 1 ? '' : 's'} (${(r.ms / 1000).toFixed(1)} s)${r.timedOut ? `; stopped after ${timeoutSeconds} s, so some are missing` : ''}`
-    : `examples: none recorded from tests: ${r.note}`);
+    : `examples: none recorded from tests: ${note}`);
   return r.examples;
 }
 
 /**
- * Runs `fn` with the head revision's code on disk: the checkout itself (working tree), or a temporary git worktree of
- * the head commit in <repo>/.modulegraph-tmp/<pid>/ (so node_modules above it resolve), removed afterwards.
+ * Runs `fn` with the head revision's code on disk: the checkout itself (the working tree, or the head commit when it
+ * is checked out with no edits in the project), else a temporary git worktree of the head commit in
+ * <repo>/.modulegraph-tmp/<pid>/, removed afterwards. The worktree gets links to the checkout's installed
+ * `node_modules` folders (the project's and the ones above it), so modules resolve exactly as in the checkout:
+ * nested copies first (`path-scurry/node_modules/lru-cache` 10 before a top-level `lru-cache` 5).
  */
 function withHeadCode(fn: (codeRoot: string, tmp: string) => void): void {
   // One folder per process: several analyses (npm run live) may record examples at the same time.
@@ -599,15 +622,26 @@ function withHeadCode(fn: (codeRoot: string, tmp: string) => void): void {
   mkdirSync(tmp, { recursive: true });
   let codeRoot = repo;
   let worktree: string | undefined;
+  const links: string[] = [];
   try {
-    if (headSha) {
+    const checkedOut = !!headSha && revParse(repo, 'HEAD') === headSha && !hasLocalChanges(repo, projectRel);
+    if (headSha && !checkedOut) {
       worktree = join(tmp, `wt-${headSha.slice(0, 10)}`).replace(/\\/g, '/');
       if (existsSync(worktree)) git(repo, ['worktree', 'remove', '--force', worktree]);
       git(repo, ['worktree', 'add', '--detach', worktree, headSha]);
       codeRoot = worktree;
+      links.push(...linkInstalledModules(repo, worktree, projectRel));
     }
     fn(codeRoot, tmp);
   } finally {
+    // Unlink first: removing the worktree must never reach into the checkout's node_modules.
+    for (const link of links) {
+      try {
+        unlinkSync(link);
+      } catch {
+        // already gone
+      }
+    }
     if (worktree) git(repo, ['worktree', 'remove', '--force', worktree]);
     rmSync(tmp, { recursive: true, force: true });
     // Leave no empty .modulegraph-tmp/ in the reviewed repo. rmdir only removes an empty folder: another run's
@@ -618,6 +652,28 @@ function withHeadCode(fn: (codeRoot: string, tmp: string) => void): void {
       // not empty, or already gone
     }
   }
+}
+
+/**
+ * Links (a junction on Windows) every installed `node_modules` of the checkout, from the project folder up to the
+ * repo root, into the same place in a worktree of it. Returns the links, for removal.
+ */
+function linkInstalledModules(repoRoot: string, worktree: string, project: string): string[] {
+  const out: string[] = [];
+  const parts = project ? project.split('/').filter(Boolean) : [];
+  for (let i = parts.length; i >= 0; i--) {
+    const rel = parts.slice(0, i).join('/');
+    const installed = join(repoRoot, rel, 'node_modules');
+    const link = join(worktree, rel, 'node_modules');
+    if (!existsSync(installed) || existsSync(link)) continue;
+    try {
+      symlinkSync(installed, link, 'junction');
+      out.push(link);
+    } catch (e) {
+      console.warn(`examples: could not link ${installed.split('\\').join('/')} into the temporary worktree (${(e as Error).message})`);
+    }
+  }
+  return out;
 }
 
 /** Runs the scenario against the head revision and returns the recorded calls per operation. */

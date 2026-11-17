@@ -136,7 +136,11 @@ export interface Source {
    * The service profile this review used, or where to create one (`exists: false`), with the home folder as `~`:
    * where descriptions and rules go. The UI names it in its "add a description" hints.
    */
-  profile?: { path: string; exists: boolean };
+  /**
+   * The service profile this review read (or would read). `unmatched`: descriptions in it that name no class or
+   * method of the service (a typo, or a display name instead of the class name): they are not shown anywhere.
+   */
+  profile?: { path: string; exists: boolean; unmatched?: string[] };
   /** The command that analyzes this review again, live (`modulegraph review …`): shown when the review is only a saved file. */
   command?: string;
   /** Which backend produced the graph and which framework adapters it used. */
@@ -207,6 +211,11 @@ export interface Operation {
   summarySource?: 'code' | 'profile' | 'api' | 'class';
   /** For `api`: which entry point's documentation, e.g. `@ApiOperation on PUT /api/v1/…`. */
   summaryFrom?: string;
+  /**
+   * No description of its own, but a described operation only hands over to this one (controller → facade → worker):
+   * that operation and its description, shown as "called through …". Not this operation's description.
+   */
+  context?: { from: string; summary: string };
   params: Param[];
   returns: TypeShape;
   /** Effects performed by this operation itself (incl. inlined non-module helpers). */

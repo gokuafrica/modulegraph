@@ -2,10 +2,13 @@
  * The review UI in a real (headless) browser, as a reviewer uses it, on the realistic sample
  * (sample-legacy-nest-service, branch fix/scope-manual-data-to-row, no profile):
  *   - `analyze` then `open <id>`: the review is live (● live, ↻ refresh, ✓ done) and the top bar fits on one line;
+ *   - the brief's verdict in the page: "incomplete analysis" in the top bar (never "all clear"), and the checks panel
+ *     lists missing-entry-points and unknown-side-effects with the profile JSON;
  *   - impact view: the Kafka handler that calls the change counts its side effects ("3 side effects, none changed");
  *   - flow of PUT …/approve/:guid: the business module, and the request pipeline as one folded node;
- *   - inspector on the changed operation: description from @ApiOperation, examples from unit tests, one risk wording,
- *     long helper names readable with their file and +/- counts visible;
+ *   - inspector on the changed worker operation (controller → facade → worker): the facade's @ApiOperation text as
+ *     context, not as its own description; examples from unit tests; one risk wording; function names never cut
+ *     (the long kebab-case file name gives way), +/- counts visible;
  *   - drill-in: now | before, code changes ± (2), the new db.read marked as added;
  *   - the server stops: the page says it is a saved file and what to run; `open --static` after a reload says why;
  *   - refresh: edit the code of a checked-out branch, the refresh button notices, a click re-analyzes.
@@ -116,13 +119,29 @@ async function main(): Promise<void> {
         return { text, labelHeights: labels.map((r) => Math.round(r.height)), labelTops: labels.map((r) => Math.round(r.top)), barHeight: Math.round(top.getBoundingClientRect().height) };
       });
       for (const t of ['● live', '↻ refresh', '✓ done']) if (!bar.text.includes(t)) fail(`top bar has no "${t}"`);
+      // R2-2: the brief says INCOMPLETE (no profile): so must the page.
+      const checks = await page.evaluate(() => {
+        const b = document.querySelector('.checks-button') as HTMLElement;
+        b.click();
+        return { text: b.textContent ?? '', cls: b.className };
+      });
+      await page.waitForSelector('.incomplete-block', { timeout: 5_000 }).catch(() => undefined);
+      const pop = await page.evaluate(() => ({
+        kinds: [...document.querySelectorAll('.incomplete-issue')].map((n) => n.getAttribute('data-kind')),
+        json: [...document.querySelectorAll('.incomplete-suggestion pre')].map((n) => n.textContent ?? '').join('\n'),
+      }));
+      if (!/incomplete/i.test(checks.text) || /all clear/.test(checks.text) || !checks.cls.includes('sev-incomplete')) fail(`top bar checks: "${checks.text}" (${checks.cls})`);
+      else if (!pop.kinds.includes('missing-entry-points') || !pop.kinds.includes('unknown-side-effects') || !pop.json.includes('"map": "ConsumerHandlerMap", "method": "handleMessages"')) fail(`checks panel: ${JSON.stringify(pop).slice(0, 300)}`);
+      else ok(`top bar: "${checks.text.trim()}"; panel lists ${pop.kinds.join(', ')} with the profile JSON`);
+      await shot(page, 'checks-incomplete');
+      await page.evaluate(() => (document.querySelector('.checks-button') as HTMLElement).click());
       if (bar.labelHeights.some((x) => x > 24) || new Set(bar.labelTops).size > 1) fail(`toggles wrap: heights ${bar.labelHeights.join(', ')}, tops ${bar.labelTops.join(', ')}`);
       else ok('top bar: ● live, ↻ refresh, ✓ done, toggles on one line');
       const handler = await nodeText(page, 'UserRecordDataUpdatedHandler');
       if (!/[1-9]\d* side effects?, none changed/.test(handler)) fail(`impact: the handler node says "${handler.slice(0, 120)}"`);
       else ok(`impact: ${/(\d+ side effects?, none changed)/.exec(handler)![1]} on the Kafka handler`);
       await shot(page, 'impact-update-d1');
-      await go(page, PORT, `v=impact&op=${encodeURIComponent('ManualReviewService.approve')}&d=2`);
+      await go(page, PORT, `v=impact&op=${encodeURIComponent('ConcludeManualReviewDecisionService.approve')}&d=2`);
       await shot(page, 'impact-approve-d2');
 
       await go(page, PORT, `v=flow&t=${encodeURIComponent('api:PUT /api/v1/internal/manual-review/approve/:guid')}`);
@@ -134,6 +153,7 @@ async function main(): Promise<void> {
       else ok(`flow: ${flow.modules.join(', ')} + one folded request pipeline node`);
       await shot(page, 'flow-approve');
 
+      await go(page, PORT, `v=impact&op=${encodeURIComponent('ConcludeManualReviewDecisionService.approve')}&d=1`);
       await page.evaluate(() => ([...document.querySelectorAll('.react-flow__node')].find((n) => n.textContent?.includes('.approve()')) as HTMLElement | undefined)?.click());
       await page.waitForSelector('.inspector', { timeout: 10_000 });
       await page.waitForTimeout(500);
@@ -143,17 +163,20 @@ async function main(): Promise<void> {
         const rows = [...panel.querySelectorAll('.fn-row')].map((r) => {
           const counts = r.querySelector('.counts')!.getBoundingClientRect();
           const file = r.querySelector('.fn-file')!.getBoundingClientRect();
-          return { text: r.textContent, countsVisible: counts.right <= right + 1 && counts.width > 0, fileVisible: file.width > 10 && file.right <= right + 1 };
+          const name = r.querySelector('.fn-name') as HTMLElement;
+          return { text: r.textContent, countsVisible: counts.right <= right + 1 && counts.width > 0, fileVisible: file.width > 10 && file.right <= right + 1, nameWhole: name.scrollWidth <= name.clientWidth + 1, name: name.textContent };
         });
         return { text: panel.textContent ?? '', rows };
       });
-      for (const t of ['change: medium', 'contract: low', 'from @ApiOperation', 'from unit tests (mocked dependencies)']) if (!insp.text.includes(t)) fail(`inspector has no "${t}"`);
+      for (const t of ['change: medium', 'contract: low', 'Called through ManualReview.approveUserRecord', 'context, not its own description', 'No description', 'from unit tests (mocked dependencies)']) if (!insp.text.includes(t)) fail(`inspector has no "${t}"`);
+      if (insp.text.includes('from @ApiOperation')) fail('inspector shows the facade\'s @ApiOperation text as the worker\'s own description');
+      if (insp.rows.some((r) => !r.nameWhole)) fail(`function names cut: ${insp.rows.filter((r) => !r.nameWhole).map((r) => r.name).join(', ')}`);
       if (/\bLOW RISK\b|low risk/.test(insp.text)) fail('inspector still says "low risk"');
       if (!insp.rows.length || insp.rows.some((r) => !r.countsVisible || !r.fileVisible)) fail(`code-change rows cut off: ${JSON.stringify(insp.rows)}`);
-      if (!failures) ok('inspector: @ApiOperation description, examples from tests, "change: medium" + "contract: low", readable rows');
+      if (!failures) ok('inspector: the facade\'s @ApiOperation as context (still needs its own), examples from tests, "change: medium" + "contract: low", function names whole');
       await shot(page, 'inspector-approve');
 
-      await go(page, PORT, `v=flow&t=${encodeURIComponent('api:PUT /api/v1/internal/manual-review/approve/:guid')}|${encodeURIComponent('ManualReviewService.approve')}`);
+      await go(page, PORT, `v=flow&t=${encodeURIComponent('api:PUT /api/v1/internal/manual-review/approve/:guid')}|${encodeURIComponent('ManualReviewService.approveUserRecord')}|${encodeURIComponent('ConcludeManualReviewDecisionService.approve')}`);
       const drill = await page.evaluate(() => ({
         seg: !!document.querySelector('.seg'),
         diff: document.querySelector('.diff-crumb')?.textContent ?? '',
@@ -204,13 +227,13 @@ async function refreshCheck(browser: Browser): Promise<void> {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await page.goto(`http://127.0.0.1:${port}/?r=1#g=${id}`);
     await page.waitForSelector('.lazy-badge.live', { timeout: 60_000 });
-    const file = join(wt, 'sample-legacy-nest-service/src/manual-review/services/manual-review.service.ts');
+    const file = join(wt, 'sample-legacy-nest-service/src/manual-review/services/conclude-manual-review-decision-service.ts');
     writeFileSync(file, readFileSync(file, 'utf8').replace('const merged = { ...row.data, ...agentData };', 'const merged = { ...row.data, ...this.userRecordDataTransformer.normalize(agentData) };'));
     if (!(await waitFor(async () => (await page.textContent('button.refresh'))?.includes('code changed: refresh') ?? false, 'the refresh prompt', 30_000))) return;
     ok('the edit is noticed: "↻ code changed: refresh"');
     await shot(page, 'refresh-prompt');
     await page.click('button.refresh');
-    if (await waitFor(async () => /Re-analyzed in .*manual-review\.service\.ts changed/.test((await page.textContent('.toast').catch(() => '')) ?? ''), 'the re-analysis', 60_000)) ok('refresh re-analyzed the edited file');
+    if (await waitFor(async () => /Re-analyzed in .*conclude-manual-review-decision-service\.ts changed/.test((await page.textContent('.toast').catch(() => '')) ?? ''), 'the re-analysis', 60_000)) ok('refresh re-analyzed the edited file');
     await page.close();
     await stop(port);
     await waitFor(async () => !(await health(port).catch(() => undefined)), 'the review server to stop', 15_000);

@@ -15,11 +15,12 @@ import {
   type FunctionExpression,
   type MethodDeclaration,
   type NewExpression,
+  type SourceFile,
   type Type,
 } from 'ts-morph';
 import type { AnalysisIssue, Edge, Effect, EntryPoint, Exit, Param, PipelineItem, Scope, Step, TypeShape } from '../../../../schema/modulegraph.ts';
 import type { CallMatch, Config, DecoratorEntryRule, DocDecoratorRule, EntryRule, RegistryEntryRule, ResponseRule, SinkRule } from '../../config.ts';
-import { argvScripts, CONSUMER_PACKAGES, EFFECT_METHOD, EFFECT_NAME, readPackageJson, registryKind, sinkKind, wraps } from './coverage-hints.ts';
+import { argvScripts, CONSUMER_PACKAGES, EFFECT_NAME, isEffectMethod, readPackageJson, registryKind, sinkKind, suggestedTarget, wraps } from './coverage-hints.ts';
 import { frameworks as allFrameworks } from './frameworks/index.ts';
 import { pipelineKey } from '../../compare.ts';
 import { dedupeEffects } from '../../effects.ts';
@@ -62,6 +63,16 @@ interface Site extends CallSite {
 interface EntrySite {
   at: Node;
   handler: Fn;
+  /** The class the handler runs as, when it inherits the method from a base class: `this.x()` means its `x`. */
+  thisClass?: ClassDeclaration;
+}
+
+/** One handler class a profile registry rule makes an entry point. */
+interface RegistryEntry {
+  rule: RegistryEntryRule;
+  label: string;
+  at: Node;
+  cls: ClassDeclaration;
 }
 
 /** Config rules plus every enabled framework adapter's rules, merged once per revision. */
@@ -175,10 +186,14 @@ export class Extractor implements RevisionAnalysis {
 
   /**
    * The service's own source files, without its tests: an e2e spec's `app.useGlobalPipes(…)` or `setGlobalPrefix`
-   * sets up a test app, not the service's pipeline, and a spec's classes and mocks are not modules.
+   * sets up a test app, not the service's pipeline, and a spec's classes and mocks are not modules. Developer scripts
+   * (`.local/scripts/publish-message.ts`, a top-level `scripts/`) are not the service either.
    */
   private projectFiles() {
-    return (this.projectFileList ??= this.project.getSourceFiles().filter((f) => this.isProjectFile(f.getFilePath()) && !isTestFile(relative(this.projectDir, f.getFilePath()).replace(/\\/g, '/'))));
+    return (this.projectFileList ??= this.project.getSourceFiles().filter((f) => {
+      const rel = relative(this.projectDir, f.getFilePath()).replace(/\\/g, '/');
+      return this.isProjectFile(f.getFilePath()) && !isTestFile(rel) && !isDevFile(rel);
+    }));
   }
   private projectFileList?: ReturnType<Project['getSourceFiles']>;
 
@@ -225,7 +240,7 @@ export class Extractor implements RevisionAnalysis {
         }
       }
     }
-    for (const method of this.registryIndex().keys()) this.decoratorEntryOf(method);
+    for (const method of this.registryIndex().keys()) this.registryEntriesOf(method);
   }
 
   /** Analyzes an operation (its own scope); `deep` also analyzes everything it calls, recursively. */
@@ -323,7 +338,7 @@ export class Extractor implements RevisionAnalysis {
     for (const h of this.rules.hooks) {
       const consumers = h.consumersAt?.(node, ctx);
       if (consumers?.length) {
-        return consumers.flatMap((c) => (this.moduleIds.has(c) ? this.publicMethods(c).map((m) => this.opIdOf(c, m.getName())) : c.getMethods().map((m) => this.decoratorEntryOf(m)).filter((x): x is string => !!x)));
+        return consumers.flatMap((c) => (this.moduleIds.has(c) ? this.publicMethods(c).map((m) => this.opIdOf(c, m.getName())) : c.getMethods().flatMap((m) => this.entriesOfMethod(m))));
       }
     }
     // A class decorator (`@Controller('orders')`, `@UseGuards(X)`) belongs to every handler in the class.
@@ -338,7 +353,7 @@ export class Extractor implements RevisionAnalysis {
    * Scopes whose steps would include something located at `node`: the entry handler or operation around it,
    * and, for helpers that get inlined, everything that calls the helper.
    */
-  scopesAt(node: Node, seen = new Set<Node>()): string[] {
+  scopesAt(node: Node, seen = new Set<Node>(), thisClass?: ClassDeclaration): string[] {
     // Inside a guard, interceptor or middleware, or in the code that applies one: every entry point behind it.
     if (!this.listed) this.listEntryPoints();
     for (let cur: Node | undefined = node; cur; cur = cur.getParent()) {
@@ -351,8 +366,8 @@ export class Extractor implements RevisionAnalysis {
         if (id) return [id];
       }
       if (Node.isMethodDeclaration(cur)) {
-        const id = this.decoratorEntryOf(cur);
-        if (id) return [id];
+        const ids = this.entriesOfMethod(cur, thisClass);
+        if (ids.length) return ids;
       }
       if (isFnNode(cur) && !isAnonymous(cur)) break;
     }
@@ -361,10 +376,13 @@ export class Extractor implements RevisionAnalysis {
     if (!fn || seen.has(fn)) return [];
     seen.add(fn);
     const out: string[] = [];
+    let helperClass = thisClass;
     if (Node.isMethodDeclaration(fn)) {
-      const entry = this.decoratorEntryOf(fn);
-      if (entry) return [entry];
+      const entries = this.entriesOfMethod(fn, thisClass);
+      if (entries.length) return entries;
       const cls = fn.getParent();
+      // An override called as `this.x()` from a base class method: only the handlers running as this class reach it.
+      if (Node.isClassDeclaration(cls) && !thisClass) helperClass = cls;
       // An operation is its own scope. Callers (in this class or another) have it as a step, not inlined, so
       // a change inside it does not change them.
       if (Node.isClassDeclaration(cls) && this.moduleIds.has(cls) && this.isOperation(fn)) return [this.opIdOf(cls, fn.getName())];
@@ -372,7 +390,11 @@ export class Extractor implements RevisionAnalysis {
     // A helper (private method, function, arrow in a variable): inlined wherever it is called.
     const named = Node.isVariableDeclaration(fn.getParent()) ? fn.getParent()! : fn;
     const refs = 'findReferencesAsNodes' in named ? (named as unknown as { findReferencesAsNodes(): Node[] }).findReferencesAsNodes() : [];
-    for (const ref of refs) out.push(...this.scopesAt(ref, seen));
+    for (const ref of refs) {
+      const refClass = ref.getFirstAncestor((n) => Node.isClassDeclaration(n)) as ClassDeclaration | undefined;
+      const viaBase = helperClass && refClass && refClass !== helperClass && isSubclassOf(helperClass, refClass);
+      out.push(...this.scopesAt(ref, seen, viaBase ? helperClass : thisClass));
+    }
     return [...new Set(out)];
   }
 
@@ -401,23 +423,34 @@ export class Extractor implements RevisionAnalysis {
 
   // ---------- in-house registrations (profile `entryRegistries`) ----------
 
-  private registryMemo?: Map<MethodDeclaration, { rule: RegistryEntryRule; label: string; at: Node }>;
+  private registryMemo?: Map<MethodDeclaration, RegistryEntry[]>;
 
-  /** Handler methods the profile's registry rules make entry points, with their labels. Computed once. */
-  private registryIndex(): Map<MethodDeclaration, { rule: RegistryEntryRule; label: string; at: Node }> {
+  /**
+   * Handler methods the profile's registry rules make entry points, with their labels. Computed once. Several
+   * handler classes may share one method they inherit from a base class (`handleMessages` on a feature-sync base):
+   * each class is an entry point of its own.
+   */
+  private registryIndex(): Map<MethodDeclaration, RegistryEntry[]> {
     if (this.registryMemo) return this.registryMemo;
-    const out = new Map<MethodDeclaration, { rule: RegistryEntryRule; label: string; at: Node }>();
+    const out = new Map<MethodDeclaration, RegistryEntry[]>();
     this.registryMemo = out;
+    const seen = new Map<ClassDeclaration, Set<MethodDeclaration>>();
     for (const rule of this.rules.registries) {
       const methods = (rule.method ?? (rule.argv ? 'onApplicationBootstrap|onModuleInit|run' : 'handle')).split('|');
+      // Through the base classes: a handler may inherit its method (methodOf walks the chain).
       const handlersOf = (cls: ClassDeclaration) =>
         methods.map((m) => methodOf(cls, m)).filter((m): m is MethodDeclaration => !!m && this.isProjectFile(m.getSourceFile().getFilePath()));
       const add = (cls: ClassDeclaration, key: string, at: Node, qualify: boolean) => {
         const handlers = handlersOf(cls);
         for (const m of handlers) {
-          if (out.has(m)) continue;
+          const done = seen.get(cls) ?? new Set<MethodDeclaration>();
+          seen.set(cls, done);
+          if (done.has(m)) continue;
+          done.add(m);
           const base = this.fill(rule.label, [], { key, class: cls.getName() ?? '?', method: m.getName() });
-          out.set(m, { rule, label: qualify || handlers.length > 1 ? `${base} (${cls.getName()}.${m.getName()})` : base, at });
+          const list = out.get(m) ?? [];
+          out.set(m, list);
+          list.push({ rule, label: qualify || handlers.length > 1 ? `${base} (${cls.getName()}.${m.getName()})` : base, at, cls });
         }
       };
       const listed = new Set<ClassDeclaration>();
@@ -479,7 +512,8 @@ export class Extractor implements RevisionAnalysis {
 
   /**
    * Modules a bootstrap file starts per command-line argument: `NestFactory.createApplicationContext(JOBS[arg])` with
-   * `JOBS = { 'some-poller': SomePollerModule }`, or `case 'some-poller':` / `if (arg === 'some-poller')` around
+   * `JOBS = { 'some-poller': SomePollerModule }` (top-level or a local const), `NestFactory.create(modules[command].register())`
+   * (dynamic modules), or `case 'some-poller':` / `if (arg === 'some-poller')` around
    * `NestFactory.createApplicationContext(SomePollerModule)`. The app started without an argument is not listed.
    */
   private argvModules(fileRel: string): { key: string; module: ClassDeclaration; at: Node }[] {
@@ -490,7 +524,13 @@ export class Extractor implements RevisionAnalysis {
     for (const call of file.getDescendantsOfKind(SyntaxKind.CallExpression)) {
       if (!/(^|\.)(create|createApplicationContext|createMicroservice)$/.test(call.getExpression().getText()) || !/NestFactory/.test(call.getExpression().getText())) continue;
       let arg: Node | undefined = call.getArguments()[0] && unwrap(call.getArguments()[0]);
-      for (let depth = 0; arg && depth < 4; depth++) {
+      for (let depth = 0; arg && depth < 5; depth++) {
+        // A dynamic module (`JobModule.register()`, `modules[command].register()`): the module is the receiver.
+        const callee = Node.isCallExpression(arg) ? arg.getExpression() : undefined;
+        if (callee && Node.isPropertyAccessExpression(callee) && /^(register|registerAsync|forRoot|forRootAsync|forFeature)$/.test(callee.getName())) {
+          arg = unwrap(callee.getExpression());
+          continue;
+        }
         if (Node.isIdentifier(arg)) {
           const decl = this.resolveDeclaration(arg);
           if (decl && Node.isClassDeclaration(decl)) {
@@ -518,13 +558,24 @@ export class Extractor implements RevisionAnalysis {
     return out;
   }
 
-  /** Classes a Nest `@Module({ providers: [...] })` declares (`X`, `{ provide, useClass: X }`). */
+  /**
+   * Classes a Nest module declares as providers (`X`, `{ provide, useClass: X }`): in `@Module({ providers })`, and in
+   * what its static methods return (a dynamic module: `static register(): DynamicModule { return { providers } }`).
+   */
   private moduleProviders(module: ClassDeclaration): ClassDeclaration[] {
-    const opts = module.getDecorator('Module')?.getArguments()[0];
-    const list = opts && Node.isObjectLiteralExpression(opts) ? opts.getProperty('providers') : undefined;
-    const items = list && Node.isPropertyAssignment(list) ? list.getInitializer() : undefined;
-    if (!items || !Node.isArrayLiteralExpression(items)) return [];
-    return items.getElements().flatMap((el) => {
+    const objects: Node[] = [module.getDecorator('Module')?.getArguments()[0]].filter((n): n is Node => !!n);
+    for (const m of module.getStaticMethods()) {
+      for (const ret of m.getDescendantsOfKind(SyntaxKind.ReturnStatement)) {
+        const e = ret.getExpression();
+        if (e && Node.isObjectLiteralExpression(unwrap(e))) objects.push(unwrap(e));
+      }
+    }
+    const elements = objects.flatMap((opts) => {
+      const list = Node.isObjectLiteralExpression(opts) ? opts.getProperty('providers') : undefined;
+      const items = list && Node.isPropertyAssignment(list) ? list.getInitializer() : undefined;
+      return items && Node.isArrayLiteralExpression(items) ? items.getElements() : [];
+    });
+    return [...new Set(elements.flatMap((el) => {
       if (Node.isObjectLiteralExpression(el)) {
         const use = el.getProperty('useClass');
         const cls = use && Node.isPropertyAssignment(use) ? this.classOf(use.getInitializer()!) : undefined;
@@ -532,7 +583,7 @@ export class Extractor implements RevisionAnalysis {
       }
       const cls = this.classOf(el);
       return cls ? [cls] : [];
-    });
+    }))];
   }
 
   // ---------- what the analysis probably misses ----------
@@ -551,41 +602,63 @@ export class Extractor implements RevisionAnalysis {
     if (!this.listed) this.listEntryPoints();
     const ignore = new Set(this.config.coverage?.ignore ?? []);
     const pkg = readPackageJson(this.projectDir);
-    const deps = Object.keys({ ...pkg.dependencies, ...pkg.peerDependencies });
+    // Only packages the service's own code uses for their values: a type-only import (`import type`, or a name used
+    // only in types) runs nothing, and a developer script (`.local/`, `scripts/`) is not the service.
+    const deps = Object.keys({ ...pkg.dependencies, ...pkg.peerDependencies }).filter((d) => !ignore.has(d) && this.valueImporters(d).length);
     const entries = Object.values(this.snapshot.entryPoints);
     const items: string[] = [];
     const rules: string[] = [];
 
     // 1. A broker client, directly or through a wrapper, and no consumer.
-    const brokers = deps.filter((d) => !ignore.has(d)).flatMap((d) => (CONSUMER_PACKAGES.has(d) ? [{ dep: d, via: '' }] : wraps(this.projectDir, d).filter((m) => CONSUMER_PACKAGES.has(m)).map((m) => ({ dep: m, via: d }))));
+    const brokers = deps.flatMap((d) => (CONSUMER_PACKAGES.has(d) ? [{ dep: d, via: '' }] : wraps(this.projectDir, d).filter((m) => CONSUMER_PACKAGES.has(m)).map((m) => ({ dep: m, via: d }))));
     const consumers = entries.filter((e) => e.kind === 'consumer').length;
     if (brokers.length && !consumers) {
       const names = [...new Set(brokers.map((b) => (b.via ? `${b.via} (wraps ${b.dep})` : b.dep)))];
       items.push(`package.json depends on ${names.join(', ')}, but no consumer entry point was found: consumers registered through a wrapper or a handler map are not seen, nor anything they reach`);
     }
-    // 2. Handler maps: a Map / object literal of classes that share a method (and usually a base class).
+    // 2. Handler maps: a Map / object literal of classes that share a method, own or inherited.
     const covered = new Set(this.rules.registries.flatMap((r) => (r.map ? [r.map] : [])));
+    const mapped = new Set<ClassDeclaration>();
+    const handlerKeys = new Set<string>();
     for (const file of this.projectFiles()) {
       for (const decl of file.getVariableDeclarations()) {
         const name = decl.getName();
-        if (covered.has(name) || ignore.has(name)) continue;
         const list = this.literalEntries(decl.getInitializer());
         const classes = list.map((i) => this.classOf(i.value)).filter((c): c is ClassDeclaration => !!c && this.isProjectFile(c.getSourceFile().getFilePath()));
         if (list.length < 2 || classes.length !== list.length || classes.some((c) => c.getDecorator('Module'))) continue;
-        if (classes.some((c) => c.getMethods().some((m) => this.decoratorEntryOf(m)))) continue;
-        const common = classes.map((c) => new Set(c.getMethods().filter((m) => this.isOperation(m)).map((m) => m.getName()))).reduce((a, b) => new Set([...a].filter((x) => b.has(x))));
-        const method = ['handle', 'process', 'execute', 'run', 'consume', 'onMessage'].find((m) => common.has(m)) ?? [...common][0];
-        if (!method) continue;
-        const bases = [...new Set(classes.map((c) => c.getExtends()?.getExpression().getText()).filter(Boolean))];
+        for (const c of classes) mapped.add(c);
+        for (const i of list) handlerKeys.add(i.key);
+        if (covered.has(name) || ignore.has(name)) continue;
+        if (classes.some((c) => c.getMethods().some((m) => this.entriesOfMethod(m).length))) continue;
+        const { method, base, inherited } = this.sharedHandler(classes);
+        const bases = base ? [base.getName() ?? '?'] : [...new Set(classes.map((c) => c.getExtends()?.getExpression().getText()).filter(Boolean))];
         const kind = registryKind(`${name} ${bases.join(' ')}`);
         const label = kind === 'consumer' && brokers.some((b) => /kafka/.test(b.dep)) ? 'kafka consumer {key}' : `${kind} {key}`;
-        items.push(`${this.rel(file.getFilePath())}: \`${name}\` maps ${list.length} names to classes${bases.length === 1 ? ` extending ${bases[0]}` : ''} with \`${method}()\` (${list.slice(0, 4).map((i) => `'${i.key}'`).join(', ')}${list.length > 4 ? ', …' : ''}): none of them is an entry point`);
-        rules.push(`{ "map": "${name}", "method": "${method}", "kind": "${kind}", "label": "${label}" }`);
+        const registers = base ? this.selfRegistration(base) : undefined;
+        items.push(`${this.rel(file.getFilePath())}: \`${name}\` maps ${list.length} names to classes${bases.length === 1 ? ` extending ${bases[0]}` : ''}${registers ? ` (which registers every instance: ${registers})` : ''}${method ? ` with \`${method}()\`${inherited ? ` (${inherited} of them inherit it)` : ''}` : ''} (${list.slice(0, 4).map((i) => `'${i.key}'`).join(', ')}${list.length > 4 ? ', …' : ''}): none of them is an entry point${method ? '' : '; they share no public method: set "method" to the one the consumer calls'}`);
+        rules.push(`{ "map": "${name}", "method": "${method ?? 'handle'}", "kind": "${kind}", "label": "${label}" }`);
       }
     }
-    // 3. Jobs: scripts that start the app with an argument, and the file that reads it.
+    // 2b. Handlers that register themselves (`manager.addHandler(this)` in a base class constructor), in no map.
+    const ruledBases = new Set(this.rules.registries.flatMap((r) => (r.extends ? [r.extends] : [])));
+    for (const file of this.projectFiles()) {
+      for (const base of file.getClasses()) {
+        const name = base.getName();
+        if (!name || !base.isAbstract() || ruledBases.has(name) || ignore.has(name)) continue;
+        const registers = this.selfRegistration(base, false);
+        if (!registers) continue;
+        const subs = this.projectFiles().flatMap((f) => f.getClasses()).filter((c) => !c.isAbstract() && isSubclassOf(c, base) && !mapped.has(c));
+        if (subs.length < 2 || subs.some((c) => c.getMethods().some((m) => this.entriesOfMethod(m).length))) continue;
+        const { method } = this.sharedHandler(subs);
+        const kind = registryKind(name);
+        items.push(`${this.rel(file.getFilePath())}: ${subs.length} classes extend ${name}, which registers every instance (${registers}), with \`${method ?? '?'}()\` (${subs.slice(0, 3).map((c) => c.getName()).join(', ')}${subs.length > 3 ? ', …' : ''}): none of them is an entry point`);
+        rules.push(`{ "extends": "${name}", "method": "${method ?? 'handle'}", "kind": "${kind}", "label": "${kind} {key}" }`);
+      }
+    }
+    // 3. Jobs: scripts that start the app with an argument, and the file that reads it. An argument that names
+    //    handlers of a map (`nest start -- a-consumer,another`) selects consumers: not a job.
     const argvRuled = this.rules.registries.some((r) => r.argv);
-    const scripts = argvScripts(pkg).filter((s) => !ignore.has(s.script) && !ignore.has(s.arg) && !entries.some((e) => e.label.includes(s.arg)));
+    const scripts = argvScripts(pkg).filter((s) => !ignore.has(s.script) && !ignore.has(s.arg) && !entries.some((e) => e.label.includes(s.arg)) && !s.arg.split(',').every((a) => handlerKeys.has(a)));
     if (scripts.length && !argvRuled) {
       const reader = this.projectFiles().find((f) => /process\.argv/.test(f.getFullText()) && /NestFactory|bootstrap/.test(f.getFullText()));
       const where = reader ? relative(this.projectDir, reader.getFilePath()).replace(/\\/g, '/') : 'src/main.ts';
@@ -607,15 +680,14 @@ export class Extractor implements RevisionAnalysis {
     // 4. Packages that look like producers, outboxes, queues or cloud clients, which no adapter or rule describes.
     const known = new Set([...allFrameworks.flatMap((f) => [...f.packages, ...(f.sinks ?? []).flatMap((s) => (s.module ?? '').split('|'))]), ...this.rules.sinks.flatMap((s) => (s.module ?? '').split('|'))].filter(Boolean));
     const sinkClasses = new Set(this.rules.sinks.flatMap((s) => (s.class ?? '').split('|')).filter(Boolean));
-    const suspects = deps.filter((d) => !known.has(d) && !ignore.has(d) && (EFFECT_NAME.test(d) || wraps(this.projectDir, d).length));
+    const suspects = deps.filter((d) => !known.has(d) && (EFFECT_NAME.test(d) || wraps(this.projectDir, d).length));
     const fxItems: string[] = [];
     const sinks: string[] = [];
     for (const dep of suspects) {
-      const files = this.projectFiles().filter((f) => f.getImportDeclarations().some((i) => { const s = i.getModuleSpecifierValue(); return s === dep || s.startsWith(`${dep}/`); }));
-      if (!files.length) continue;
+      const files = this.valueImporters(dep);
       const imported = new Set(files.flatMap((f) => f.getImportDeclarations().filter((i) => i.getModuleSpecifierValue() === dep || i.getModuleSpecifierValue().startsWith(`${dep}/`)).flatMap((i) => i.getNamedImports().map((n) => n.getName()))));
       if ([...imported].some((n) => sinkClasses.has(n))) continue;
-      const calls = new Map<string, { n: number; owner: string; method: string; arg: number }>();
+      const calls = new Map<string, { n: number; owner: string; method: string; target: string }>();
       for (const f of files) {
         for (const call of f.getDescendantsOfKind(SyntaxKind.CallExpression)) {
           const site = this.site(call);
@@ -623,22 +695,17 @@ export class Extractor implements RevisionAnalysis {
           const ownerType = site.receiver?.getType().getSymbol()?.getName();
           const fromDep = site.pkg === dep || (!!ownerType && imported.has(ownerType));
           if (!fromDep || !site.name || site.name === 'new') continue;
-          const owner = ownerType && imported.has(ownerType) ? ownerType : site.owner;
+          const owner = ownerType && (imported.has(ownerType) || site.pkg === dep) && site.receiver?.getType().isClass() ? ownerType : site.owner;
           const key = `${owner}.${site.name}`;
-          const decl = site.decl;
-          const params = Node.isMethodDeclaration(decl) || Node.isMethodSignature(decl) ? decl.getParameters() : [];
-          const arg = params.findIndex((p) => p.getType().isString());
           const prev = calls.get(key);
-          calls.set(key, { n: (prev?.n ?? 0) + 1, owner, method: site.name, arg });
+          calls.set(key, { n: (prev?.n ?? 0) + 1, owner, method: site.name, target: prev?.target ?? suggestedTarget(site.decl, dep) });
         }
       }
       const via = wraps(this.projectDir, dep);
-      const effectful = [...calls.values()].filter((c) => EFFECT_METHOD.test(c.method));
+      const effectful = [...calls.values()].filter((c) => isEffectMethod(c.method));
       fxItems.push(`${dep}${via.length ? ` (wraps ${via.join(', ')})` : ''}: ${calls.size ? [...calls.entries()].map(([k, c]) => `${k}${c.n > 1 ? ` ×${c.n}` : ''}`).join(', ') : `${[...imported].join(', ')} imported`} in ${files.map((f) => this.rel(f.getFilePath())).slice(0, 2).join(', ')}${files.length > 2 ? ', …' : ''}`);
       for (const c of effectful) {
-        const kind = sinkKind(dep, c.owner);
-        const target = c.arg >= 0 ? `arg:${c.arg}` : `const:${dep.replace(/^@[^/]+\//, '').replace(/^client-/, '')}`;
-        sinks.push(`{ "class": "${c.owner}", "module": "${dep}", "method": "${c.method}", "kind": "${kind}", "target": "${target}" }`);
+        sinks.push(`{ "class": "${c.owner}", "module": "${dep}", "method": "${c.method}", "kind": "${sinkKind(dep, c.owner)}", "target": "${c.target}" }`);
       }
     }
     if (fxItems.length) {
@@ -646,13 +713,62 @@ export class Extractor implements RevisionAnalysis {
         kind: 'unknown-side-effects',
         message: `${fxItems.length} package${fxItems.length > 1 ? 's look' : ' looks'} like ${fxItems.length > 1 ? 'producers, outboxes or cloud clients' : 'a producer, an outbox or a cloud client'}, but no adapter or profile rule describes ${fxItems.length > 1 ? 'them' : 'it'}: calls into ${fxItems.length > 1 ? 'them' : 'it'} are not side effects in this review (no Kafka topic, outbox event or external call is shown for them).`,
         hint: sinks.length
-          ? 'Describe the calls that publish, write or call out as `sinks` in the service\'s profile (suggested below: check the kind and which argument names the topic or event), then analyze again. A package without side effects: add it to `coverage.ignore`.'
+          ? 'Describe the calls that publish, write or call out as `sinks` in the service\'s profile (suggested below: check the kind and which argument names the topic or event; factories such as `producer()` and `connect()` are left out), then analyze again. A package without side effects: add it to `coverage.ignore`.'
           : 'Describe their calls as `sinks` in the service\'s profile (docs/analyzers.md), or add the package to `coverage.ignore`.',
         items: fxItems,
         ...(sinks.length ? { suggestion: `"sinks": [\n  ${sinks.join(',\n  ')}\n]` } : {}),
       });
     }
     return out;
+  }
+
+  /** Project files that import `dep` (or a subpath) for its values: `import type` and names used only as types don't count. */
+  private valueImporters(dep: string): SourceFile[] {
+    const memo = (this.importersMemo ??= new Map<string, SourceFile[]>());
+    if (!memo.has(dep)) {
+      memo.set(dep, this.projectFiles().filter((f) => f.getImportDeclarations().some((i) => {
+        const s = i.getModuleSpecifierValue();
+        if ((s !== dep && !s.startsWith(`${dep}/`)) || i.isTypeOnly()) return false;
+        if (i.getNamespaceImport() || i.getDefaultImport()) return true;
+        const named = i.getNamedImports();
+        if (!named.length) return true; // `import 'x'`: run for its side effects
+        return named.some((n) => !n.isTypeOnly() && usedAsValue(f, (n.getAliasNode() ?? n.getNameNode()).getText()));
+      })));
+    }
+    return memo.get(dep)!;
+  }
+  private importersMemo?: Map<string, SourceFile[]>;
+
+  /**
+   * The method handler classes share, own or inherited: an abstract method of their common base class first (the
+   * base says what every handler implements), else a usual handler name (`handleMessages`, `handle`, …).
+   */
+  private sharedHandler(classes: ClassDeclaration[]): { method?: string; base?: ClassDeclaration; inherited: number } {
+    const ancestors = (c: ClassDeclaration) => {
+      const out: ClassDeclaration[] = [];
+      for (let k = c.getBaseClass(), d = 0; k && d < 8; k = k.getBaseClass(), d++) out.push(k);
+      return out;
+    };
+    const base = ancestors(classes[0]).find((b) => classes.every((c) => ancestors(c).includes(b)));
+    const names = (c: ClassDeclaration) => new Set([c, ...ancestors(c)].flatMap((k) => k.getMethods().filter((m) => this.isOperation(m)).map((m) => m.getName())));
+    const common = classes.map(names).reduce((a, b) => new Set([...a].filter((x) => b.has(x))));
+    const PREFERRED = ['handleMessages', 'handleMessage', 'handleBatch', 'handle', 'process', 'execute', 'run', 'consume', 'onMessage'];
+    const pick = (list: string[]) => PREFERRED.find((p) => list.includes(p)) ?? list[0];
+    const abstract = base ? [base, ...ancestors(base)].flatMap((k) => k.getMethods().filter((m) => m.isAbstract() && common.has(m.getName())).map((m) => m.getName())) : [];
+    const method = pick(abstract) ?? pick([...common].filter((n) => !/^(on[A-Z]|constructor$)/.test(n)));
+    const inherited = method ? classes.filter((c) => !c.getMethod(method)).length : 0;
+    return { method, base, inherited };
+  }
+
+  /** `manager.addHandler(this)` in the constructor of this class (or, with `up`, a base class): how it says so. */
+  private selfRegistration(cls: ClassDeclaration, up = true): string | undefined {
+    for (let k: ClassDeclaration | undefined = cls, d = 0; k && d < 8; k = up ? k.getBaseClass() : undefined, d++) {
+      for (const ctor of k.getConstructors()) {
+        const call = ctor.getDescendantsOfKind(SyntaxKind.CallExpression).find((c) => c.getArguments().some((a) => a.getKind() === SyntaxKind.ThisKeyword) && c.getExpression().getKind() !== SyntaxKind.SuperKeyword);
+        if (call) return `\`${short(call.getText(), 50)}\` in ${k.getName()}'s constructor`;
+      }
+    }
+    return undefined;
   }
 
   // ---------- completeness ----------
@@ -803,7 +919,9 @@ export class Extractor implements RevisionAnalysis {
       const decorators = cls.getDecorators().map((d) => d.getName());
       if (decorators.some((d) => this.rules.notModuleDecorators.has(d))) return false;
       if (cls.getImplements().some((i) => this.rules.notModuleImplements.has(i.getExpression().getText()))) return false;
-      if ((this.rules.decorators.length || this.rules.registries.length) && cls.getMethods().some((m) => this.decoratorEntryOf(m))) return false;
+      if (this.rules.decorators.length && cls.getMethods().some((m) => this.decoratorEntryOf(m))) return false;
+      // A handler a profile registry lists (its method may be inherited) is an entry point, not a module.
+      if (this.rules.registries.length && [...this.registryIndex().values()].some((list) => list.some((r) => r.cls === cls))) return false;
       const hasPublicMethods = cls.getMethods().some((m) => this.isOperation(m));
       return hasPublicMethods && (injected.has(key(cls)) || injects.has(key(cls)) || decorators.some((d) => this.rules.moduleDecorators.has(d)));
     });
@@ -897,17 +1015,29 @@ export class Extractor implements RevisionAnalysis {
     return this.addEntry(`${rule.kind}:${label}`, rule.kind, label, rule.readOnly, { at: call, handler });
   }
 
+  /**
+   * Entry points a profile registry makes of this method: one per handler class (several may inherit the method).
+   * With `thisClass`, only the handlers that run as that class or a subclass of it (a change in its override).
+   */
+  private registryEntriesOf(method: MethodDeclaration, thisClass?: ClassDeclaration): string[] {
+    return (this.registryIndex().get(method) ?? [])
+      .filter((r) => !thisClass || r.cls === thisClass || isSubclassOf(r.cls, thisClass))
+      .map((r) => this.addEntry(`${r.rule.kind}:${r.label}`, r.rule.kind, r.label, false, { at: r.at, handler: method, thisClass: r.cls }));
+  }
+
+  /** Every entry point a method is: registry entries, else its decorators. */
+  private entriesOfMethod(method: MethodDeclaration, thisClass?: ClassDeclaration): string[] {
+    const reg = this.registryEntriesOf(method, thisClass);
+    if (reg.length || this.registryIndex().has(method)) return reg;
+    const id = this.decoratorEntryOf(method);
+    return id ? [id] : [];
+  }
+
   /** A method that is an entry point by its decorators (`@Get(':id')` in a `@Controller('orders')`). Returns its id. */
   private decoratorEntryOf(method: MethodDeclaration): string | undefined {
     if (this.entryIdCache.has(method)) return this.entryIdCache.get(method);
     let id: string | undefined;
     const cls = method.getParent();
-    const registered = this.registryIndex().get(method);
-    if (registered) {
-      id = this.addEntry(`${registered.rule.kind}:${registered.label}`, registered.rule.kind, registered.label, false, { at: registered.at, handler: method });
-      this.entryIdCache.set(method, id);
-      return id;
-    }
     if (Node.isClassDeclaration(cls) && method.getDecorators().length + cls.getDecorators().length > 0) {
       for (const rule of this.rules.decorators) {
         const classDec = rule.classDecorator ? this.findDecorator(cls, rule.classDecorator, rule.from) : undefined;
@@ -986,12 +1116,15 @@ export class Extractor implements RevisionAnalysis {
   }
 
   private buildEntry(id: string): void {
-    const { at, handler } = this.entrySites.get(id)!;
+    const { at, handler, thisClass } = this.entrySites.get(id)!;
     const entry = this.snapshot.entryPoints[id];
     // Guards, interceptors and middleware run on every request: their steps (and side effects) are the entry's too.
     const specs = this.pipelines.get(id) ?? [];
     const prelude = specs.flatMap((s, i) => (s.fn && isFn(s.fn) ? [{ fn: s.fn, name: fnName(s.fn), item: i, label: `${s.kind} ${s.name}` }] : []));
+    const outer = this.currentClass;
+    this.currentClass = thisClass;
     const scope = this.buildScope(id, handler, prelude);
+    this.currentClass = outer;
     for (const p of scope.prelude) if (entry.pipeline?.[p.item]) entry.pipeline[p.item].functions = p.functions;
     const label = entry.label;
     // Where the pipeline items are applied is part of the entry point too: removing `@UseGuards(X)` changes it.
@@ -1314,7 +1447,7 @@ export class Extractor implements RevisionAnalysis {
     if (spec.startsWith('const:')) return spec.slice(6);
     if (spec.startsWith('arg:')) {
       const node = argNode(args, spec.slice(4));
-      return node ? this.literal(node) : undefined;
+      return node ? this.targetText(node) : undefined;
     }
     if (spec.startsWith('url:')) return this.urlTarget(argNode(args, spec.slice(4)));
     if (spec === 'receiver') return site.receiver && Node.isPropertyAccessExpression(site.receiver) ? site.receiver.getName() : site.receiver?.getText();
@@ -1331,6 +1464,99 @@ export class Extractor implements RevisionAnalysis {
       return name ? collectionName(name) : undefined;
     }
     return undefined;
+  }
+
+  /**
+   * What a side effect's target argument names, followed back to where the value is made: a local variable or a
+   * `this.x` field set in the constructor to its value, `config.get('KAFKA_TOPICS').X` to the config key
+   * (`KAFKA_TOPICS.X`), a message built by a factory to the string the factory was given
+   * (`createSyncedMessage(guid, id, 'RecordApproved')`), an object to its `topic` / `type`, and a parameter to what
+   * the service's callers pass. Else `<the expression>`.
+   */
+  private targetText(node: Node | undefined, depth = 0, seen = new Set<Node>()): string {
+    if (!node) return '?';
+    const lit = this.literal(node);
+    if (!lit.startsWith('<') || depth > 6 || seen.has(node)) return lit;
+    seen.add(node);
+    const n = unwrap(node);
+    const next = (x: Node | undefined) => (x ? this.targetText(x, depth + 1, seen) : undefined);
+    const found = (v: string | undefined) => v !== undefined && v !== '?' && !v.startsWith('<');
+    const key = configKey(n, (x) => this.literal(x));
+    if (key) return key;
+    if (Node.isAwaitExpression(n)) return next(n.getExpression()) ?? lit;
+    if (Node.isTemplateExpression(n)) {
+      const parts = [n.getHead().getLiteralText(), ...n.getTemplateSpans().flatMap((s) => [next(s.getExpression()) ?? '?', s.getLiteral().getLiteralText()])];
+      return parts.slice(1).every((p, i) => i % 2 === 1 || found(p)) ? parts.join('') : lit;
+    }
+    if (Node.isIdentifier(n)) {
+      const parent = n.getParent();
+      const symbol = parent && Node.isShorthandPropertyAssignment(parent) && parent.getNameNode() === n ? parent.getValueSymbol() : n.getSymbol();
+      const decl = symbol?.getDeclarations()[0];
+      if (decl && Node.isVariableDeclaration(decl)) return next(decl.getInitializer()) ?? lit;
+      if (decl && Node.isParameterDeclaration(decl)) return this.fromCallers(decl, undefined, depth, seen) ?? `<${decl.getName()} from the caller>`;
+      return lit;
+    }
+    if (Node.isPropertyAccessExpression(n)) {
+      const holder = unwrap(n.getExpression());
+      if (holder.getKind() === SyntaxKind.ThisKeyword) {
+        const v = next(this.fieldValue(n));
+        return v && found(v) ? v : lit;
+      }
+      if (Node.isIdentifier(holder)) {
+        const decl = holder.getSymbol()?.getDeclarations()[0];
+        if (decl && Node.isParameterDeclaration(decl)) return this.fromCallers(decl, n.getName(), depth, seen) ?? `<${n.getText()} from the caller>`;
+        const value = argNode([holder], `0.${n.getName()}`);
+        if (value) return next(value) ?? lit;
+      }
+      return lit;
+    }
+    if (Node.isObjectLiteralExpression(n)) {
+      for (const prop of ['topic', 'type', 'eventType', 'event', 'name']) {
+        const value = argNode([n], `0.${prop}`);
+        const v = next(value);
+        if (found(v)) return v!;
+      }
+      return lit;
+    }
+    if (Node.isCallExpression(n)) {
+      // A factory that builds the message: the string it is given names it.
+      const strings = n.getArguments().map((a) => this.literal(a)).filter((v) => /^[A-Za-z][\w.:-]*$/.test(v));
+      if (strings.length) return strings.at(-1)!;
+    }
+    return lit;
+  }
+
+  /** `this.x`: the value the field is created with, or what the constructor assigns to it. */
+  private fieldValue(access: Node): Node | undefined {
+    const decl = this.resolveDeclaration(access);
+    if (!decl || !Node.isPropertyDeclaration(decl)) return undefined;
+    if (decl.getInitializer()) return decl.getInitializer();
+    const cls = decl.getParent();
+    if (!Node.isClassDeclaration(cls)) return undefined;
+    for (const ctor of cls.getConstructors()) {
+      for (const bin of ctor.getDescendantsOfKind(SyntaxKind.BinaryExpression)) {
+        const left = bin.getLeft();
+        if (bin.getOperatorToken().getKind() === SyntaxKind.EqualsToken && Node.isPropertyAccessExpression(left) && left.getExpression().getKind() === SyntaxKind.ThisKeyword && left.getName() === decl.getName()) return bin.getRight();
+      }
+    }
+    return undefined;
+  }
+
+  /** What the service's own callers pass for a parameter (or one property of it): `a | b`, if they say. */
+  private fromCallers(param: Node, prop: string | undefined, depth: number, seen: Set<Node>): string | undefined {
+    const fn = param.getParent();
+    if (!fn || !(Node.isMethodDeclaration(fn) || Node.isFunctionDeclaration(fn)) || depth > 3) return undefined;
+    const index = fn.getParameters().indexOf(param as never);
+    const files = new Set(this.projectFiles());
+    const values = new Set<string>();
+    for (const ref of fn.findReferencesAsNodes()) {
+      const call = callOf(ref);
+      if (!call || !files.has(call.getSourceFile())) continue;
+      const arg = argNode(call.getArguments(), prop ? `${index}.${prop}` : String(index));
+      const v = arg ? this.targetText(arg, depth + 1, seen) : '?';
+      if (v !== '?' && !v.startsWith('<')) values.add(v);
+    }
+    return values.size ? [...values].sort().join(' | ') : undefined;
   }
 
   /** The name a receiver was injected or built with: `@InjectQueue('emails') q`, `q = new Queue('emails')`. */
@@ -1380,6 +1606,8 @@ export class Extractor implements RevisionAnalysis {
    * module implementation), interface or type alias; `fn()` / `ns.fn()` to the function and its npm package.
    */
   private site(call: Invocation): Site | undefined {
+    const own = this.thisSite(call);
+    if (own) return own;
     if (this.siteCache.has(call)) return this.siteCache.get(call);
     const site = this.computeSite(call);
     if (site?.receiver && site.name !== 'new') {
@@ -1392,6 +1620,23 @@ export class Extractor implements RevisionAnalysis {
     }
     this.siteCache.set(call, site);
     return site;
+  }
+
+  /**
+   * `this.x()` in a base class method that runs as a subclass (an inherited consumer handler calling its abstract
+   * `this.syncFeature()`): `x` as that subclass has it. Not cached: the same call means another method per subclass.
+   */
+  private thisSite(call: Invocation): Site | undefined {
+    const cur = this.currentClass;
+    if (!cur || Node.isNewExpression(call)) return undefined;
+    const expr = call.getExpression();
+    if (!Node.isPropertyAccessExpression(expr) || expr.getExpression().getKind() !== SyntaxKind.ThisKeyword) return undefined;
+    const own = call.getFirstAncestor((n) => Node.isClassDeclaration(n)) as ClassDeclaration | undefined;
+    if (!own || own === cur || !isSubclassOf(cur, own)) return undefined;
+    const method = methodOf(cur, expr.getName());
+    const cls = method?.getParent();
+    if (!method || !cls || cls === own || !Node.isClassDeclaration(cls)) return undefined;
+    return { call, cls, owner: cls.getName() ?? 'Anonymous', name: method.getName(), pkg: pkgOf(method.getSourceFile().getFilePath()), decl: method, receiver: expr.getExpression() };
   }
 
   private computeSite(call: Invocation): Site | undefined {
@@ -1683,6 +1928,34 @@ function lastName(node: Node): string {
   return short(node.getText(), 20);
 }
 
+/**
+ * `config.get('KAFKA_TOPICS').RECORD_CREATED`, `this.configService.get<T>('kafka.topics.created')`: the config key
+ * (`KAFKA_TOPICS.RECORD_CREATED`). A `get` on something called `config…`, with a constant key.
+ */
+function configKey(node: Node, literal: (n: Node) => string): string | undefined {
+  const path: string[] = [];
+  let cur = node;
+  for (;;) {
+    if (Node.isNonNullExpression(cur) || Node.isParenthesizedExpression(cur)) cur = cur.getExpression();
+    else if (Node.isPropertyAccessExpression(cur)) {
+      path.unshift(cur.getName());
+      cur = cur.getExpression();
+    } else if (Node.isElementAccessExpression(cur)) {
+      const k = literal(cur.getArgumentExpressionOrThrow());
+      if (k.startsWith('<') || k === '?') return undefined;
+      path.unshift(k);
+      cur = cur.getExpression();
+    } else break;
+  }
+  if (!Node.isCallExpression(cur)) return undefined;
+  const callee = cur.getExpression();
+  if (!Node.isPropertyAccessExpression(callee) || !/^(get|getOrThrow)$/.test(callee.getName()) || !/config/i.test(callee.getExpression().getText())) return undefined;
+  const first = cur.getArguments()[0];
+  const key = first ? literal(first) : '?';
+  if (key.startsWith('<') || key === '?') return undefined;
+  return [key, ...path].join('.');
+}
+
 /** `0` → args[0]; `0.topic` → the `topic` property of an object literal args[0] (or of the variable it names). */
 function argNode(args: Node[], spec: string): Node | undefined {
   const [index, prop] = spec.split('.');
@@ -1880,6 +2153,11 @@ export function isTestFile(relPath: string): boolean {
   return /\.(spec|test|e2e-spec|e2e)\.[cm]?[jt]sx?$/.test(relPath) || /(^|\/)(__tests__|__mocks__|tests?|e2e)\//.test(relPath);
 }
 
+/** Developer tooling next to the service: dot-folders (`.local/`, `.github/`) and a top-level `scripts/` or `tools/`. */
+export function isDevFile(relPath: string): boolean {
+  return /(^|\/)\.[^/]+\//.test(relPath) || /^(scripts|tools)\//.test(relPath);
+}
+
 function isFnNode(n: Node): n is Fn {
   return Node.isMethodDeclaration(n) || Node.isFunctionDeclaration(n) || Node.isArrowFunction(n) || Node.isFunctionExpression(n);
 }
@@ -2013,6 +2291,29 @@ function fnName(fn: Node): string {
   if (parent && Node.isVariableDeclaration(parent)) return parent.getName();
   const outer = fn.getFirstAncestor(isFnNode);
   return outer ? `callback in ${fnName(outer)}` : 'anonymous function';
+}
+
+/** A name imported into `file` is used as a value somewhere (not only in types; a constructor parameter's type is injected, so it counts). */
+function usedAsValue(file: SourceFile, name: string): boolean {
+  return file.getDescendantsOfKind(SyntaxKind.Identifier).some((id) => id.getText() === name && !id.getFirstAncestorByKind(SyntaxKind.ImportDeclaration) && !inTypePosition(id));
+}
+
+function inTypePosition(id: Node): boolean {
+  let top: Node | undefined;
+  for (let cur = id.getParent(); cur; cur = cur.getParent()) {
+    if (Node.isHeritageClause(cur)) return cur.getToken() === SyntaxKind.ImplementsKeyword;
+    if (Node.isTypeNode(cur) && !Node.isExpressionWithTypeArguments(cur)) top = cur;
+    else if (top) break;
+  }
+  if (!top) return Node.isTypeAliasDeclaration(id.getParent()) || Node.isInterfaceDeclaration(id.getParent());
+  const holder = top.getParent();
+  return !(holder && Node.isParameterDeclaration(holder) && Node.isConstructorDeclaration(holder.getParent()));
+}
+
+/** `cls` extends `base`, directly or further up. */
+function isSubclassOf(cls: ClassDeclaration, base: ClassDeclaration): boolean {
+  for (let cur: ClassDeclaration | undefined = cls.getBaseClass(), depth = 0; cur && depth < 8; cur = cur.getBaseClass(), depth++) if (cur === base) return true;
+  return false;
 }
 
 /** The class extends a class with this name, directly or further up (a base class from a package counts). */
