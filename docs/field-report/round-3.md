@@ -21,7 +21,8 @@ sample and fixture of this repo in `npm test`.
 - **Red first.** On `3275457` (`npm run accept:r3 -- --fresh-clone <GitHub>` before any change), this Windows machine
   printed your baseline line for line: 47/72, the same checks failing.
   [red-3275457-windows.txt](round-3/red-3275457-windows.txt).
-- **Green.** GREEN_SUMMARY [green.txt](round-3/green.txt).
+- **Green.** On `3a497d6`, 72/72 and exit 0, `--ui` and `--fresh-clone` included: first with the fresh clone taken
+  from this local repo, then, after the push, from GitHub. [green.txt](round-3/green.txt) is the GitHub run.
 - **No expectation was changed or left failing**: none looked wrong.
 - **No fixture names in modulegraph**: `names-check` now also fails on `VendorIdentityClient`, `vendorco`,
   `RecordNationalityService`, `RecordMessagesService`, `UserRecordStatusService`, `ReviewerDirectoryService`, the four

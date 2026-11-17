@@ -1,0 +1,89 @@
+
+0. fixture
+  ✓ [setup] fixture is outside the modulegraph checkout
+  ✓ [setup] own node_modules: top-level lru-cache 5.x (got 5.1.1), nested lru-cache 10.x under path-scurry/typeorm (got 10.4.3)
+  ✓ [setup] branch fix/conclude-review-row-scope checked out
+  ✓ [setup] read from the source: 29 handler-map entries, 7 jobs
+  ✓ [setup] the fixture's own `npx jest` passes (10 tests)
+
+1. no profile, --head, lazy
+  ✓ [R2-1] examples recorded from Jest (not "Tests: 0 total")
+  ✓ [R2-1] ≥5 cases from conclude-manual-review-decision-service.spec.ts
+  ✓ [R2-1] ConcludeManualReviewDecisionService.approve has an approved case and a NotFoundException case
+  ✓ [F5] INCOMPLETE with missing-entry-points and unknown-side-effects
+  ✓ [R2-3] suggests { "map": "ConsumerHandlerMap", "method": "handleMessages", "kind": "consumer" }
+  ✓ [R2-4] suggests { "argv": "src/main.ts", "kind": "cron" }
+  ✓ [R2-5] suggests AvroProducer.send with "target": "arg:0.topic"
+  ✓ [R2-5] suggests TypeORMOutboxService.createOutboxMessage as kind outbox
+  ✓ [R2-5] suggests no factory / lifecycle method (producer, consumer, connect, disconnect, end, isHealthy, forRootAsync, register)
+  ✓ [R2-5] suggests no "const:<package name>" target for a topic or event
+  ✓ [R2-8] @nestjs/microservices is not flagged (its only import is a type)
+  ✓ [R2-8] nothing under .local/ is counted
+  ✓ [R3-3] @vendorco/identity-api (does network I/O, no adapter knows it) is flagged under unknown-side-effects
+  ✓ [R3-3] ssh2-sftp-client (does network I/O, no adapter knows it) is flagged under unknown-side-effects
+  ✓ [R3-3] the suggested sinks cover both I/O packages
+  ✓ [I1] no profile: every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] no profile: one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no profile: no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] no profile: every effect step in every flow names its target
+  ✓ [I5] no profile: api entry points = route decorators in src (9 / 9)
+
+2. no profile, working tree
+  ✓ [R2-1] working-tree run records examples too
+
+3. with the profile the first run suggested, full
+  · [profile] applied as suggested: {"service":"records-review-service","entryRegistries":[{"map":"ConsumerHandlerMap","method":"handleMessages","kind":"consumer","label":"kafka consumer {key}"},{"argv":"src/main.ts","kind":"cron","label":"job {key}"}],"sinks":[{"class":"AvroProducer","module":"@acme/nestjs-kafkajs","method":"send","kind":"kafka","target":"arg:0.topic"},{"class":"TypeORMOutboxService","module":"@acme/typeorm-outbox-writer","method":"createOutboxMessage","kind":"outbox","target":"arg:0"},{"class":"DefaultApi","module":"@vendorco/identity-api","method":"getApplicant","kind":"http","target":"const:@vendorco/identity-api"},{"class":"DefaultApi","module":"@vendorco/identity-api","method":"createCheck","kind":"http","target":"const:@vendorco/identity-api"},{"class":"sftp","module":"ssh2-sftp-client","method":"list","kind":"http","target":"const:ssh2-sftp-client"},{"class":"sftp","module":"ssh2-sftp-client","method":"put","kind":"http","target":"const:ssh2-sftp-client"}]}
+  ✓ [I6] with the suggested profile applied, nothing is incomplete
+  ✓ [R2-3] exactly the 29 handler-map consumers (got 29)
+  ✓ [R3-1] exactly the 7 jobs, one entry point each, labelled "job <name>" (got 7)
+  ✓ [R3-1] job duplicate-scan (onApplicationBootstrap → this.run()) has the effect of run(): kafka KAFKA_TOPICS.RECORD_DUPLICATE_FOUND
+  ✓ [R2-3/4] the 5 inherited sync handlers, review-decision-requested and 2 jobs reach the change
+  ✓ [R2-5] RecordEventsProducer.publishDuplicateFound → kafka KAFKA_TOPICS.RECORD_DUPLICATE_FOUND
+  ✓ [R2-5] RecordEventsProducer.publishReviewConcluded → kafka KAFKA_TOPICS.REVIEW_CONCLUDED
+  ✓ [R2-5] NotificationsOutboxService.notifyReviewConcluded → outbox ReviewConcludedNotification
+  ✓ [R2-5] RecordMessagesService.updateWithNotificationPayload → outbox RecordMessagesSynced
+  ✓ [R3-2] LocksClient.listLocks → http {LOCKS_SERVICE_BASE_URL}/locks
+  ✓ [R3-2] GeoIpClient.countryOf → http {GEOIP_PROXY_BASE_URL}/ip/{ip}
+  ✓ [R3-2] AssessmentsClient.getAssessmentStatuses → http {ASSESSMENTS_SERVICE_BASE_URL}/v1/internal/entities/{entityId}/assessments/statuses
+  ✓ [R3-2] VendorIdentityClient.getAccessToken → http {VENDOR_WORKFLOW_API_BASE_URL}/v1/oauth2/token
+  ✓ [R3-2] CaptchaService.validate (URL in a readonly field) → http challenges.captcha-vendor.example…
+  ✓ [R3-3] VendorIdentityClient.getApplicant (calls @vendorco/identity-api) has a non-database effect with a named target once the suggested rule is applied
+  ✓ [R3-3] VendorIdentityClient.startCheck (calls @vendorco/identity-api) has a non-database effect with a named target once the suggested rule is applied
+  ✓ [R3-3] SftpClientService.listDirectory (calls ssh2-sftp-client) has a non-database effect with a named target once the suggested rule is applied
+  ✓ [R3-3] SftpClientService.upload (calls ssh2-sftp-client) has a non-database effect with a named target once the suggested rule is applied
+  ✓ [R3-3] SftpClientService.onModuleDestroy (end()) and the SDK constructor are no effects
+  ✓ [R3-4] RecordNationalityService.storeNationalities → db.write user_nationalities (and no unnamed write)
+  ✓ [R3-4] RecordMessagesService.updateWithNotificationPayload → db.write record_messages, user_records (and no unnamed write)
+  ✓ [R3-4] UserRecordStatusService.setStatus → db.write user_records, status_history (and no unnamed write)
+  ✓ [R3-5] approve(): the 5 steps between startTransaction and commit are marked as in the transaction (queryRunner, through a helper, two data sources)
+  ✓ [R3-5] approve(): the read before the transaction and the calls after commit are not marked
+  ✓ [R3-5] the two data sources are told apart (legacy and admin)
+  ✓ [R2-5] no effect target is a code expression or "?"
+  ✓ [R2-8] no effect from .local/ (topic local-test)
+  ✓ [R3-6] the worker approve (behind a facade that calls a helper first) shows "Approve user record" as context in the brief
+  ✓ [I1] with profile, full: every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] with profile, full: one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] with profile, full: no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] with profile, full: every effect step in every flow names its target
+  ✓ [I5] with profile, full: api entry points = route decorators in src (9 / 9)
+
+4. with the profile, lazy
+  ✓ [lazy] lazy lists the same consumers and jobs as full (29/29, 7/7)
+  ✓ [I1] with profile, lazy: every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] with profile, lazy: one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] with profile, lazy: no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] with profile, lazy: every effect step in every flow names its target
+  ✓ [I5] with profile, lazy: api entry points = route decorators in src (9 / 9)
+
+5. UI (1440×900)
+  ✓ [R2-2] top bar / checks button of the no-profile review say "incomplete" and not "all clear"
+  ✓ [R2-2] after opening it, the page lists the missing entry points and the unknown side effects, with the profile JSON to add
+  ✓ [R3-7] the suggested profile JSON in the panel is readable without horizontal scrolling (wrapped, not clipped)
+  ✓ [R2-6] inspector of ConcludeManualReviewDecisionService.approve: every changed function name shown uncut at 1440 px
+  ✓ [R3-6] inspector of the worker approve shows "Approve user record" as context (its facade calls a helper first)
+  ✓ [R2-2] with the suggested profile (nothing incomplete) the top bar does not say "incomplete"
+
+6. fresh clone
+  ✓ [R2-7] git clone → npm run setup → npm test passes
+
+72/72 checks pass
