@@ -70,6 +70,12 @@ The last lines print two paths: `<id>.json` (for the UI) and **`<id>.brief.md` (
 Read `<id>.brief.md` completely. It has the verdict, every change with its **Behaviour inside** lines,
 entry-point changes, grouped findings, owners and UI links. Don't read the JSON; it's for the UI.
 
+If the verdict says **INCOMPLETE**, the analysis could not see everything: "no findings" means nothing. Do what
+its "Analysis incomplete" section says first (usually: install the service's dependencies, then analyze again),
+and read every function it lists under `unmapped-change` by hand. If you can't fix it, say so at the top of your
+brief. An **Access control and request pipeline** section means guards, middleware or auth metadata changed in
+front of the entry points it lists: read that change before anything else.
+
 A change starts at its topmost changed operation. Changed operations reached only through it are its parts
 (numbered 1.1, 1.2, …): review them as one change, not as separate ones. A changed operation that other flows
 also reach stays its own change, even when a changed caller uses it too.
@@ -101,7 +107,7 @@ Then refresh (or re-run the analyzer).
 
 ```
 **Goal:** one sentence (from the intent), and whether the contract changes match it.
-**Verdict:** copy the brief's verdict (BLOCKING with the error rules, or not blocked).
+**Verdict:** copy the brief's verdict (BLOCKING with the error rules, INCOMPLETE with why, or not blocked).
 **Changes, riskiest first:** one bullet per change in the brief's "Changes" (not per changed operation):
   Module.op where it begins (reach N): output/effect deltas, then its parts ("inside: X gains …, new Y"),
   and in words every GUARD CHANGED / REMOVED / NEW step from "Behaviour inside" of the root and its parts.
