@@ -668,7 +668,12 @@ export class Extractor implements RevisionAnalysis {
   private setPipeline(id: string, method: MethodDeclaration, cls: ClassDeclaration, vars: Record<string, string>): void {
     const ctx = this.hookContext();
     const specs = this.rules.hooks.flatMap((h) => h.pipeline?.(method, cls, vars, ctx) ?? []);
-    if (!specs.length) return;
+    if (!specs.length) {
+      // An adapter that knows the pipeline found nothing in front of this handler: say so (empty), so a new endpoint
+      // reads "guarded by nothing" rather than "not known".
+      if (this.rules.hooks.some((h) => h.pipeline)) this.snapshot.entryPoints[id].pipeline = [];
+      return;
+    }
     this.pipelines.set(id, specs);
     this.snapshot.entryPoints[id].pipeline = specs.map((s): PipelineItem => ({
       kind: s.kind, name: s.name, scope: s.scope, file: this.rel(s.at.getSourceFile().getFilePath()), line: s.at.getStartLineNumber(),

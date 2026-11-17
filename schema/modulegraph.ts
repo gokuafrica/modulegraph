@@ -269,7 +269,10 @@ export interface EntryPoint {
   changes?: CodeChange[];
   /** Lazy analyses only. listed: only its registration is known; reached: known to reach the change; full: flow analyzed. */
   analysis?: 'listed' | 'reached' | 'full';
-  /** What runs before the handler (guards, interceptors, …), in the order the framework applies it. */
+  /**
+   * What runs before the handler (guards, interceptors, …), in the order the framework applies it. Empty: an adapter
+   * that knows the pipeline found nothing in front of it; absent: not known.
+   */
   pipeline?: PipelineItem[];
   /**
    * Set when comparing with a base and the pipeline differs: items added, removed, or whose code changed, as

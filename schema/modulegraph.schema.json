@@ -989,7 +989,7 @@
           "items": {
             "$ref": "#/definitions/PipelineItem"
           },
-          "description": "What runs before the handler (guards, interceptors, …), in the order the framework applies it."
+          "description": "What runs before the handler (guards, interceptors, …), in the order the framework applies it. Empty: an adapter\nthat knows the pipeline found nothing in front of it; absent: not known."
         },
         "pipelineDelta": {
           "type": "object",
