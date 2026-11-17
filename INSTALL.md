@@ -76,6 +76,11 @@ In any repository with a TypeScript service:
   Edit code and click refresh in the review to see the change. `modulegraph review --head <branch>` reviews another
   branch without checking it out, `--pr <n>` a GitHub PR, `--uncommitted` only what isn't committed.
 - `modulegraph open` shows saved reviews; `modulegraph help` lists every option.
+- **Finishing.** A review server stops by itself after 30 minutes with no requests (`--idle <minutes>`), or with
+  `modulegraph stop`. Saved reviews stay in `~/.modulegraph/reviews/` (with your service's code in them) until you
+  remove them: `modulegraph done <id>` (or the review page's **✓ done** button) removes one review, its PR ref and
+  temp files; `modulegraph clean` removes reviews older than 14 days (`--older-than <days>`, `--dry-run` to see
+  the list first).
 
 **First review of a service.** NestJS, Express, Fastify, KafkaJS, BullMQ, node-cron, TypeORM, Prisma, Mongoose,
 axios and fetch are recognised from `package.json`, so many services need nothing more. When a service uses
@@ -95,5 +100,17 @@ http://127.0.0.1:5174.
 
 ## Uninstalling
 
-Delete `~/modulegraph`, `~/.modulegraph` (your profiles and reviews: keep it if you might come back) and
-`~/.claude/skills/module-review`, and remove the line from step 3 if you added it.
+First, while modulegraph is still there, stop its servers and remove what it left in your repositories (the
+`refs/modulegraph/*` refs `--pr` fetched, and `.modulegraph-tmp/` folders and git worktrees of runs that were
+killed). `--older-than 0` also deletes every saved review; leave it out to keep them:
+
+```bash
+node ~/modulegraph/bin/modulegraph.mjs stop
+node ~/modulegraph/bin/modulegraph.mjs clean --older-than 0 --dry-run    # see the list first
+node ~/modulegraph/bin/modulegraph.mjs clean --older-than 0
+```
+
+Then delete `~/modulegraph`, `~/.modulegraph` (your profiles and reviews: keep it if you might come back) and
+`~/.claude/skills/module-review`, and remove the line from step 3 if you added it. `tsx` (which runs the
+analyzer) keeps a compile cache in the OS temp folder (`tsx-*` in `/tmp`, `$TMPDIR` or `%TEMP%`); delete it too
+if you like, it is only a cache.

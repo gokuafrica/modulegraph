@@ -2,7 +2,7 @@ import { Background, Controls, ReactFlow, useReactFlow, type Edge, type Node } f
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ModuleGraph } from '../../schema/modulegraph.ts';
 import { Inspector, type Selection } from './components/Inspector.tsx';
-import { expand, fetchLive, isStale, refresh, servedGraphs, type ExpandAction } from './api.ts';
+import { endReview, expand, fetchLive, isStale, refresh, servedGraphs, type ExpandAction } from './api.ts';
 import { DiffPanel } from './components/DiffView.tsx';
 import { edgeTypes } from './components/Edges.tsx';
 import { ActionsContext, casesOf, ExampleContext, exampleFor, nodeTypes, type Actions } from './components/Nodes.tsx';
@@ -236,13 +236,43 @@ export default function App() {
     }
   }, []);
 
+  /** The review is finished: the server deletes its saved files (graph, brief, PR ref, temp folders) and stops. */
+  const runDone = useCallback(async () => {
+    const cur = gRef.current;
+    const id = graphIdRef.current;
+    if (!cur?.lazy || !id) return;
+    if (!window.confirm(`End the review of ${id}?\n\nThe review server stops, and the saved review (graph and brief) is deleted, with its PR ref and temporary files in the repo. Your code is not touched.\n\nRunning \`modulegraph review\` again re-creates it.`)) return;
+    setBusy('ending the review');
+    try {
+      const removed = await endReview(cur, id);
+      setLive(false);
+      setError(`Review ended: the server has stopped${removed.length ? ` and ${removed.length} item${removed.length === 1 ? ' was' : 's were'} removed (${removed.join(', ')})` : ''}. You can close this tab.`);
+    } catch (err) {
+      setToast(`Could not end the review: ${String(err)}`);
+    } finally {
+      setBusy(undefined);
+    }
+  }, []);
+
   // While live: notice edits (window focus, and a cheap git check every 5 s) so the refresh button can say so.
+  // The server stops by itself when nobody has looked for a while: after two missed checks, say so and go read-only.
   useEffect(() => {
     if (!g?.lazy || !live || !graphId) return;
     let cancelled = false;
+    let missed = 0;
     const check = () => {
       if (document.visibilityState !== 'visible') return;
-      void isStale(g, graphId).then((x) => !cancelled && setStale(x));
+      void isStale(g, graphId).then((x) => {
+        if (cancelled) return;
+        if (x !== undefined) {
+          missed = 0;
+          return setStale(x);
+        }
+        if (++missed < 2) return;
+        setStale(false);
+        setLive(false);
+        setToast('The review server has stopped (it stops after a while with no requests, or the review was ended). This page shows what was analyzed; run `modulegraph review` again to continue live.');
+      });
     };
     check();
     const timer = setInterval(check, 5000);
@@ -498,6 +528,12 @@ export default function App() {
             <button className={`refresh ${stale ? 'stale' : ''}`} disabled={!!busy} onClick={() => void runRefresh()}
               title={stale ? 'The code changed since this was analyzed. Re-analyze: only the changed files are read again.' : 'Re-analyze after editing or committing. Only the files that changed are read again.'}>
               ↻ {stale ? 'code changed: refresh' : 'refresh'}
+            </button>
+          )}
+          {g.lazy && live && (
+            <button className="refresh done" disabled={!!busy} onClick={() => void runDone()}
+              title="Finished reviewing? Stops the review server and deletes the saved review (graph, brief, PR ref, temp files). Same as `modulegraph done`.">
+              ✓ done
             </button>
           )}
           {g.lazy && (

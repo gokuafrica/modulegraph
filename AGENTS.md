@@ -9,6 +9,8 @@ People review it as an interactive graph.
   for any agent (setup installs it for Claude Code in every project, and writes it to
   `~/.modulegraph/module-review.md` for others). In short: `node bin/modulegraph.mjs analyze --project <service dir>`
   (add `--head <branch>`, `--pr <n>` or `--uncommitted`), then read the printed `<id>.brief.md` and add the judgment.
+  Afterwards, stop any server you started (`modulegraph stop <id>`) and offer the user `modulegraph done <id>` /
+  `modulegraph clean` (step 3b of the skill); delete nothing without their yes.
 - **Never modify the code being analyzed.** Per-service knowledge lives in the service's profile, in
   `~/.modulegraph/configs/<service>/` (the demo services' are in `configs/`).
 - Backends and framework support: [docs/analyzers.md](docs/analyzers.md). The analyzer picks the language backend

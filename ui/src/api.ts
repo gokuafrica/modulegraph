@@ -46,14 +46,31 @@ export async function refresh(g: ModuleGraph, graphId: string): Promise<RefreshR
   return (await res.json()) as RefreshResult;
 }
 
-/** True when the code changed since the last analysis (a cheap git check on the server, no analysis). */
-export async function isStale(g: ModuleGraph, graphId: string): Promise<boolean> {
+/**
+ * True when the code changed since the last analysis (a cheap git check on the server, no analysis); undefined
+ * when the server is gone (it stopped after being idle, or the review was ended).
+ */
+export async function isStale(g: ModuleGraph, graphId: string): Promise<boolean | undefined> {
   try {
     const res = await fetch(`${apiOf(g)}/graphs/${graphId}/status`, { cache: 'no-store' });
+    // The dev server's proxy answers 5xx when nothing listens behind it.
+    if (res.status >= 500) return undefined;
     return res.ok && ((await res.json()) as { stale?: boolean }).stale === true;
   } catch {
-    return false;
+    return undefined;
   }
+}
+
+/** Ends the review: the server deletes its saved graph, brief, PR ref and temp files, then stops. */
+export async function endReview(g: ModuleGraph, graphId: string): Promise<string[]> {
+  const res = await fetch(`${apiOf(g)}/graphs/${graphId}/done`, {
+    method: 'POST',
+    // Required by the server: a page on another site can't send it without a CORS preflight, which is refused.
+    headers: { 'content-type': 'application/json', 'x-modulegraph': 'done' },
+    body: '{}',
+  });
+  if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? res.statusText);
+  return ((await res.json()) as { removed?: string[] }).removed ?? [];
 }
 
 /** The reviews the analysis server is serving right now (empty when none is running). */

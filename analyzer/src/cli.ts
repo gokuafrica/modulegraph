@@ -11,6 +11,7 @@ import { compare } from './compare.ts';
 import { findProfile, loadConfig } from './config.ts';
 import { appRoot, graphsDirFor, insideApp, profileDirs, uiDistDir, userConfigsDir } from './home.ts';
 import { brief } from './brief.ts';
+import { endReview, recordRepo } from './cleanup.ts';
 import { describe, descriptionsKey } from './describe.ts';
 import { LazySession } from './lazy.ts';
 import { type RefreshResult, serve } from './server.ts';
@@ -59,6 +60,10 @@ lazy analysis (large codebases)
                            refresh requests. Refresh re-reads only the files that changed since the last
                            analysis and keeps the base side's analysis. Only this machine can connect
   --open                   with --serve: open the review in the browser
+  --idle <minutes>         with --serve: stop after this many minutes with no requests (default 30; 0 = never).
+                           An open review tab asks every 5 s while it is visible, so this means nobody is looking
+
+ending reviews (see modulegraph help): modulegraph stop [<id>] | done [<id>] | clean [--older-than <days>]
 `;
 
 const { values: args } = parseArgs({
@@ -85,6 +90,7 @@ const { values: args } = parseArgs({
     serve: { type: 'boolean' },
     port: { type: 'string' },
     open: { type: 'boolean' },
+    idle: { type: 'string' },
     analyzer: { type: 'string' },
     frameworks: { type: 'string' },
     help: { type: 'boolean', short: 'h' },
@@ -107,6 +113,8 @@ if (!existsSync(projectDir)) {
 }
 const repo = (args.repo ? fromUser(args.repo) : repoRootOf(projectDir)).replace(/\\/g, '/');
 const projectRel = relative(repo, projectDir).replace(/\\/g, '/') || '.';
+// So `modulegraph clean` can find this repo's leftovers (PR refs, scenario temp folders) after its reviews are gone.
+recordRepo(repo);
 // No mode: the branch checked out, committed and uncommitted, vs the repo's default branch ("review my work").
 if (!args.pr && !args.head && !args.base && !args.uncommitted && !args.snapshot) {
   const main = defaultBranch(repo);
@@ -295,7 +303,10 @@ describe(output, config);
 
 // ---------- write ----------
 const briefFile = outFile.replace(/\.json$/, '') + '.brief.md';
+/** Set once the review is done (deleted): nothing may write it back. */
+let ended = false;
 function write(graph: ModuleGraph): void {
+  if (ended) return;
   mkdirSync(dirname(outFile), { recursive: true });
   writeFileSync(outFile, JSON.stringify(graph, null, 2));
   writeFileSync(briefFile, brief(graph, id));
@@ -348,7 +359,20 @@ console.log(`wrote ${displayPath(briefFile)}   <- review facts for agents and pe
 if (args.serve && session) {
   const live = session;
   let stateKey = currentStateKey();
-  serve(live, { persist: write, graphId: id, port: Number(args.port ?? 5174), graphsDir, uiDir: uiDistDir, open: args.open, refresh: () => refresh(live), stale: () => currentStateKey() !== stateKey });
+  const idleMinutes = args.idle === undefined ? undefined : Number(args.idle);
+  if (idleMinutes !== undefined && !(idleMinutes >= 0)) {
+    console.error('--idle takes a number of minutes (0 = never stop by itself)');
+    process.exit(2);
+  }
+  serve(live, {
+    persist: write, graphId: id, port: Number(args.port ?? 5174), graphsDir, uiDir: uiDistDir, open: args.open, idleMinutes, repo,
+    refresh: () => refresh(live), stale: () => currentStateKey() !== stateKey,
+    // The UI's done button (and `modulegraph done`): delete this review's files, PR ref and scenario leftovers.
+    done: ({ keepBrief }) => {
+      ended = true;
+      return endReview({ id, json: outFile, brief: briefFile, indexFile: args.out ? undefined : join(graphsDir, 'index.json') }, { keepBrief });
+    },
+  });
 
   /** Re-analyze after the code changed: re-read only changed files, keep the base side when it didn't move. */
   function refresh(s: LazySession): RefreshResult {

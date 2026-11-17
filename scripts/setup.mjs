@@ -82,7 +82,9 @@ Private to this machine; not part of the modulegraph repo, and updating modulegr
 - \`configs/<service>/modulegraph.config.json\`: what modulegraph knows about one of your services (its profile),
   found by the service's package name. Optional \`scenario.ts\` next to it records example calls.
   Templates: ${join(root, 'configs').replace(/\\/g, '/')}
-- \`reviews/\`: review graphs (\`<id>.json\`) and briefs (\`<id>.brief.md\`).
+- \`reviews/\`: review graphs (\`<id>.json\`) and briefs (\`<id>.brief.md\`), kept until \`modulegraph done <id>\`
+  or \`modulegraph clean\` (reviews older than 14 days) removes them.
+- \`servers/\`, \`repos.json\`: running review servers, and the repos modulegraph has read (for stop, done, clean).
 - \`module-review.md\`: the review procedure for agents (rewritten by setup).
 
 The modulegraph tool itself: ${root.replace(/\\/g, '/')}
@@ -131,7 +133,7 @@ console.log(`
 modulegraph is ready.
 
   Review a change yourself:  cd <your service folder>   then   ${cmd} review
-                             (opens the interactive review in your browser; Ctrl+C stops it)
+                             (opens the interactive review in your browser; it stops after 30 min idle)
   Ask your agent:            "review my branch at module level"
                              Claude Code has the skill in every project; for another agent, point it at
                              ${join(home, 'module-review.md')}

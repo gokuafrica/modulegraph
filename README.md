@@ -125,6 +125,34 @@ window regains focus and every few seconds; nothing is analyzed until you click)
 On the demos a refresh takes 0.4–1.5 s against 2–7 s for the first analysis. `npm run lazy-check` edits each demo
 branch and checks the refreshed graph equals a full analysis of the edited code.
 
+### Ending a review
+
+A review server holds the analyzed code (both revisions) in memory, and every review is saved in
+`~/.modulegraph/reviews/` with the service's source code in its JSON. Neither lasts forever:
+
+- **Servers stop by themselves** after 30 minutes with no requests (`--idle <minutes>`, `0` = never; the startup
+  line says so). An open review tab asks every 5 s while it is visible, so that means nobody is looking. A server
+  also stops when the command that started it is killed, on every OS, and `npm run live`'s router takes its demo
+  servers down with it. When a server has stopped, an open tab says so and keeps showing what was analyzed.
+- **`modulegraph stop [<id>]`** stops the server serving `<id>` (no id: every modulegraph server). It deletes nothing.
+- **`modulegraph done [<id>]`**, or the review page's **✓ done** button: the review is finished. It stops the
+  server and deletes the review's graph, brief and `index.json` entry, the `refs/modulegraph/pr-<n>` ref `--pr`
+  fetched (unless another saved review uses it), and scenario temp folders that a killed run left in the repo. No
+  id: the one review being served. `--keep-brief` keeps `<id>.brief.md`; `--dry-run` only lists.
+  The brief goes too by default: it is derived (re-run the analyzer to get it back, the commits are still there),
+  what mattered in it is in the agent's summary or the PR by then, and keeping it would mean reviews still pile up.
+- **`modulegraph clean [--older-than <days>] [--dry-run]`** removes reviews older than 14 days that no server is
+  serving, index entries without files, and, in every repo modulegraph has read (recorded in
+  `~/.modulegraph/repos.json`), `refs/modulegraph/*` refs no remaining review uses and `.modulegraph-tmp/<pid>/`
+  folders (with their git worktrees) of processes that are gone. It lists everything it removes.
+
+In the reviewed repo these touch only modulegraph's own things: `refs/modulegraph/*`, `.modulegraph-tmp/<pid>/`
+of dead runs, and the worktrees registered there (removed one by one: never a blanket `git worktree prune`, which
+would also drop your own worktrees whose folder is missing). Shipped demo graphs (`ui/public/graphs/`) are never
+deleted. Not covered: the TypeScript compile cache that `tsx` keeps in the OS temp folder (`tsx-*`); it belongs to
+tsx and is safe to delete. A graph written with `--out <file>` is yours to delete, unless you end it while it is
+being served.
+
 `modulegraph analyze` takes the same options, writes the review and exits: what agents run. On the NestJS demo,
 from this folder (it needs nothing but the project folder):
 
@@ -278,7 +306,7 @@ base + head sources        steps, data edges, side effects      modulegraph/v1  
 | Path | What |
 |---|---|
 | `schema/` | `modulegraph.ts` (types) and generated `modulegraph.schema.json` |
-| `analyzer/` | CLI: `cli.ts`; `analyzers/` (backend contract `types.ts`, registry; `typescript/extract.ts` with `frameworks/` adapters); `compare.ts` + `compare-steps.ts` (base vs head, per-function and per-step deltas), `rules.ts` (guardrails), `brief.ts`, `lazy.ts` + `server.ts` (lazy analysis, live expansion); checks `framework-check.ts`, `lazy-check.ts`, `mentions-check.ts` |
+| `analyzer/` | CLI: `cli.ts`; `analyzers/` (backend contract `types.ts`, registry; `typescript/extract.ts` with `frameworks/` adapters); `compare.ts` + `compare-steps.ts` (base vs head, per-function and per-step deltas), `rules.ts` (guardrails), `brief.ts`, `lazy.ts` + `server.ts` (lazy analysis, live expansion); `servers.ts` (idle shutdown, server registry), `cleanup.ts` + `end.ts` (`stop`, `done`, `clean`); checks `framework-check.ts`, `lazy-check.ts`, `changes-check.ts`, `mentions-check.ts`, `lifecycle-check.ts` |
 | `ui/` | Vite + React + `@xyflow/react` + `elkjs` |
 | `sample-service/` | demo microservice, an ordinary codebase with no modulegraph markers. Branches `feature/birthinfo-consent` and `feature/kyc-risk-tiers` hold the demo changes |
 | `sample-nest-service/` | NestJS demo (order-service): REST, Kafka events, gRPC, BullMQ, cron, TypeORM. Branch `feature/order-fraud-hold` |

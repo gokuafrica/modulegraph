@@ -4,6 +4,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { extname, join, resolve, sep } from 'node:path';
 import type { ModuleGraph } from '../../schema/modulegraph.ts';
 import type { ExpandAction, LazySession } from './lazy.ts';
+import { DEFAULT_IDLE_MINUTES, formatMinutes, idleShutdown, registerServer, shutdownOnSignals, stopWithParent, trustedAction } from './servers.ts';
 
 const ACTIONS: ExpandAction[] = ['callers', 'reach', 'entry', 'op'];
 
@@ -32,12 +33,20 @@ export interface ServeOptions {
   uiDir?: string;
   /** Open the review in the browser once the server is up. */
   open?: boolean;
+  /** Stop after this many minutes with no requests (0: never; default 30). */
+  idleMinutes?: number;
+  /** Repo the review reads (recorded so `modulegraph stop`/`done` can say which server is which). */
+  repo?: string;
+  /** Ends the review: removes its saved files (and PR ref, temp folders). Returns what was removed. */
+  done?: (opts: { keepBrief: boolean }) => string[];
 }
 
 export interface StaticOptions {
   /** Folders with graph files, served at /graphs/ (the first that has a file wins; index.json lists them all). */
   graphsDirs: string[];
   uiDir?: string;
+  /** Stop after this many minutes with no requests (0: never; default 30). */
+  idleMinutes?: number;
 }
 
 /** Only this machine can connect: the review shows the service's code. */
@@ -53,28 +62,49 @@ const TYPES: Record<string, string> = {
  * proxies /api here instead. Every expansion and refresh is also written back to the graph JSON, so the static
  * file always holds what has been explored so far and can be shared as is.
  *
- *   GET  /api/health                     -> { ok, graphs: [id] }
+ *   GET  /api/health                     -> { ok, graphs: [id], pid }
  *   GET  /api/graphs/:id                 -> current graph
  *   GET  /api/graphs/:id/status          -> { stale }: the code changed since the last analysis
  *   POST /api/graphs/:id/refresh         -> { changed, files, baseKept, ms, graph }: re-analyze after code changes
  *   POST /api/graphs/:id/expand {action, id}
  *        action: callers (one level up) | reach (all the way up) | entry (analyze a flow) | op (analyze downward)
+ *   POST /api/graphs/:id/done {keepBrief?} -> { removed }: end the review (delete its files), then stop
+ *   POST /api/shutdown                   -> stop the server (`modulegraph stop` / `done`)
  *   GET  /graphs/<file>, /<ui file>      -> this review's saved files, the built UI
+ * done and shutdown need the x-modulegraph header and a local Host: a web page can't trigger them.
+ * The server stops by itself after `idleMinutes` with no requests, and with the process that started it.
  */
 export function serve(session: LazySession, opts: ServeOptions): void {
   const { persist, graphId, port } = opts;
   let current = session.graph();
   current.lazy!.api = '/api';
-  createServer(async (req, res) => {
+  const idleMinutes = opts.idleMinutes ?? DEFAULT_IDLE_MINUTES;
+  let stop: (reason: string) => void = () => undefined;
+  const touch = idleShutdown(idleMinutes, (why) => stop(why));
+  const server = createServer(async (req, res) => {
+    touch();
     const send = (status: number, body: unknown) => {
       res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' }).end(JSON.stringify(body));
     };
     try {
       const url = new URL(req.url ?? '/', 'http://local');
-      if (req.method === 'GET' && url.pathname === '/api/health') return send(200, { ok: true, graphs: [graphId] });
+      if (req.method === 'GET' && url.pathname === '/api/health') return send(200, { ok: true, graphs: [graphId], pid: process.pid });
+      if (req.method === 'POST' && url.pathname === '/api/shutdown') {
+        if (!trustedAction(req)) return send(403, { error: 'shutdown needs the x-modulegraph header' });
+        send(200, { ok: true });
+        return stop('asked to stop (modulegraph stop/done)');
+      }
       if (req.method === 'GET' && !url.pathname.startsWith('/api/')) return sendFile(res, url.pathname, { graphsDirs: [opts.graphsDir], uiDir: opts.uiDir });
-      const m = /^\/api\/graphs\/([^/]+)(?:\/(expand|refresh|status))?$/.exec(url.pathname);
+      const m = /^\/api\/graphs\/([^/]+)(?:\/(expand|refresh|status|done))?$/.exec(url.pathname);
       if (!m || m[1] !== graphId) return send(404, { error: `this server serves only ${graphId}` });
+      if (req.method === 'POST' && m[2] === 'done') {
+        if (!trustedAction(req)) return send(403, { error: 'done needs the x-modulegraph header' });
+        const body = JSON.parse((await readBody(req)) || '{}') as { keepBrief?: boolean };
+        const removed = opts.done ? opts.done({ keepBrief: body.keepBrief === true }) : [];
+        for (const r of removed) console.log(`removed ${r}`);
+        send(200, { removed });
+        return stop('the review is done');
+      }
       if (req.method === 'GET' && !m[2]) return send(200, current);
       if (req.method === 'GET' && m[2] === 'status') return send(200, { stale: opts.stale() });
       if (req.method === 'POST' && m[2] === 'refresh') {
@@ -98,16 +128,22 @@ export function serve(session: LazySession, opts: ServeOptions): void {
       console.error(err);
       send(500, { error: String(err) });
     }
-  })
+  });
+  stop = shutdownOnSignals(server, `modulegraph review of ${graphId}`);
+  stopWithParent(stop);
+  server
     .on('error', (err: NodeJS.ErrnoException) => {
       if (err.code !== 'EADDRINUSE') throw err;
-      console.error(`\nport ${port} is in use: another review is probably being served. Stop it, or pass --port <n>.`);
+      console.error(`\nport ${port} is in use: another review is probably being served. Stop it (modulegraph stop), or pass --port <n>.`);
       process.exit(2);
     })
     .listen(port, HOST, () => {
+      const actual = (server.address() as { port: number }).port;
+      registerServer({ port: actual, ids: [graphId], kind: 'review', repo: opts.repo, idleMinutes });
       const ui = !!opts.uiDir && existsSync(join(opts.uiDir, 'index.html'));
-      const link = ui ? `http://${HOST}:${port}/#g=${graphId}` : `http://localhost:5173/#g=${graphId}`;
-      console.log(`\nmodulegraph is serving the review of ${graphId}; only this machine can connect. Ctrl+C stops it.`);
+      const link = ui ? `http://${HOST}:${actual}/#g=${graphId}` : `http://localhost:5173/#g=${graphId}`;
+      console.log(`\nmodulegraph is serving the review of ${graphId} on port ${actual}; only this machine can connect.`);
+      console.log(`It stops ${stopsWhen(idleMinutes)}, on Ctrl+C, or with \`modulegraph stop ${graphId}\` (\`modulegraph done ${graphId}\` also deletes the review).`);
       console.log(`open the review: ${link}`);
       if (!ui) console.log('(the UI is not built: run `npm run setup` in the modulegraph folder, or start it with `npm run dev`)');
       if (opts.open) openBrowser(link);
@@ -119,20 +155,35 @@ export function serve(session: LazySession, opts: ServeOptions): void {
  * was explored when they were saved.
  */
 export function serveStatic(opts: StaticOptions & { port: number; open?: string }): void {
-  createServer((req, res) => {
+  const idleMinutes = opts.idleMinutes ?? DEFAULT_IDLE_MINUTES;
+  let stop: (reason: string) => void = () => undefined;
+  const touch = idleShutdown(idleMinutes, (why) => stop(why));
+  const server = createServer((req, res) => {
+    touch();
     const url = new URL(req.url ?? '/', 'http://local');
-    if (url.pathname === '/api/health') return void res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ ok: true, graphs: [] }));
+    if (url.pathname === '/api/health') return void res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ ok: true, graphs: [], pid: process.pid }));
+    if (req.method === 'POST' && url.pathname === '/api/shutdown') {
+      if (!trustedAction(req)) return void res.writeHead(403, { 'content-type': 'application/json' }).end(JSON.stringify({ error: 'shutdown needs the x-modulegraph header' }));
+      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ ok: true }));
+      return stop('asked to stop (modulegraph stop)');
+    }
     if (url.pathname.startsWith('/api/')) return void res.writeHead(404, { 'content-type': 'application/json' }).end(JSON.stringify({ error: 'saved reviews only: run `modulegraph review` to analyze live' }));
     sendFile(res, url.pathname, opts);
-  })
+  });
+  stop = shutdownOnSignals(server, 'modulegraph open');
+  stopWithParent(stop);
+  server
     .on('error', (err: NodeJS.ErrnoException) => {
       if (err.code !== 'EADDRINUSE') throw err;
-      console.error(`port ${opts.port} is in use: a review is probably being served there already. Stop it, or pass --port <n>.`);
+      console.error(`port ${opts.port} is in use: a review is probably being served there already. Stop it (modulegraph stop), or pass --port <n>.`);
       process.exit(2);
     })
     .listen(opts.port, HOST, () => {
-      const link = `http://${HOST}:${opts.port}/${opts.open ? `#g=${opts.open}` : ''}`;
-      console.log(`modulegraph is showing saved reviews on ${link} (only this machine can connect; Ctrl+C stops it)`);
+      const actual = (server.address() as { port: number }).port;
+      registerServer({ port: actual, ids: [], kind: 'open', idleMinutes });
+      const link = `http://${HOST}:${actual}/${opts.open ? `#g=${opts.open}` : ''}`;
+      console.log(`modulegraph is showing saved reviews on ${link} (only this machine can connect)`);
+      console.log(`It stops ${stopsWhen(idleMinutes)}, on Ctrl+C, or with \`modulegraph stop\`.`);
       openBrowser(link);
     });
 }
@@ -159,6 +210,11 @@ function sendFile(res: ServerResponse, pathname: string, opts: StaticOptions): v
   // A one-page app: unknown paths get index.html.
   const found = existsSync(file) && statSync(file).isFile() ? file : join(root, 'index.html');
   res.writeHead(200, { 'content-type': TYPES[extname(found)] ?? 'application/octet-stream', 'cache-control': 'no-store' }).end(readFileSync(found));
+}
+
+/** "after 30 min with no requests (--idle <minutes>)", for the startup line. */
+export function stopsWhen(idleMinutes: number): string {
+  return idleMinutes > 0 ? `after ${formatMinutes(idleMinutes)} with no requests (--idle <minutes>; 0 = never)` : 'only when told to (--idle 0)';
 }
 
 function openBrowser(url: string): void {

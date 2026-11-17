@@ -159,6 +159,7 @@ input, select { font: inherit; border: 1px solid var(--line); border-radius: 6px
 .refresh { background: transparent; color: var(--topbar-fg); border-color: #334155; font-size: 12px; white-space: nowrap; }
 .refresh.stale { border-color: #f59e0b; color: #fcd34d; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25); }
 .refresh:disabled { opacity: 0.6; }
+.refresh.done:hover:not(:disabled) { border-color: #22c55e; color: #86efac; }
 .theme-toggle { background: transparent; color: var(--topbar-fg); border-color: #334155; }
 .brand { font-weight: 700; letter-spacing: 0.2px; }
 .spacer { flex: 1; }

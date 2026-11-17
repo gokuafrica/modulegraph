@@ -21,7 +21,8 @@ modulegraph needs about a service lives in its profile, in the modulegraph home 
   the service folder, and defaults to the folder you run it in.
 - **Profiles** (one per service): `~/.modulegraph/configs/<package name>/modulegraph.config.json`, plus an optional
   `scenario.ts`. The analyzer prints which profile it used, or the exact path to create when there is none.
-- **Reviews**: `~/.modulegraph/reviews/<id>.json` (the graph) and `<id>.brief.md` (the facts).
+- **Reviews**: `~/.modulegraph/reviews/<id>.json` (the graph) and `<id>.brief.md` (the facts), kept until
+  `modulegraph done <id>` or `modulegraph clean` removes them (step 3b).
 - Templates, framework docs and the schema are in the modulegraph folder: `configs/`, `docs/analyzers.md`,
   `schema/`.
 - Not set up yet (`modulegraph is not set up yet`, or no `node_modules`)? Run `npm run setup` in the modulegraph
@@ -45,7 +46,8 @@ With `--head`/`--pr`, a branch that is checked out in `--project` with uncommitt
 tree (the brief says "with its uncommitted edits"); `--committed` reads the commit only. For a person reviewing in
 the UI, tell them to run `modulegraph review` with the same arguments in their terminal (or run it in the
 background yourself): it opens the review in their browser and keeps serving, and the UI's refresh button
-re-analyzes only what changed after each edit. `modulegraph open <id>` shows a saved review without analyzing.
+re-analyzes only what changed after each edit. It stops by itself after 30 minutes with no requests (an open,
+visible review tab keeps it alive). `modulegraph open <id>` shows a saved review without analyzing.
 
 - `<service dir>` is the folder with the service's `package.json`; in a monorepo, the one package that changed
   (run once per changed package).
@@ -113,6 +115,24 @@ Then refresh (or re-run the analyzer).
 
 Rules: don't invent effects or entry points that aren't in the facts; if the facts and the code disagree,
 say so. Say "no PR description" if the intent is missing.
+
+## 3b. When the review is finished
+
+Reviews are kept until someone removes them: `~/.modulegraph/reviews/<id>.json` holds the service's source code,
+`--pr` leaves a `refs/modulegraph/pr-<n>` ref in the reviewed repo, and a review server holds the code in memory.
+
+- **Stop every server you started** (`modulegraph review` or `analyze --serve` run in the background) once you no
+  longer need it: `modulegraph stop <id>`. It deletes nothing. If the user is still looking at the review in their
+  browser, leave it running and tell them it stops by itself after 30 minutes with no requests.
+- **Offer cleanup, don't do it unasked.** When the user says the review is finished (merged, approved, abandoned),
+  offer: "`modulegraph done <id>` removes the saved review (graph and brief), its PR ref and leftover temp files;
+  `--keep-brief` keeps the brief." Run it only after they say yes. The review page's **✓ done** button does the
+  same. Re-running the analyzer re-creates a review at any time.
+- Reviews pile up? `modulegraph clean --dry-run` lists reviews older than 14 days (`--older-than <days>`) and
+  leftovers in the repos modulegraph has read; show the user the list, and run `modulegraph clean` if they agree.
+- These commands only touch modulegraph's own things: files in `~/.modulegraph/`, `refs/modulegraph/*` refs,
+  `<repo>/.modulegraph-tmp/<pid>/` folders of runs that are gone and the git worktrees in them. Never delete
+  anything else yourself, in the reviewed repo or elsewhere.
 
 ## 4. Writing a profile for a new service (read-only on the service)
 
