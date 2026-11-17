@@ -6,7 +6,7 @@
  * (`entryPoints`, `decoratorEntries`, `sinks`, …), so an agent can teach modulegraph an unknown framework without
  * code. Hooks cover what data can't say (route prefixes from `app.use('/x', router)`, Prisma's `prisma.user.*`).
  */
-import type { CallExpression, NewExpression, Node } from 'ts-morph';
+import type { CallExpression, NewExpression, Node, Type } from 'ts-morph';
 import type { DecoratorEntryRule, EntryRule, ResponseRule, SinkRule } from '../../../config.ts';
 import type { Effect } from '../../../../../schema/modulegraph.ts';
 
@@ -53,6 +53,10 @@ export interface HookContext {
   callsNamed(name: string): CallExpression[];
   /** Declaration a name or `a.b` refers to (through imports). */
   resolve(node: Node): Node | undefined;
+  /** Table of a TypeORM entity: from an entity class reference (`Order`) or a type (`Order` in `SelectQueryBuilder<Order>`). */
+  table(of: Node | Type): string | undefined;
+  /** Collection of a Mongoose model the receiver is (`@InjectModel(Order.name) orders`, `Model<Order>`). */
+  collection(receiver: Node): string | undefined;
 }
 
 export interface FrameworkHooks {

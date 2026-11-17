@@ -918,6 +918,14 @@ export class Extractor implements RevisionAnalysis {
       literal: (n) => this.literal(n),
       callsNamed: (name) => this.callsNamed(name),
       resolve: (n) => this.resolveDeclaration(n),
+      table: (of) => {
+        const decl = of instanceof Node ? this.classOf(of) : of.getSymbol()?.getDeclarations()[0];
+        return decl && Node.isClassDeclaration(decl) && this.isProjectFile(decl.getSourceFile().getFilePath()) ? entityTable(decl, (n) => this.literal(n)) : undefined;
+      },
+      collection: (receiver) => {
+        const name = this.injectedName(receiver) ?? receiver.getType().getTypeArguments()[0]?.getSymbol()?.getName();
+        return name ? collectionName(name) : undefined;
+      },
     };
   }
 
@@ -1123,7 +1131,7 @@ function entityTable(cls: ClassDeclaration, literal: (n: Node) => string): strin
 }
 
 /** Mongoose's default collection: lower-case, plural model name (`Order` → `orders`). */
-function collectionName(model: string): string {
+export function collectionName(model: string): string {
   const base = model.replace(/(Document|Doc|Schema|Model)$/, '') || model;
   const lower = base.charAt(0).toLowerCase() + base.slice(1);
   const snake = lower.toLowerCase();
