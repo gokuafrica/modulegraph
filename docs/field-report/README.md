@@ -1,5 +1,7 @@
 # Field report: modulegraph on a real production NestJS service (F1–F8)
 
+> Round 2 (the re-test of these fixes on the real service, R2-1 … R2-9): [round-2.md](round-2.md).
+
 The report came from running modulegraph (v0.4.0, `25785cc`) on a closed-source NestJS service. That code can't be
 shared, so a sample with the same shape was built first, every finding was reproduced on it, then fixed and checked
 on it, in the browser and in `npm test`.

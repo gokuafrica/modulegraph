@@ -74,6 +74,8 @@ button; its top bar says so.
 - Example data: without a scenario, the analyzer runs the service's Jest specs that reference the changed classes and
   their callers, and records what the real (unmocked) classes were called with; the brief and the UI say "from unit
   tests (mocked dependencies)". `--no-tests` skips it; for `--pr` it is off unless `--tests` (it runs the PR's code).
+  If the brief says none were recorded, its note names the failing suite and error, and Jest's whole output is in
+  `<id>.tests.log` next to the brief: say so in your brief (don't guess why).
 - If it says `analyzer: no static analyzer for <language>`, use "Services no backend understands" below.
 
 The last lines print two paths: `<id>.json` (for the UI) and **`<id>.brief.md` (the facts: read this one)**.
@@ -114,9 +116,17 @@ the file the analyzer printed on its `profile:` line (none yet: create it as in 
 "modules": { "overrides": { "BirthInfoService": { "operations": { "get": "The user's birth info as the document has it and as they told us in KYC, side by side." } } } }
 ```
 
+Start from the exact JSON the brief prints under **Needs a description**: it is keyed by class name and method
+(`ConcludeManualReviewDecisionService` / `approve`), not by the shorter names the change headlines show. When the
+brief says an operation is "only called through" a described one (a controller → facade → worker chain), that
+text is context: write what *this* operation does beyond it (which rows it changes, what it encrypts, what it
+publishes), not the same sentence again.
+
 Say what it does and when it matters (inputs, outputs, effects, the rule it enforces), not how it does it. Don't
 repeat the method name. A doc comment in the code always wins; the UI labels yours "written by the review agent".
-Then refresh (or re-run the analyzer).
+Then refresh (or re-run the analyzer) and **check it took**: the run must not print
+`profile: … describe(s) nothing in this service`, the brief must have no **Profile descriptions not applied**
+section, and the **Required** list must be gone. If any is there, fix the key it names and run again.
 
 ## 3. Write the brief (≤ 25 lines)
 

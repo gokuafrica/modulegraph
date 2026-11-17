@@ -98,11 +98,20 @@ call, so it has no side effects, and its review said "not blocked". Now the back
   `mocks/`, `e2e/`) don't count.
 - `missing-entry-points`: signs of handlers the analysis does not see: a message broker client in `package.json`
   (`kafkajs`, or a package built on it) but no consumer entry point; a `Map` or object literal of classes that share
-  a method (`ConsumerHandlerMap`); `package.json` scripts that start the app with an argument (`nest start --
-  some-poller`) and the file that reads `process.argv`. The issue carries the `entryRegistries` rule that fixes it.
+  a method, own or inherited (`ConsumerHandlerMap`: an abstract method of their common base class is preferred,
+  e.g. `handleMessages`; a base constructor that registers each instance, `manager.addHandler(this)`, is named);
+  abstract base classes whose subclasses register themselves and are in no map; `package.json` scripts that start the
+  app with an argument (`nest start -- some-poller`) and the file that reads `process.argv` (an argument that names
+  handlers of a map, `nest start -- a-consumer,another`, selects consumers and is not a job). The issue carries the
+  `entryRegistries` rule that fixes it.
 - `unknown-side-effects`: dependencies whose name says producer, outbox, queue or cloud client (or that are built on
-  a broker client), imported by the service, that no adapter or `sinks` rule describes. The issue lists the calls
-  into them and carries suggested `sinks` (check the kind and the target argument).
+  a broker client), imported by the service for their values, that no adapter or `sinks` rule describes. The issue
+  lists the calls into them and carries suggested `sinks`: the target is `arg:N.topic` when the argument is an object
+  with a `topic`, else the first string argument, else a message object; factories and lifecycle calls (`producer()`,
+  `connect()`, `isHealthy()`) are left out. Check the kind and the target.
+
+A type-only import (`import type`, or a name used only in types) doesn't count, and neither does code outside the
+service: tests, dot-folders (`.local/scripts/…`) and a top-level `scripts/` or `tools/`.
 
 Add a name to `coverage.ignore` in the profile to stop a false alarm.
 
@@ -127,10 +136,14 @@ Adapters are mostly data, and the same data can go in a service's profile
   ],
   "responses": [ { "class": "Context", "method": "json", "arg": 0 } ],
   "entryRegistries": [   // handlers registered by data
-    // handler map + base class: every key of the map is an entry point, handled by its class's `method`
-    { "map": "ConsumerHandlerMap", "method": "handle", "kind": "consumer", "label": "kafka consumer {key}" },
-    // module picked by a command-line argument: main.ts boots JOBS[argv._[0]] (or `case 'x':`); what runs is the
-    // module's providers' lifecycle hooks (default onApplicationBootstrap|onModuleInit, and run)
+    // handler map + base class: every key of the map is an entry point, handled by its class's `method` (inherited
+    // methods count: a handler that inherits handleMessages runs it as its own class, so `this.x()` is its x)
+    { "map": "ConsumerHandlerMap", "method": "handleMessages", "kind": "consumer", "label": "kafka consumer {key}" },
+    // every concrete subclass of a base class (`{key}` is the class name)
+    { "extends": "BaseConsumerHandler", "method": "handleMessages", "kind": "consumer", "label": "consumer {key}" },
+    // module picked by a command-line argument: main.ts boots JOBS[argv._[0]], a local `modules[command]`, a dynamic
+    // module (`modules[command].register()`, providers from what register() returns) or `case 'x':`; what runs is
+    // the module's providers' lifecycle hooks (default onApplicationBootstrap|onModuleInit, and run)
     { "argv": "src/main.ts", "kind": "cron", "label": "job {key}" }
   ],
   "docDecorators": [ { "decorator": "Doc", "from": "@acme/docs", "props": ["description"] } ],   // more description sources
@@ -138,6 +151,15 @@ Adapters are mostly data, and the same data can go in a service's profile
   "frameworks": ["nestjs", "typeorm"]   // optional: replaces detection
 }
 ```
+
+A sink's `arg:N` target is followed back to where the value is made: a local `const`, a `this.x` field set in the
+constructor, `config.get('KAFKA_TOPICS').RECORD_CREATED` (shown as the config key, `KAFKA_TOPICS.RECORD_CREATED`), a
+parameter (what the service's own callers pass, `a | b`), a message built by a factory (the string the factory is
+given: `createSyncedMessage(guid, id, 'RecordApproved')` → `RecordApproved`), an object's `topic` / `type`.
+
+Profile descriptions (`modules.overrides.<Class>.operations.<method>`) are matched by class name, module id or display
+name, in any case; keys that match no class or public method are reported (`profile: … describes nothing`, and a
+"Profile descriptions not applied" section in the brief).
 
 `class` is the declaring class, interface or type alias the type checker resolves the call to, or the receiver's own
 class when the method is inherited (`KMSClient` for `kmsClient.send()`, declared on the SDK's base `Client`);
@@ -167,8 +189,9 @@ and marks it `generator: "agent:<model>"`.
 
 ## Known limits
 
-- Effects behind a generic wrapper (`publish(topic, …)` called with different topics) get the wrapper's
-  parameter as target (`<topic>`), not each caller's topic.
+- Effects behind a generic wrapper (`publish(topic, …)`) get what the service's callers pass, joined
+  (`a | b`) on the wrapper's own operation; a caller outside the service, or a value computed at runtime, stays
+  `<topic from the caller>`.
 - Relative axios/HttpService URLs name the path (`/v1/charges`); the base URL is configured elsewhere.
 - tRPC routers have no adapter yet; the profile's `decoratorEntries` / `entryPoints` cover them meanwhile.
 - No adapter yet for the AWS SDK v3 (`client.send(new XCommand(…))`), ioredis / redis, RabbitMQ (amqplib,
@@ -189,4 +212,5 @@ and marks it `generator: "agent:<model>"`.
   transaction box; only `….transaction(cb)` and `@Transactional()` are.
 - Examples from tests: Jest only (config in `package.json` or `jest.config.json/js/cjs`; `jest.config.ts` is not read),
   specs picked by name (`*.spec.*` / `*.test.*` that mention a changed class or its callers, or import their files); e2e
-  specs are not run.
+  specs are not run. A branch that isn't checked out runs in a temporary git worktree with links to the checkout's
+  `node_modules`; Jest's whole output is kept next to the review as `<id>.tests.log`.

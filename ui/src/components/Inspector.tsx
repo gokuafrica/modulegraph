@@ -53,7 +53,7 @@ function OpCard({ g, op }: { g: ModuleGraph; op: Operation }) {
   return (
     <div key={op.id}>
       <div className="insp-head">
-        <div className="insp-title">{mod.name}<span className="muted">.{op.name}()</span></div>
+        <div className="insp-title">{mod.name}<wbr /><span className="muted">.{op.name}()</span></div>
         <div className="insp-sub">
           {op.change !== 'unchanged' && <span className={`badge b-${op.change}`}>{op.change}</span>}
           <RiskBadges g={g} op={op} />

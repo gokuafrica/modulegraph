@@ -1,5 +1,5 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { createContext, useContext } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import type { CodeChange, Effect, Example, Exit, Param } from '../../../schema/modulegraph.ts';
 import type { Chip } from '../graph/model.ts';
 import { FunctionDiff } from './DiffView.tsx';
@@ -28,6 +28,11 @@ export const ActionsContext = createContext<Actions>(null!);
 export const ExampleContext = createContext<{ caseId?: string; setCase: (id: string) => void; cases: Record<string, string> }>({ setCase: () => {}, cases: {} });
 
 /** The requests an example happened in. Graphs recorded before cases existed: one per example position. */
+/** A long CamelCase name (`ConcludeManualReviewDecision`) may wrap between its words, never inside one. */
+export function breakable(name: string): ReactNode[] {
+  return name.split(/(?=[A-Z][a-z])/).flatMap((part, i) => (i ? [<wbr key={i} />, part] : [part]));
+}
+
 export function casesOf(e: Example, i: number): string[] {
   return e.cases ?? [`#${i}`];
 }
@@ -190,7 +195,7 @@ export function ModuleNode({ data, selected }: NodeProps) {
       <StepDelta delta={d.delta} conditionBefore={d.conditionBefore} ghost={d.ghost} beforeMark={d.beforeMark} conditionNow={d.conditionNow} />
       <div className="module-head">
         <div>
-          <div className="module-title">{d.title}{d.loop && <span className="loop" title="Runs once per item">⟳ each</span>}</div>
+          <div className="module-title">{breakable(d.title)}{d.loop && <span className="loop" title="Runs once per item">⟳ each</span>}</div>
           {d.ops ? (
             <div className="module-op">
               {d.ops.map((name, i) => (

@@ -26,7 +26,8 @@ npm run setup
 ```
 
 It takes a minute or two the first time and ends with `modulegraph is ready.` It:
-- installs the dependencies and builds the review UI;
+- installs the dependencies (and, with `npm ci`, those of the standalone demo service) and builds the review UI;
+- creates local branches for the demo changes (the list is `scripts/demo-branches.json`);
 - creates `~/.modulegraph/` (`configs/` for your services' profiles, `reviews/` for review output). It is private
   to the machine and not part of the repo;
 - installs the **module-review** skill for Claude Code in every project (`~/.claude/skills/module-review/`) and

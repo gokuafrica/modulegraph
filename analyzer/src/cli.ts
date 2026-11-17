@@ -2,7 +2,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, realpathSync, rmdirSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join, relative, resolve } from 'node:path';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import type { Example, ExampleCase, Finding, ModuleGraph, Source } from '../../schema/modulegraph.ts';
@@ -538,10 +538,23 @@ if (args.check && output.incomplete?.length && !args['allow-incomplete']) {
 
 /** A path as people read it: inside the modulegraph folder relative to it, under the home folder with `~`. */
 function displayHome(path: string): string {
-  const p = path.replace(/\\/g, '/');
+  // Long names first: Windows may give the same folder as an 8.3 short path (C:/Users/ABCDEF~1/…), which would not
+  // match the home folder and would show the user's name.
+  const p = longPath(path).replace(/\\/g, '/');
   if (insideApp(p)) return relative(appRoot, p).replace(/\\/g, '/');
-  const home = homedir().replace(/\\/g, '/');
+  const home = longPath(homedir()).replace(/\\/g, '/');
   return p.toLowerCase().startsWith(`${home.toLowerCase()}/`) ? `~${p.slice(home.length)}` : p;
+}
+
+/** The path with long folder names (the nearest existing folder resolved by the OS), the rest as given. */
+function longPath(path: string): string {
+  for (let dir = path, rest = ''; ; rest = join(basename(dir), rest), dir = dirname(dir)) {
+    try {
+      return rest ? join(realpathSync.native(dir), rest) : realpathSync.native(dir);
+    } catch {
+      if (dirname(dir) === dir) return path;
+    }
+  }
 }
 
 /** `modulegraph review …` that analyzes this review again, live: what a saved review tells you to run. */
