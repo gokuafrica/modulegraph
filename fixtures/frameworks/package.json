@@ -4,7 +4,7 @@
   "private": true,
   "description": "Small services in common TypeScript backend stacks, used by analyzer/src/framework-check.ts.",
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "prisma generate && tsc --noEmit",
     "generate": "prisma generate"
   },
   "dependencies": {
