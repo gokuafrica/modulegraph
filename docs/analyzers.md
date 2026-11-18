@@ -134,6 +134,12 @@ is stored on the operation (`operations[].gaps: [{ file, line, reason }]`). The 
 reason, and the brief lists gaps under each change ("Not followed"). One gap is enough to show: there is no
 threshold.
 
+A gap in what an operation calls, at any depth, makes the caller incomplete too: each caller (and entry point) carries
+it in its own `gaps`, after its own ones, with `via` (the operation the gap is in): `{ file, line, reason, via }`. Its
+box gets the same ⚠ ("reaches a gap in `Class.method` line N"), its change in the brief lists it, and the brief no
+longer says "same inputs, outputs and side effects" for it. A review whose changes reach a gap doesn't say "all
+clear" in its header.
+
 Steps are placed where they run, not where they are written. A function handed to a call runs:
 - in place, once per item, for array methods (`map`, `forEach`, `filter`, …); in place for a promise's `then` /
   `catch` / `finally`, `new Promise(executor)`, and the library calls the adapters or the profile's `callbacks` name
@@ -143,9 +149,17 @@ Steps are placed where they run, not where they are written. A function handed t
   through parameters, return values, objects, arrays, destructuring and closures;
 - in another operation that calls the parameter it is given (`locks.withLock(key, async () => …)`), right after
   that call step;
-- anywhere else (a library this analysis doesn't know runs it, `setTimeout`, an event emitter): a `function-value`
-  gap, and its steps are not shown. Teach a library's rule in the profile:
+- picked from a collection the class fills once with its own functions: a `new Map([[key, this.onX], …])`, an
+  object literal `{ [key]: this.onX }` or an array of them, in a field's initializer or the constructor, with every
+  value a method or arrow property of the project and nothing else in the class changing it. `.get(key)`, `[key]` and
+  iteration give every value, each with a `condition` naming its keys (`when status is 'REJECTED' or 'UNREADABLE'`);
+- anywhere else (a library this analysis doesn't know runs it, `setTimeout`, an event emitter, a list filled at run
+  time such as `onX(hook) { this.hooks.push(hook) }`): a `function-value` gap, and its steps are not shown. Teach a library's rule in the profile:
   `"callbacks": [{ "module": "rxjs", "function": "catchError", "runs": "in-place", "condition": "on error" }]`.
+
+A loop is a repetition (`loop` on its steps, "once per item") unless it dispatches: when it goes over a collection
+holding functions (the list of callbacks itself, or objects that each hold their own), each runs once, so what those
+functions do isn't looped by it. Anything else in its body, and loops inside the functions, still are.
 
 A call on an interface or abstract class goes to every implementation the module wiring provides (`useClass`, and a
 `useFactory` that returns its injected instances as a list, with `inject`), as call steps, with a `condition` naming
@@ -166,6 +180,8 @@ during …, not through it: a rollback doesn't undo it"). A `@Transactional()` m
 
 Transactions open at the same time on different handles commit separately (one can commit and another fail), so
 they are never named as one: `2 transactions (legacy, admin), separate commits`, drawn as one box labelled that way.
+Each step in it says which one it commits with (`commitsWith: "legacy"`; "commits with legacy" on the step, "in the
+legacy transaction (one of …)" in the brief): what a failed commit would leave undone.
 One handle: `legacy transaction`, named after the data source (`@InjectDataSource('legacy')`, else the field).
 
 ### The agent's blind check: `disagreements`
@@ -225,6 +241,10 @@ followed the same way (a local, a `this.x` field, `request({ url })`) into a tem
 braces, `${this.config.getOrThrow('PAYMENTS_URL')}/accounts/${id}` → `{PAYMENTS_URL}/accounts/{id}`; an absolute URL
 gives its host. A TypeORM `entity` target is the entity class passed (`manager.create(Order, …)`), else the type of
 the argument, an entity or an array of them (`manager.save(rows)`).
+
+The brief's "Needs a description" lists every operation drawn in the flows of the entry points the change affects,
+at any drill-in depth (the request pipeline's steps too) that has no description, changed or not, all required, and
+puts every one in the JSON to copy. The inspector asks for one on any such box.
 
 Profile descriptions (`modules.overrides.<Class>.operations.<method>`) are matched by class name, module id or display
 name, in any case; keys that match no class or public method are reported (`profile: … describes nothing`, and a

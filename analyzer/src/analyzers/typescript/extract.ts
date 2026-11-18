@@ -15,6 +15,7 @@ import {
   type FunctionExpression,
   type MethodDeclaration,
   type NewExpression,
+  type PropertyAccessExpression,
   type SourceFile,
   type Type,
 } from 'ts-morph';
@@ -120,7 +121,12 @@ const ARRAY_CALLBACKS = new Set(['map', 'forEach', 'filter', 'reduce', 'reduceRi
 /** A promise's continuations: they run after it, in the same flow. */
 const PROMISE_CALLBACKS = new Set(['then', 'catch', 'finally']);
 
-type Guard = { condition?: string; loop?: boolean };
+/**
+ * When and how often a call runs. `loops` has one entry per enclosing loop: the functions its collection holds. A loop
+ * over a list of callbacks (or of objects holding their own) runs each of them once: it dispatches, it doesn't repeat.
+ * So a step that one of those functions produced isn't looped by it; anything else in its body is.
+ */
+type Guard = { condition?: string; loop?: boolean; loops?: Set<Node>[] };
 
 /** How a function is run: the scope it closes over, the values of its arguments, an enclosing `@Transactional`. */
 interface Invoke {
@@ -148,7 +154,7 @@ interface Tx {
  * the module wiring lists.
  */
 type Val =
-  | { k: 'fn'; fn: Fn; env?: Env }
+  | { k: 'fn'; fn: Fn; env?: Env; when?: string }
   | { k: 'handle'; tx: Tx; result?: boolean }
   | { k: 'source'; node: Node }
   | { k: 'obj'; props: Map<string, Val[]> }
@@ -229,8 +235,11 @@ class Trace {
     }
     for (const s of steps) {
       const through = this.stepTx.get(s.id);
-      if (through) s.transaction = names.get(through[0]);
-      else if (!s.transaction && this.outside.has(s.id)) s.outsideTransaction = names.get(this.outside.get(s.id)![0]);
+      if (through) {
+        s.transaction = names.get(through[0]);
+        // Named together with others: which one this step commits with (what a failed commit leaves undone).
+        if (/^\d+ transactions /.test(s.transaction ?? '')) s.commitsWith = [...new Set(through.map((t) => t.name))].join(', ');
+      } else if (!s.transaction && this.outside.has(s.id)) s.outsideTransaction = names.get(this.outside.get(s.id)![0]);
     }
   }
 
@@ -300,6 +309,65 @@ function handlesIn(vals: Val[], depth = 0): Tx[] {
     else if (v.k === 'arr') for (const x of v.items) handlesIn(x, depth + 1).forEach((t) => out.add(t));
   }
   return [...out];
+}
+
+/** The functions a collection holds: its items, and what its items (objects, lists) hold. */
+function fnsIn(vals: Val[], depth = 0, out = new Set<Node>()): Set<Node> {
+  if (depth > 4) return out;
+  for (const v of vals) {
+    if (v.k === 'fn') out.add(v.fn);
+    else if (v.k === 'arr') for (const x of v.items) fnsIn(x, depth + 1, out);
+    else if (v.k === 'obj') for (const x of v.props.values()) fnsIn(x, depth + 1, out);
+  }
+  return out;
+}
+
+/** Whether a step runs once per item: a loop of its own, or an enclosing one that isn't dispatching to the function that produced it. */
+function looped(guard: Guard, own: boolean | undefined, origins: Node[] | undefined): boolean | undefined {
+  if (own) return true;
+  if (!guard.loops) return guard.loop || undefined;
+  return guard.loops.some((fns) => !origins?.some((o) => fns.has(o))) || undefined;
+}
+
+/**
+ * `handlers.get(key)` / `handlers[key]` on a keyed collection of functions: the one under a literal key, else every
+ * function it holds, each with the keys it is under (`when kind is 'A' or 'B'`).
+ */
+function pick(vals: Val[], keyNode: Node | undefined): Val[] {
+  const objs = vals.filter((v): v is Extract<Val, { k: 'obj' }> => v.k === 'obj');
+  if (!objs.length) return [];
+  const bare = (k: string) => k.replace(/^\[(.*)\]$/, '$1').replace(/^(['"`])(.*)\1$/, '$2');
+  const literal = keyNode && (Node.isStringLiteral(keyNode) || Node.isNoSubstitutionTemplateLiteral(keyNode) || Node.isNumericLiteral(keyNode)) ? String(keyNode.getLiteralValue()) : undefined;
+  const byFn = new Map<Node, { v: Extract<Val, { k: 'fn' }>; keys: string[] }>();
+  const other: Val[] = [];
+  for (const o of objs) {
+    for (const [k, xs] of o.props) {
+      if (literal !== undefined && bare(k) !== literal) continue;
+      for (const x of xs) {
+        if (x.k !== 'fn') other.push(x);
+        else if (byFn.has(x.fn)) byFn.get(x.fn)!.keys.push(k);
+        else byFn.set(x.fn, { v: x, keys: [k] });
+      }
+    }
+  }
+  const subject = keyNode ? short(keyNode.getText(), 30) : 'the key';
+  // A string key reads as itself ('A'); a computed one as its code (Kind.A).
+  const shown = (k: string) => (/^(['"`])/.test(k) ? `'${bare(k)}'` : bare(k));
+  const fns = [...byFn.values()].map(({ v, keys }): Val => (literal === undefined && byFn.size > 1 ? { ...v, when: `when ${subject} is ${keys.map(shown).join(' or ')}` } : v));
+  return [...fns, ...other];
+}
+
+/** A collection's values when every one of them is a function the code shows: anything else and it is not followed. */
+function onlyFns(vals: Val[], depth = 0): boolean {
+  if (depth > 3) return false;
+  return vals.length > 0 && vals.every((v) => v.k === 'fn' || (v.k === 'arr' && v.items.every((x) => onlyFns(x, depth + 1))) || (v.k === 'obj' && [...v.props.values()].every((x) => onlyFns(x, depth + 1))));
+}
+
+/** What a Map's methods give back: `get(key)` (see `pick`), `values()`. */
+function keyedResult(name: string, recv: Val[], arg: Node | undefined): Val[] {
+  if (name === 'get') return pick(recv, arg);
+  if (name === 'values' && recv.some((v) => v.k === 'obj')) return [{ k: 'arr', items: [pick(recv, undefined).map((v): Val => (v.k === 'fn' ? { ...v, when: undefined } : v))] }];
+  return [];
 }
 
 /** What an array method gives back: its items (`find`, `at`), a list of them (`filter`, `slice`), or the callback's results (`map`). */
@@ -1550,6 +1618,8 @@ export class Extractor implements RevisionAnalysis {
   /** Gaps of each scope built so far (calls it could not follow), for its operation or entry point. */
   private gapsOf = new Map<string, Gap[]>();
   private trace = new Trace();
+  /** The function values (not helpers) whose running produced each step, innermost first: for `looped`. */
+  private origins = new WeakMap<Step, Node[]>();
 
   /**
    * The steps of a function, in the order they run. Every call gets one disposition (see `Trace`): a step, a helper
@@ -1623,16 +1693,25 @@ export class Extractor implements RevisionAnalysis {
       }
       if (Node.isPropertyAccessExpression(n)) {
         const recv = n.getExpression();
-        if (recv.getKind() === SyntaxKind.ThisKeyword) return this.fieldVals(n);
+        if (recv.getKind() === SyntaxKind.ThisKeyword) {
+          // A collection the class fills once from its own functions (`new Map([[k, this.onX], …])` in the constructor).
+          const writes = this.fieldWrites(n);
+          const held = writes?.flatMap(next) ?? [];
+          if (writes && onlyFns(held)) return held;
+          return this.fieldVals(n);
+        }
         return member(next(recv), n.getName());
       }
       if (Node.isElementAccessExpression(n)) {
         const key = this.literal(n.getArgumentExpressionOrThrow());
-        return next(n.getExpression()).flatMap((v) => {
-          if (v.k === 'arr') return /^\d+$/.test(key) && v.items[Number(key)] ? v.items[Number(key)] : v.items.flat();
-          if (v.k === 'obj') return v.props.get(key) ?? [...v.props.values()].flat();
-          return v.k === 'handle' ? [v] : [];
-        });
+        const held = next(n.getExpression());
+        return [
+          ...held.flatMap((v) => {
+            if (v.k === 'arr') return /^\d+$/.test(key) && v.items[Number(key)] ? v.items[Number(key)] : v.items.flat();
+            return v.k === 'handle' ? [v] : [];
+          }),
+          ...pick(held, n.getArgumentExpressionOrThrow()),
+        ];
       }
       if (Node.isObjectLiteralExpression(n)) {
         const props = new Map<string, Val[]>();
@@ -1652,6 +1731,18 @@ export class Extractor implements RevisionAnalysis {
         }
         return [{ k: 'arr', items }];
       }
+      // `new Map([[key, value], …])`: an object keyed by the keys' text.
+      if (Node.isNewExpression(n) && n.getExpression().getText() === 'Map') {
+        const pairs = n.getArguments()[0];
+        const props = new Map<string, Val[]>();
+        if (!pairs || !Node.isArrayLiteralExpression(pairs)) return [];
+        for (const e of pairs.getElements()) {
+          if (!Node.isArrayLiteralExpression(e) || e.getElements().length !== 2) return [];
+          const [k, v] = e.getElements();
+          props.set(k.getText(), [...(props.get(k.getText()) ?? []), ...next(v)]);
+        }
+        return [{ k: 'obj', props }];
+      }
       if (Node.isConditionalExpression(n)) return [...next(n.getWhenTrue()), ...next(n.getWhenFalse())];
       if (Node.isBinaryExpression(n) && [SyntaxKind.QuestionQuestionToken, SyntaxKind.BarBarToken, SyntaxKind.AmpersandAmpersandToken].includes(n.getOperatorToken().getKind())) {
         return [...next(n.getLeft()), ...next(n.getRight())];
@@ -1665,7 +1756,7 @@ export class Extractor implements RevisionAnalysis {
           if (callee.getName() === 'bind') return recv.filter((v) => v.k === 'fn');
           const h = handlesIn(recv, 0);
           if (h.length) return h.map((tx) => ({ k: 'handle', tx, result: true }) as Val);
-          return arrayResult(callee.getName(), recv, []);
+          return [...arrayResult(callee.getName(), recv, []), ...keyedResult(callee.getName(), recv, n.getArguments()[0])];
         }
       }
       return [];
@@ -1696,11 +1787,12 @@ export class Extractor implements RevisionAnalysis {
     };
 
     /** Runs `v` (a function value) here, with these arguments: its steps are this call's. */
-    const invoke = (call: Invocation, v: Extract<Val, { k: 'fn' }>, args: Val[][], guard: Guard, inputs: Map<string, Set<string>>, extra: { loop?: boolean; via?: string } = {}) => {
+    const invoke = (call: Invocation, v: Extract<Val, { k: 'fn' }>, args: Val[][], guard: Guard, inputs: Map<string, Set<string>>, extra: { loop?: Set<Node>; via?: string } = {}) => {
+      if (extra.loop) guard = { ...guard, loop: true, loops: [...(guard.loops ?? []), extra.loop] };
       // A method of a class given as a value (`items.forEach(this.process)`): as if called.
       if (Node.isMethodDeclaration(v.fn) && !v.env) {
         const r = this.resolveMethod(v.fn);
-        if (r.kind === 'op') return handleTarget(call, r, { ...guard, loop: guard.loop || extra.loop || undefined }, new Map(), inputs, args);
+        if (r.kind === 'op') return handleTarget(call, r, guard, new Map(), inputs, args);
       }
       if (stack.has(v.fn)) return;
       stack.add(v.fn);
@@ -1708,18 +1800,21 @@ export class Extractor implements RevisionAnalysis {
       stack.delete(v.fn);
       const handed = trace.handed.get(v.fn);
       if (handed) handed.to.push(at(call));
-      merge(call, sub, extra.via, { ...guard, loop: guard.loop || extra.loop || undefined }, inputs);
+      merge(call, sub, extra.via, guard, inputs, v.fn);
     };
 
     /** Steps of a function run by this call (a helper, a callback), merged into this one's. */
-    const merge = (call: Invocation, sub: FnResult, via: string | undefined, guard: Guard, inputs: Map<string, Set<string>>) => {
+    const merge = (call: Invocation, sub: FnResult, via: string | undefined, guard: Guard, inputs: Map<string, Set<string>>, origin?: Node) => {
       for (const s of sub.steps) {
-        steps.push({
+        const origins = [...(this.origins.get(s) ?? []), ...(origin ? [origin] : [])];
+        const step: Step = {
           ...s,
           condition: [guard.condition, s.condition].filter(Boolean).join(' and ') || undefined,
-          loop: guard.loop || s.loop || undefined,
+          loop: looped(guard, s.loop, origins),
           ...(s.via ?? via ? { via: s.via ?? via } : {}),
-        });
+        };
+        if (origins.length) this.origins.set(step, origins);
+        steps.push(step);
       }
       for (const e of sub.edges) {
         if (e.from !== 'entry') edges.push(e);
@@ -1747,7 +1842,9 @@ export class Extractor implements RevisionAnalysis {
       const w = { ...where(call), text: short(call.getText(), 100) };
       const callee = call.getExpression();
       const args = call.getArguments();
-      const { guardNodes, ...guard } = guardOf(call, fn);
+      const { guardNodes, loopNodes, ...syntactic } = guardOf(call, fn);
+      // Each enclosing loop, with the functions its collection holds (`for (const run of runs)`: a dispatch).
+      const guard: Guard = { ...syntactic, ...(loopNodes.length ? { loops: loopNodes.map((l) => (Node.isForOfStatement(l) ? fnsIn(valOf(l.getExpression())) : new Set<Node>())) } : {}) };
       const guards: Prod = new Map();
       for (const g of guardNodes) mergeInto(guards, strip(prodOf(g)));
       const inputs = new Map<string, Set<string>>();
@@ -1764,7 +1861,9 @@ export class Extractor implements RevisionAnalysis {
         const fns = valOf(viaCall ?? callee).filter((v): v is Extract<Val, { k: 'fn' }> => v.k === 'fn');
         if (fns.length) {
           const given = viaCall ? argVals.slice(1) : argVals;
-          for (const v of fns) invoke(call, v, given, guard, inputs);
+          // Several functions it can be (a handler picked by key): each with the keys it is under.
+          const several = new Set(fns.map((v) => v.fn)).size > 1;
+          for (const v of fns) invoke(call, v, given, several && v.when ? { ...guard, condition: [guard.condition, v.when].filter(Boolean).join(' and ') } : guard, inputs);
           trace.note({ ...w, disposition: 'followed', to: [...new Set(fns.map((v) => at(v.fn)))].join(', ') });
           return;
         }
@@ -1830,13 +1929,13 @@ export class Extractor implements RevisionAnalysis {
             if (v.k !== 'fn') continue;
             const before = callVals.get(call)?.length ?? 0;
             const guardFor = onError ? { ...when, condition: [when.condition, 'on error'].filter(Boolean).join(' and ') } : when;
-            invoke(call, v, ARRAY_CALLBACKS.has(name) ? [items, [], recv] : [], guardFor, inputs, { loop: ARRAY_CALLBACKS.has(name) });
+            invoke(call, v, ARRAY_CALLBACKS.has(name) ? [items, [], recv] : [], guardFor, inputs, ARRAY_CALLBACKS.has(name) ? { loop: fnsIn(items) } : {});
             results.push(...(callVals.get(call) ?? []).slice(before));
           }
           callVals.set(call, ARRAY_CALLBACKS.has(name) ? arrayResult(name, recv, results) : results);
         } else if (isPromiseAll(call)) callVals.set(call, argVals[0] ?? []);
         else if (Node.isPropertyAccessExpression(callee)) {
-          const r = arrayResult(callee.getName(), recv, []);
+          const r = [...arrayResult(callee.getName(), recv, []), ...keyedResult(callee.getName(), recv, args[0])];
           if (r.length) callVals.set(call, r);
           // A method of a handle gives what works on the same connection (`runner.manager.getRepository(X)`).
           const h = handlesIn(recv, 0);
@@ -1868,7 +1967,8 @@ export class Extractor implements RevisionAnalysis {
           ...(resolved.kind === 'op' ? { target: resolved.opId } : { effect: resolved.effect }),
           line: call.getStartLineNumber(),
           file: this.rel(call.getSourceFile().getFilePath()),
-          ...guard,
+          condition: guard.condition,
+          loop: looped(guard, false, undefined),
           ...(ambient ? { transaction: ambient } : {}),
         };
         steps.push(step);
@@ -1973,7 +2073,43 @@ export class Extractor implements RevisionAnalysis {
     }
     const decl = Node.isPropertyAccessExpression(access) ? this.resolveDeclaration(access) : undefined;
     if (decl && Node.isMethodDeclaration(decl) && decl.getBody() && this.isProjectFile(decl.getSourceFile().getFilePath())) return [{ k: 'fn', fn: decl }];
+    // An arrow function property (`private onApproved = async (…) => {…}`).
+    const init = decl && Node.isPropertyDeclaration(decl) && this.isProjectFile(decl.getSourceFile().getFilePath()) ? decl.getInitializer() : undefined;
+    if (init && (Node.isArrowFunction(init) || Node.isFunctionExpression(init))) return [{ k: 'fn', fn: init }];
     return [{ k: 'source', node: access }];
+  }
+
+  /**
+   * What the class writes to a field it fills once: its initializer and what its constructor assigns, when each is a
+   * collection literal (`new Map([...])`, `{ … }`, `[ … ]`) and nothing else in the class assigns or changes it
+   * (`push`, `set`, `this.x[k] = …`). Undefined otherwise: a list filled at run time
+   * (`onX(hook) { this.hooks.push(hook) }`) holds functions the code doesn't show.
+   */
+  private fieldWrites(access: PropertyAccessExpression): Node[] | undefined {
+    const decl = this.resolveDeclaration(access);
+    if (!decl || !Node.isPropertyDeclaration(decl) || !this.isProjectFile(decl.getSourceFile().getFilePath())) return undefined;
+    const cls = decl.getParent();
+    if (!Node.isClassDeclaration(cls)) return undefined;
+    const name = decl.getName();
+    const literal = (x: Node) => Node.isArrayLiteralExpression(x) || Node.isObjectLiteralExpression(x) || (Node.isNewExpression(x) && x.getExpression().getText() === 'Map');
+    const assigned = (x: Node) => {
+      const b = x.getParent();
+      return b && Node.isBinaryExpression(b) && b.getLeft() === x && b.getOperatorToken().getKind() === SyntaxKind.EqualsToken ? b : undefined;
+    };
+    const writes: Node[] = [];
+    const init = decl.getInitializer();
+    if (init) writes.push(unwrap(init));
+    for (const pa of cls.getDescendantsOfKind(SyntaxKind.PropertyAccessExpression)) {
+      if (pa.getName() !== name || pa.getExpression().getKind() !== SyntaxKind.ThisKeyword) continue;
+      const parent = pa.getParent();
+      const whole = assigned(pa);
+      if (whole) {
+        if (!pa.getFirstAncestorByKind(SyntaxKind.Constructor)) return undefined;
+        writes.push(unwrap(whole.getRight()));
+      } else if (Node.isPropertyAccessExpression(parent) && /^(set|push|unshift|splice|add|delete|clear)$/.test(parent.getName())) return undefined;
+      else if (Node.isElementAccessExpression(parent) && parent.getExpression() === pa && assigned(parent)) return undefined;
+    }
+    return writes.length && writes.every(literal) ? writes : undefined;
   }
 
   /** Where a function calls the function it is given as parameter `index` (`retry(op)` runs `op()`), if it does. */
@@ -2391,6 +2527,10 @@ export class Extractor implements RevisionAnalysis {
       return Node.isClassDeclaration(decl) ? { call, owner: decl.getName() ?? '', name: 'new', pkg, decl, receiver } : undefined;
     }
     if (Node.isFunctionDeclaration(decl)) return { call, owner: '', name: decl.getName() ?? '', pkg, decl, receiver };
+    // A library's plain function declared as a constant (`export declare const getSignedUrl: (…) => Promise<string>`).
+    if (Node.isVariableDeclaration(decl) && Node.isSourceFile(decl.getVariableStatement()?.getParent()) && decl.getType().getCallSignatures().length) {
+      return { call, owner: '', name: decl.getName(), pkg, decl, receiver };
+    }
     if (!(Node.isMethodDeclaration(decl) || Node.isMethodSignature(decl) || Node.isPropertySignature(decl) || Node.isPropertyDeclaration(decl))) return undefined;
     const name = decl.getName();
     const parent = decl.getParent();
@@ -2549,6 +2689,44 @@ export class Extractor implements RevisionAnalysis {
     for (const entry of Object.values(this.snapshot.entryPoints)) {
       const steps = this.snapshot.scopes[entry.id]?.steps ?? [];
       entry.effects = dedupeEffects(steps.flatMap((s) => (s.effect ? [s.effect] : s.target ? visit(s.target, new Set()) : [])));
+    }
+    this.carryGaps();
+  }
+
+  /**
+   * What an operation reaches is part of it: a gap in a callee, at any depth, makes its callers' facts incomplete too.
+   * Each caller (and entry point) gets the gaps of what it reaches after its own, with `via` (the operation the gap
+   * is in). Recomputed from the own gaps every time, so a lazy analysis that loads more callees stays the same as a
+   * full one.
+   */
+  private carryGaps(): void {
+    const ops = this.snapshot.operations;
+    const own = (gaps: Gap[] | undefined) => (gaps ?? []).filter((x) => !x.via);
+    const key = (x: Gap) => `${x.file}:${x.line}:${x.reason}`;
+    const reached = (from: string[]): Gap[] => {
+      const seen = new Set<string>();
+      const out = new Map<string, Gap>();
+      const queue = [...from];
+      while (queue.length) {
+        const id = queue.shift()!;
+        if (seen.has(id) || !ops[id]) continue;
+        seen.add(id);
+        for (const x of own(ops[id].gaps)) if (!out.has(key(x))) out.set(key(x), { file: x.file, line: x.line, reason: x.reason, via: id });
+        queue.push(...ops[id].calls);
+      }
+      return [...out.values()];
+    };
+    const set = (holder: { gaps?: Gap[] }, mine: Gap[], callees: string[]) => {
+      const keys = new Set(mine.map(key));
+      const all = [...mine, ...reached(callees).filter((x) => !keys.has(key(x)))];
+      if (all.length) holder.gaps = all;
+      else delete holder.gaps;
+    };
+    const owns = new Map(Object.values(ops).map((op) => [op.id, own(op.gaps)]));
+    for (const op of Object.values(ops)) set(op, owns.get(op.id)!, op.calls);
+    for (const entry of Object.values(this.snapshot.entryPoints)) {
+      const targets = (this.snapshot.scopes[entry.id]?.steps ?? []).flatMap((s) => (s.target ? [s.target] : []));
+      set(entry, own(entry.gaps), [...new Set(targets)]);
     }
   }
 
@@ -2777,9 +2955,10 @@ export function collectionName(model: string): string {
   return /s$/.test(snake) ? snake : /y$/.test(snake) ? `${snake.slice(0, -1)}ies` : `${snake}s`;
 }
 
-function guardOf(call: Node, fn: Node): { condition?: string; loop?: boolean; guardNodes: Node[] } {
+function guardOf(call: Node, fn: Node): { condition?: string; loop?: boolean; guardNodes: Node[]; loopNodes: Node[] } {
   const conditions: string[] = [];
   const guardNodes: Node[] = [];
+  const loopNodes: Node[] = [];
   let loop = false;
   let child: Node = call;
   let node = call.getParent();
@@ -2804,9 +2983,13 @@ function guardOf(call: Node, fn: Node): { condition?: string; loop?: boolean; gu
       Node.isForOfStatement(node) || Node.isForInStatement(node) || Node.isForStatement(node) ||
       Node.isWhileStatement(node) || Node.isDoStatement(node)
     ) {
-      if (child === node.getStatement()) loop = true;
+      if (child === node.getStatement()) {
+        loop = true;
+        loopNodes.push(node);
+      }
     } else if (Node.isCallExpression(node) && isFnNode(child) && /\.(map|forEach|flatMap|filter|reduce|some|every)$/.test(node.getExpression().getText())) {
       loop = true;
+      loopNodes.push(node);
     } else if (Node.isCatchClause(node)) {
       conditions.push('on error');
     } else if (Node.isBlock(node)) {
@@ -2822,7 +3005,7 @@ function guardOf(call: Node, fn: Node): { condition?: string; loop?: boolean; gu
     child = node;
     node = node.getParent();
   }
-  return { condition: conditions.reverse().join(' and ') || undefined, loop: loop || undefined, guardNodes };
+  return { condition: conditions.reverse().join(' and ') || undefined, loop: loop || undefined, guardNodes, loopNodes };
 }
 
 /** `unless (x)`, but `if (x)` for `unless (!x)`: an early `if (!order) throw` means "only when order". */

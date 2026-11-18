@@ -57,7 +57,7 @@ the mechanisms. The kit is in the repo unchanged ([acceptance/round-4](../../acc
   rule (I7). The "incomplete" panel shows each item next to its rule with one click.
 - **R4-4.** URLs from a config object's property (`config.baseUrl` with `config = configService.getOrThrow('X')`)
   and from destructuring (`const { baseUrl } = configService.get('X')`): `{X.baseUrl}/…`.
-- **R4-5.** An unchanged operation without a description shows one quiet line in the inspector; changed ones keep
+- **R4-5** (reversed by [bug note 1](bug-note-1.md), B3: every box asks). An unchanged operation without a description shows one quiet line in the inspector; changed ones keep
   the prompt. The skill now asks for every operation the brief lists (Required and "Also met in the flows"), and
   `analyze`/`review` print one line saying descriptions come from the code or the reviewing agent.
 - **R4-6.** A read that locks its rows carries `lock` (`for update`, `for share`): TypeORM `lock: { mode }`,

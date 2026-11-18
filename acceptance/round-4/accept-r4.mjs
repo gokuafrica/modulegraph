@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * Round-4 acceptance check for modulegraph, on the fixture made by create-r4-fixture.mjs. Fast on purpose (about a
+ * Round-4 acceptance check for modulegraph (with bug note 1: B1, B2, B3), on the fixture made by create-r4-fixture.mjs. Fast on purpose (about a
  * minute): two analyze runs (first run with no profile; then the profile it suggests, applied as-is, full, without
  * Jest), one browser page with --ui, the invariants on both reviews, and the call accounting of accounting.mjs.
  *
- *   node accept-r4.mjs --modulegraph <checkout> --fixture <dir> [--ui] [--only R4-1,R4-3] [--keep]
+ *   node accept-r4.mjs --modulegraph <checkout> --fixture <dir> [--ui] [--only R4-1,B2] [--keep]
  *
  * --only shows and counts only those items (plus setup and the invariants), for a quick loop while fixing one thing.
  * DO NOT EDIT the expectations or the fixture to make a check pass; if one looks wrong, leave it failing and say why.
@@ -120,9 +120,10 @@ try {
     else if (e.disposition === 'gap' && !(C.g.operations[c.op]?.gaps ?? []).some((x) => x.line === c.line)) unaccounted.push(`${c.op} L${c.line}: a gap in --explain but not in operations[].gaps`);
   }
   check('R4-1', `all ${cands.length} calls through values / function literals handed on (found independently from the source) are "followed" or a named "gap"`, cands.length > 0 && !unaccounted.length, unaccounted.join(' | '));
-  for (const op of NO_GAPS) check('R4-1', `${op}: fully typed project code, so no gap`, !(C.g.operations[op]?.gaps ?? []).length, JSON.stringify(C.g.operations[op]?.gaps));
-  const opsWithGaps = ops.filter((o) => (C.g.operations[o.id]?.gaps ?? []).length);
-  check('R4-1', `gap budget: at most 10% of analyzed operations carry a gap (${opsWithGaps.length}/${ops.length})`, opsWithGaps.length <= Math.ceil(ops.length * 0.1), opsWithGaps.map((o) => o.id).join(', '));
+  const own = (op) => (C.g.operations[op]?.gaps ?? []).filter((x) => !x.via);
+  for (const op of NO_GAPS) check('R4-1', `${op}: fully typed project code, so no gap of its own (a gap carried up from a callee has "via")`, !own(op).length, JSON.stringify(own(op)));
+  const opsWithGaps = ops.filter((o) => own(o.id).length);
+  check('R4-1', `gap budget: at most 10% of analyzed operations carry a gap of their own (${opsWithGaps.length}/${ops.length})`, opsWithGaps.length <= Math.ceil(ops.length * 0.1), opsWithGaps.map((o) => o.id).join(', '));
 
   // ── R4-2 Execution order and transaction membership.
   for (const [op, want] of Object.entries(TX)) {
@@ -148,10 +149,66 @@ try {
   const rs = C.g.scopes['ReassignmentService.reassign']?.steps ?? [];
   const rsPlaced = ['db.write review_comments', 'db.write user_records'].every((n) => rs.some((s) => stepName(s) === n && s.transaction));
   const rsGap = (C.g.operations['ReassignmentService.reassign']?.gaps ?? []).some((x) => x.reason === 'interface-dispatch');
-  check('R4-2', 'reassign(): the strategy steps\' writes are in the transaction (both implementations followed), OR it carries an interface-dispatch gap', rsPlaced || rsGap, `steps: ${fmtSteps(rs) || 'none'}; gaps: ${JSON.stringify(C.g.operations['ReassignmentService.reassign']?.gaps ?? [])}`);
+  // Both strategies drawn as call boxes in the transaction, their writes in reassign()'s effects, is also right (bug note 1).
+  const rsBoxes = ['call MoveCommentsStep.apply', 'call ReassignRecordStep.apply'].every((n) => rs.some((s) => stepName(s) === n && s.transaction))
+    && ['review_comments', 'user_records'].every((t) => (C.g.operations['ReassignmentService.reassign']?.effects ?? []).some((e) => e.kind === 'db.write' && e.target === t));
+  check('R4-2', 'reassign(): both strategy implementations are followed inside the transaction (inlined, or as call boxes in it with their writes in its effects), OR it carries an interface-dispatch gap', rsPlaced || rsBoxes || rsGap, `steps: ${fmtSteps(rs) || 'none'}; gaps: ${JSON.stringify(C.g.operations['ReassignmentService.reassign']?.gaps ?? [])}`);
   // Regressions: these already work and must keep working.
   check('R4-2', 'retry(() => …) is followed: RecordLocksService.freeze writes user_records', effectsOf(C.g, 'RecordLocksService.freeze').some((e) => e.kind === 'db.write' && e.target === 'user_records'));
   check('R4-2', 'an abstract class with one implementation is followed: DocumentArchiveService.archive → http {FILE_STORE_URL}/objects/{key}', effectsOf(C.g, 'DocumentArchiveService.archive').some((e) => e.kind === 'http' && e.target === '{FILE_STORE_URL}/objects/{key}'));
+
+  // ── B1 A loop that walks a list of callbacks (or of contexts holding them) is dispatch: each callback runs once.
+  for (const op of [`${W}.approve`, `${W}.updateUserRecordData`]) {
+    for (const [side, steps] of [['head', C.g.scopes[op]?.steps], ['base', C.g.scopes[op]?.before?.steps]]) {
+      const looped = (steps ?? []).filter((s) => s.loop);
+      check('B1', `${op} (${side}): no step is marked as running once per item (executeQueries' loop runs each callback once)`, !!steps?.length && !looped.length, steps ? `looped: ${looped.map(stepName).join(', ')}` : 'no steps');
+    }
+  }
+  const perRow = (C.g.scopes[`${W}.setUserRecordManualReviewData`]?.steps ?? []).filter((s) => stepName(s) === `call ${W}.setUserRecordManualReviewDataForRow`);
+  check('B1', 'control: setUserRecordManualReviewData\'s per-row call (for … of rows) is still marked once per item', perRow.length > 0 && perRow.every((s) => s.loop), fmtSteps(C.g.scopes[`${W}.setUserRecordManualReviewData`]?.steps ?? []));
+
+  // ── B2 A collection literal of the class's own methods is followed; a gap in a callee is carried up to its callers.
+  const SS = 'UserRecordStatusService.setStatus';
+  const ssFile = join(fx, 'src/user-records/user-record-status.service.ts');
+  const ssLines = existsSync(ssFile) ? readFileSync(ssFile, 'utf8').split('\n') : [];
+  const lineOf = (re) => ssLines.findIndex((l) => re.test(l)) + 1;
+  const handlerLine = lineOf(/await setStatus\(record, changedBy, legacyManager, status\)/);
+  const hookLine = lineOf(/await hook\(record, status\)/);
+  const ssExplain = C.explain?.[SS] ?? [];
+  check('B2', `setStatus: the Map handler call (line ${handlerLine}) is "followed" to the three handler properties`, handlerLine > 0 && ssExplain.some((x) => x.line === handlerLine && x.disposition === 'followed'), JSON.stringify(ssExplain.filter((x) => x.line === handlerLine)));
+  const ssEff = effectsOf(C.g, SS).map((e) => `${e.kind} ${e.target}`);
+  check('B2', 'setStatus: the handlers\' writes are its effects (db.write user_records, db.write record_messages)', ['db.write user_records', 'db.write record_messages'].every((e) => ssEff.includes(e)), ssEff.join(', '));
+  const ssOwn = (C.g.operations[SS]?.gaps ?? []).filter((x) => !x.via);
+  check('B2', `setStatus: its one gap of its own is the runtime hook list (line ${hookLine}), not the Map`, hookLine > 0 && ssOwn.length === 1 && ssOwn[0].line === hookLine, JSON.stringify(ssOwn));
+  const apEff = effectsOf(C.g, `${W}.approve`).map((e) => `${e.kind} ${e.target}`);
+  check('B2', 'approve(): the status handlers\' message write reaches its effects', apEff.includes('db.write record_messages'), apEff.join(', '));
+  const carried = (op) => (C.g.operations[op]?.gaps ?? []).some((x) => x.via && x.line === hookLine && /user-record-status\.service\.ts$/.test(x.file ?? '') && GAP_REASONS.has(x.reason));
+  for (const op of [`${W}.approve`, 'ManualReviewService.approveUserRecord']) {
+    check('B2', `${op}: carries the setStatus gap up (operations[].gaps entry with "via", the original file and line ${hookLine})`, carried(op), JSON.stringify(C.g.operations[op]?.gaps ?? []));
+  }
+  const briefSection = (b, short) => b.split(/^### \d+\. /m).find((x) => x.startsWith(`${short}:`) || x.startsWith(`${short.replace(/^(\w+?)Service\./, '$1.')}:`)) ?? '';
+  const apSec = briefSection(C.brief, `${W}.approve`);
+  check('B2', 'brief: approve()\'s change names the gap it reaches (setStatus, its line) and does not claim "same … side effects"', !!apSec && new RegExp(`setStatus[^\\n]*${hookLine}|${hookLine}[^\\n]*setStatus`).test(apSec) && !/same inputs, outputs and side effects/i.test(apSec), apSec.split('\n').slice(0, 12).join(' / ').slice(0, 600) || 'section not found');
+
+  // ── B3 Every operation drawn in a flow of an affected entry point, at any depth, is asked for a description.
+  const affected = Object.values(C.g.entryPoints).filter((e) => e.containsChanges || (e.change && e.change !== 'unchanged'));
+  const drawn = new Set();
+  const walk = (id) => { if (drawn.has(id)) return; drawn.add(id); for (const s of C.g.scopes[id]?.steps ?? []) if (s.target && C.g.operations[s.target]) walk(s.target); };
+  for (const e of affected) walk(e.id);
+  const drawnOps = [...drawn].filter((id) => C.g.operations[id] && C.g.operations[id].change !== 'removed');
+  const undescribed = drawnOps.filter((id) => !C.g.operations[id].summary);
+  const need = C.brief.split(/^## Needs a description/m)[1]?.split(/^## /m)[0] ?? '';
+  const notListed = undescribed.filter((id) => !need.includes(`\`${id}\``));
+  check('B3', `brief: "Needs a description" lists every undescribed operation drawn in the affected flows, at any depth (${undescribed.length})`, undescribed.length > 3 && !notListed.length, `not listed: ${notListed.join(', ')}`);
+  const json = /```json\n([\s\S]*?)```/.exec(need)?.[1] ?? '';
+  const clsOf = (id) => C.g.modules[C.g.operations[id].moduleId]?.className ?? C.g.operations[id].moduleId;
+  const notInJson = undescribed.filter((id) => !new RegExp(`"${clsOf(id)}"[^\\n]*"${C.g.operations[id].name}"`).test(json));
+  check('B3', 'brief: the JSON skeleton the agent copies has every one of them, not only the changed ones', !!json && !notInJson.length, `missing: ${notInJson.join(', ')}`);
+  const overrides = {};
+  for (const id of undescribed) ((overrides[clsOf(id)] ??= { operations: {} }).operations[C.g.operations[id].name] = `Test description for ${id}.`);
+  const D = analyze('d', { ...profile, modules: { overrides } }, ['--head', BRANCH, '--no-tests']);
+  const dNeed = D.brief.split(/^## Needs a description/m)[1]?.split(/^## /m)[0] ?? '';
+  check('B3', 'with every listed one described in the profile, the brief asks for nothing more', !/No doc comment, no API docs/.test(dNeed) && undescribed.every((id) => !!D.g.operations[id]?.summary), dNeed.slice(0, 400) || 'ok');
 
   // ── R4-3 A pure function from a package that also has a network client.
   const dl = effectsOf(C.g, 'DocumentLinksService.downloadLink');
@@ -176,10 +233,10 @@ try {
   const sec = C.brief.split(/^### \d+\. /m).find((s) => s.startsWith(`ConcludeManualReviewDecision.setUserRecordManualReviewData:`) || s.startsWith(`${W}.setUserRecordManualReviewData:`)) ?? '';
   check('R4-6', 'brief: setUserRecordManualReviewData\'s "Behaviour inside" says the new read locks the rows (pessimistic write)', /lock/i.test(sec), sec.split('\n').slice(0, 8).join(' / ').slice(0, 400) || 'section not found');
 
-  if (opt.ui && (!only || ['R4-2', 'R4-3', 'R4-5'].some((i) => only.has(i)))) {
+  if (opt.ui && (!only || ['R4-2', 'R4-3', 'R4-5', 'B2', 'B3'].some((i) => only.has(i)))) {
     section('3. UI (1440×900)');
     await ui(A, C);
-  } else if (!opt.ui) console.log('\n  · UI not run (pass --ui): R4-2 (label), R4-3 (panel) and R4-5 are NOT verified');
+  } else if (!opt.ui) console.log('\n  · UI not run (pass --ui): R4-2 (label), R4-3 (panel), R4-5, B2 (⚠ on the box) and B3 (the ask) are NOT verified');
 } catch (e) {
   check('run', 'the runs completed', false, String(e?.stack ?? e));
 } finally {
@@ -213,8 +270,13 @@ async function ui(A, C) {
     await page.waitForSelector('.react-flow__node', { timeout: 60_000 });
     await page.waitForTimeout(1200);
   };
+  /** The inspector's text once it has rendered (it opens with only its close button for a moment). */
+  const inspectorText = async () => { for (let i = 0; i < 25; i++) { const t = await page.evaluate(() => document.querySelector('.inspector')?.innerText ?? ''); if (t.split('\n').length > 3) return t; await page.waitForTimeout(200); } return page.evaluate(() => document.querySelector('.inspector')?.innerText ?? ''); };
   const clickNode = (re) => page.evaluate((src) => { const n = [...document.querySelectorAll('.react-flow__node')].find((x) => new RegExp(src).test(x.textContent ?? '')); (n?.firstElementChild ?? n)?.click(); }, re);
+  // A server left over from an earlier, interrupted run answers on the same port with a review whose files are gone.
+  const free = async () => { await down(); for (let i = 0; i < 50; i++) { try { await fetch(`http://127.0.0.1:${PORT}/api/health`); } catch { return; } await new Promise((r) => setTimeout(r, 200)); } };
   try {
+    await free();
     let child = serve(A);
     await up(A);
     // R4-3: one click on "incomplete" shows each flagged item and its rule.
@@ -225,25 +287,27 @@ async function ui(A, C) {
     const pkgs = ['@vendorco/identity-api', 'ssh2-sftp-client'];
     const lines = pkgs.filter((p) => visible.split('\n').some((l) => l.includes(`${p} (`) && !l.includes('"module"')));
     check('R4-3', 'one click on "incomplete" shows each flagged item (package and why) and its rule, without a further click', lines.length === pkgs.length && /"sinks"/.test(visible), `item lines visible for: ${lines.join(', ') || 'none'}; ${/"sinks"/.test(visible) ? 'rule shown' : 'no rule shown'}`);
-    // R4-5: unchanged undescribed operation: a quiet line, not the "Ask your agent" block; the changed one still asks.
+    // B3 (replaces the R4-5 quiet line): an unchanged, undescribed operation in the change's flow asks too.
     await go(A, `v=impact&op=${encodeURIComponent('UserRecordsService.findByGuid')}&d=0`);
     await clickNode('UserRecords(Service)?\\.findByGuid\\(');
-    await page.waitForTimeout(800);
-    const insp = await page.evaluate(() => document.querySelector('.inspector')?.innerText ?? '');
-    check('R4-5', 'unchanged, undescribed operation (UserRecordsService.findByGuid): no "Ask your agent" block, no profile JSON', !!insp && !/Ask your agent/i.test(insp) && !/"overrides"/.test(insp), insp.slice(0, 300) || 'inspector did not open');
+    const insp = await inspectorText();
+    check('B3', 'unchanged, undescribed operation in the change\'s flow (UserRecordsService.findByGuid): the inspector asks for a description, as for a changed one', !!insp && /Ask your agent|needs a description/i.test(insp), insp.slice(0, 300) || 'inspector did not open');
     await go(A, `v=impact&op=${encodeURIComponent(`${W}.approve`)}&d=1`);
     await clickNode('ConcludeManualReviewDecision(Service)?\\.approve\\(');
-    await page.waitForTimeout(800);
-    const insp2 = await page.evaluate(() => document.querySelector('.inspector')?.innerText ?? '');
+    const insp2 = await inspectorText();
     check('R4-5', 'the changed, undescribed operation still asks for a description (required)', /describe|description/i.test(insp2), insp2.slice(0, 200));
     await down();
     await new Promise((r) => child.on('exit', r));
 
     // R4-2: the drawn label of the two-database transaction.
+    await free();
     child = serve(C);
     await up(C);
     await go(C, `v=flow&t=${encodeURIComponent('api:PUT /api/v1/internal/manual-review/approve/:guid')}|${encodeURIComponent(`${W}.approve`)}`);
     const tx = await page.evaluate(() => [...document.querySelectorAll('.react-flow__node')].map((n) => n.textContent ?? '').filter((t) => /transaction/i.test(t)).join(' | '));
+    await go(C, `v=flow&t=${encodeURIComponent('api:PUT /api/v1/internal/manual-review/approve/:guid')}`);
+    const facade = await page.evaluate(() => [...document.querySelectorAll('.react-flow__node')].map((n) => n.textContent ?? '').find((t) => /approveUserRecord/.test(t)) ?? '');
+    check('B2', 'top level of the approve flow: the facade box shows the ⚠ for the gap it reaches in setStatus', /⚠/.test(facade), facade.slice(0, 300) || 'facade box not drawn');
     check('R4-2', 'the flow labels the two-database box as 2 transactions with separate commits, not "one transaction"', /2 transactions|separate commits/i.test(tx) && !/one transaction/i.test(tx), tx.slice(0, 200) || 'no transaction box drawn');
     await down();
   } finally {

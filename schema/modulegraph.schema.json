@@ -93,6 +93,10 @@
         },
         "reason": {
           "$ref": "#/definitions/GapReason"
+        },
+        "via": {
+          "type": "string",
+          "description": "Set on a gap carried up from a callee: the operation it is in (`Class.method`). An operation that reaches a gap\nthrough what it calls is incomplete too. A gap of the operation itself has no `via`."
         }
       },
       "required": [
@@ -909,7 +913,7 @@
           "items": {
             "$ref": "#/definitions/Gap"
           },
-          "description": "Calls in it (helpers included) the analysis can't follow: what they do is not shown."
+          "description": "Calls in it (helpers included) the analysis can't follow: what they do is not shown. Then the gaps of the\noperations it reaches, carried up with `via`."
         },
         "disagreements": {
           "type": "array",
@@ -1269,7 +1273,7 @@
           "items": {
             "$ref": "#/definitions/Gap"
           },
-          "description": "Calls in its handler the analysis can't follow."
+          "description": "Calls in its handler the analysis can't follow; then those of the operations it reaches, with `via`."
         }
       },
       "required": [
@@ -1467,6 +1471,10 @@
         "transaction": {
           "type": "string",
           "description": "The transaction the step runs in: it goes through the transaction's handle (a query runner, its manager, the\nmanager a `transaction(cb)` callback is given), or the method is `@Transactional`. Transactions open at the same\ntime on different handles commit separately: `2 transactions (orders, audit), separate commits`."
+        },
+        "commitsWith": {
+          "type": "string",
+          "description": "When `transaction` names several (separate commits): the one this step goes through, by its handle's name\n(`legacy`). If that one's commit fails, only its steps are undone."
         },
         "outsideTransaction": {
           "type": "string",

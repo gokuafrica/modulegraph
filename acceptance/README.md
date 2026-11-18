@@ -30,11 +30,11 @@ workspace of this repo: npm would hoist its packages, which is what hid R2-1.
 
 | File | What it is |
 |---|---|
-| `create-r4-fixture.mjs` | Round 3's service plus the round-4 shapes, copied from the real code with names changed: callbacks handed to a helper that stores them and runs them later, two query runners committed separately, a `transaction(cb)` whose callback also writes through its own repository, strategy steps injected as a list, `retry(fn)`, an abstract class bound with `useClass`, a URL signer next to an HTTP client, URLs from a config object's property and from destructuring, a read that locks its rows. |
-| `accept-r4.mjs` | 47 checks, about 45 s (`--only R4-2` for one item): two runs (no profile, lazy; then the suggested profile, full, `--explain`), the invariants on both, the call accounting, one browser page with `--ui`. |
+| `create-r4-fixture.mjs` | Round 3's service plus the round-4 shapes, copied from the real code with names changed: callbacks handed to a helper that stores them and runs them later, two query runners committed separately, a `transaction(cb)` whose callback also writes through its own repository, strategy steps injected as a list, `retry(fn)`, an abstract class bound with `useClass`, a URL signer next to an HTTP client, URLs from a config object's property and from destructuring, a read that locks its rows; since bug note 1, status handlers in a Map and a hook list filled at run time. |
+| `accept-r4.mjs` | 63 checks (bug note 1 added B1-B3), about a minute (`--only R4-2` for one item): two runs (no profile, lazy; then the suggested profile, full, `--explain`), the invariants on both, the call accounting, one browser page with `--ui`. |
 | `accounting.mjs` | An independent list, from the TypeScript parser only, of every call through a value and every function literal handed to a call: each must be in `--explain` as `followed` or a `gap`. |
 | `invariants.mjs` | I1-I5, I7, I9. `npm test` runs them over every sample and fixture in this repo (`invariants-check`), and every review checks the same properties on itself (`analyzer/src/invariants.ts`). |
-| `red-baseline-4b292fb.txt` | What it printed on `4b292fb`, before the round-4 fixes (30/47). |
+| `red-baseline-b4776f4.txt` | What it printed on `b4776f4`, before the bug-note-1 fixes (48/63). Round 4's own red run (30/47 on `4b292fb`) is in [docs/field-report/round-4](../docs/field-report/round-4/). |
 
 ```bash
 npm run accept:r4

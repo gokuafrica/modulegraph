@@ -52,6 +52,12 @@ const NAMES: [string, RegExp, string?][] = [
   ['NationalityAuditService', /NationalityAudit/],
   ['DocumentArchiveService', /DocumentArchive|HttpFileStorage/],
   ['GeoIpClient', /GeoIpClient/],
+  // bug note 1 (acceptance/round-4): the status handlers' Map and the hook list filled at run time
+  ['UserRecordStatusService', /UserRecordStatus/],
+  ['statusHandlers / statusHooks', /status(Handlers|Hooks)/],
+  ['onStatusChanged', /onStatusChanged/],
+  ['set…Status handlers', /set(Approved|Rejected|RecheckRejected)Status/],
+  ['UNREADABLE', /UNREADABLE|RECHECK_REJECTED/],
   // sample-legacy-nest-service and its packages
   ['ConcludeManualReview', /ConcludeManualReview/],
   ['user-records-service', /user-records-service/],

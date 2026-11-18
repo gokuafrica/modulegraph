@@ -137,10 +137,11 @@ For each contract change, open the changed functions it lists (`file:line`) and 
 
 Descriptions come from the code first: doc comments, the API docs of the endpoint that hands a request to an
 operation (`@ApiOperation`), the class's doc comment. If the brief's **Needs a description** section lists operations
-with none of those, the reviewer will meet them in the graph with no explanation. **Describing every operation it
-lists is a required step of this review, not an option**: the changed ones under "Required" and the ones under "Also
-met in the flows" (the reviewer meets those in the change's flows too). Nobody else writes them: modulegraph only
-reads them. Describe them before writing the brief. Read each one (and what it calls), then write one or two sentences into the service's profile,
+with none of those, the reviewer will meet them in the graph with no explanation. **Describe every operation the
+brief lists, changed or not; the brief is done only when the list is gone.** The list is every operation drawn in the
+flows of the entry points the change affects, at any drill-in depth: the changed ones under "Required" and the
+unchanged ones under "Also in the flows", which are what the reviewer reads the change by. Nobody else writes them:
+modulegraph only reads them. Describe them before writing the brief. Read each one (and what it calls), then write one or two sentences into the service's profile,
 the file the analyzer printed on its `profile:` line (none yet: create it as in step 4), never into the code:
 
 ```json
@@ -178,7 +179,7 @@ section, and the **Needs a description** list must be gone. If any is there, fix
 
 Rules: don't invent effects or entry points that aren't in the facts; if the facts and the code disagree,
 say so. A change whose facts say **Not followed** has calls the analysis could not follow (a gap, with its line and
-why): read those lines and say what they do. `modulegraph explain <id> <Class.method>` lists what the analysis did
+why), in it or in what it calls ("reaches a gap in `Class.method` line N"): read those lines and say what they do. `modulegraph explain <id> <Class.method>` lists what the analysis did
 with every call of an operation (it needs `--explain` on the run). Say "no PR description" if the intent is missing.
 
 ## 3b. When the review is finished

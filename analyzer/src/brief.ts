@@ -142,15 +142,21 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://127.0.0.
       const files = new Set(op.changes.map((c) => c.file)).size;
       out.push(`- **Code**: ${op.changes.length} function${op.changes.length > 1 ? 's' : ''} in ${files} file${files > 1 ? 's' : ''}: ${op.changes.map((c) => `\`${c.name}\` (${c.status}, +${c.added}/−${c.removed}, ${c.file}:${c.line})`).join('; ')}`);
     }
+    const ownGaps = (op.gaps ?? []).filter((x) => !x.via);
+    const reachedGaps = (op.gaps ?? []).filter((x) => x.via);
     if (d?.implementationOnly) {
+      // With a gap reachable, nobody knows the side effects are the same: say what is known.
+      const same = op.gaps?.length ? 'same inputs and outputs, and the same side effects as far as they are followed (not all are: below)' : 'same inputs, outputs and side effects';
       out.push(behaviour.length
-        ? '- Same inputs, outputs and side effects, but **behaviour changed inside** (above): check who relied on the old behaviour.'
-        : '- Implementation only: same inputs, outputs and side effects.');
+        ? `- ${same.charAt(0).toUpperCase()}${same.slice(1)}, but **behaviour changed inside** (above): check who relied on the old behaviour.`
+        : `- Implementation only: ${same}.`);
     }
-    if (op.gaps?.length) {
+    if (ownGaps.length) {
       // Calls the analysis can't follow: what they do is not in the facts above.
-      out.push(`- **Not followed** (what these calls do is not shown above; read them): ${op.gaps.map((x) => `${x.file}:${x.line} (${x.reason})`).join(', ')}`);
+      out.push(`- **Not followed** (what these calls do is not shown above; read them): ${ownGaps.map((x) => `${x.file}:${x.line} (${x.reason})`).join(', ')}`);
     }
+    // Gaps in what it calls, at any depth: its effects above are incomplete too.
+    for (const x of reachedGaps) out.push(`- **Not followed**: reaches a gap in \`${x.via}\` line ${x.line} (${x.reason}, ${x.file}): what it does is not in the facts above.`);
     for (const i of (g.incomplete ?? []).filter((x) => x.kind === 'invariant' && x.scope === op.id)) out.push(`- **Not to be trusted here**: ${i.message}`);
     out.push(`- **Reached from** ${entries.length}${partial && !op.lazy?.callersLoaded ? '+' : ''} entry point${entries.length === 1 ? '' : 's'}: ${list(entries.map((id) => `\`${label(g, id)}\``), 8)}`);
     out.push('');
@@ -217,15 +223,20 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://127.0.0.
   out.push('');
 
   // ---------- descriptions the reviewer will see ----------
-  // Changed operations and every module they call: the ones the reviewer meets in the flows. A description comes
-  // from the method's doc comment, the API docs of an endpoint that hands to it (@ApiOperation), its class's doc
-  // comment, or the profile. What has none of those is listed: the changed ones first, as a required step.
+  // Every operation drawn in a flow of an entry point the change affects, at any drill-in depth (the request
+  // pipeline's steps too), and the changed ones: the unchanged ones are what the reviewer reads the change by. A
+  // description comes from the method's doc comment, the API docs of an endpoint that hands to it (@ApiOperation),
+  // its class's doc comment, or the profile. What has none of those is listed, all of it required, changed ones first.
   const met = new Set<string>();
-  for (const q of g.review.queue) {
-    met.add(q.operation);
-    for (const step of g.scopes[q.operation]?.steps ?? []) if (step.target) met.add(step.target);
-  }
+  const walk = (id: string) => {
+    if (met.has(id)) return;
+    met.add(id);
+    for (const step of g.scopes[id]?.steps ?? []) if (step.target) walk(step.target);
+  };
+  for (const q of g.review.queue) walk(q.operation);
+  for (const e of Object.values(g.entryPoints)) if (e.containsChanges || (e.change && e.change !== 'unchanged')) walk(e.id);
   const metOps = [...met].map((id) => g.operations[id]).filter((op) => op && op.change !== 'removed');
+  metOps.sort((a, b) => Number(a.change === 'unchanged') - Number(b.change === 'unchanged'));
   const undescribed = metOps.filter((op) => !op.summary);
   const changedUndescribed = undescribed.filter((op) => op.change !== 'unchanged');
   const fromDocs = metOps.filter((op) => op.summarySource === 'api' || op.summarySource === 'class');
@@ -238,10 +249,10 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://127.0.0.
     if (!undescribed.length) out.push('Every operation this review meets has a description.', '');
   }
   if (undescribed.length) {
-    out.push(`No doc comment, no API docs, nothing in the profile. Read each and write one or two sentences (what it does, not how) into the profile, \`${profilePath}\`${s.profile?.exists ? '' : ' (it does not exist yet: create it with `"service": "' + g.service + '"`)'}, under \`modules.overrides.<Class>.operations.<method>\`, then refresh:`, '');
-    // The exact JSON, keyed by class name (not the shorter name the change headlines show), for every required one.
+    out.push(`No doc comment, no API docs, nothing in the profile. Read each and write one or two sentences (what it does, not how) into the profile, \`${profilePath}\`${s.profile?.exists ? '' : ' (it does not exist yet: create it with `"service": "' + g.service + '"`)'}, under \`modules.overrides.<Class>.operations.<method>\`, then refresh. All of them are required: the reviewer meets each one in the flows, and reads the change by the unchanged ones:`, '');
+    // The exact JSON, keyed by class name (not the shorter name the change headlines show), for every listed one.
     const byClass = new Map<string, string[]>();
-    for (const op of changedUndescribed.length ? changedUndescribed : undescribed.slice(0, 1)) {
+    for (const op of undescribed) {
       const cls = g.modules[op.moduleId]?.className ?? op.moduleId;
       byClass.set(cls, [...(byClass.get(cls) ?? []), op.name]);
     }
@@ -255,9 +266,8 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://127.0.0.
     }
     const called = undescribed.filter((op) => op.change === 'unchanged');
     if (called.length) {
-      out.push(`${changedUndescribed.length ? 'Also met in the flows' : 'Met in the flows'} (called by the change):`, '');
-      for (const op of called.slice(0, 20)) out.push(`- \`${op.id}\` (${op.file}:${op.line})${context(op)}`);
-      if (called.length > 20) out.push(`- … ${called.length - 20} more`);
+      out.push(`**${changedUndescribed.length ? 'Also in the flows' : 'In the flows'}: ${called.length} unchanged operation${called.length > 1 ? 's' : ''}**, required too (drawn in the flows of the entry points the change affects, at any depth):`, '');
+      for (const op of called) out.push(`- \`${op.id}\` (${op.file}:${op.line})${context(op)}`);
       out.push('');
     }
   } else if (fromDocs.length) out.push('');
@@ -303,7 +313,7 @@ function behaviourChanges(g: ModuleGraph, opId: string): string[] {
   const scope = g.scopes[opId];
   if (!scope || g.operations[opId].change === 'added') return [];
   const what = (s: Step) => (s.target ? `call ${opLabel(g, s.target)}` : `${s.effect!.kind} \`${s.effect!.target}\`${s.effect!.lock ? `, rows locked ${s.effect!.lock}` : ''}`);
-  const where = (s: Step) => [s.condition && `only ${when(s.condition)}`, s.loop && 'once per item', s.via && s.via !== opId && `in ${s.via}`, s.transaction && `in ${s.transaction}`].filter(Boolean).join(', ');
+  const where = (s: Step) => [s.condition && `only ${when(s.condition)}`, s.loop && 'once per item', s.via && s.via !== opId && `in ${s.via}`, s.transaction && (s.commitsWith ? `in the ${s.commitsWith} transaction (one of ${s.transaction})` : `in ${s.transaction}`)].filter(Boolean).join(', ');
   const out: string[] = [];
   for (const s of scope.steps) {
     if (s.delta === 'added') out.push(`NEW ${what(s)}${where(s) ? ` (${where(s)})` : ''}`);

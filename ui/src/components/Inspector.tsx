@@ -294,12 +294,11 @@ function MissingDescription({ g, op }: { g: ModuleGraph; op: Operation }) {
   const mod = g.modules[op.moduleId];
   const profile = g.source.profile?.path ?? `~/.modulegraph/configs/${g.service}/modulegraph.config.json`;
   const snippet = `"modules": { "overrides": { "${mod.className}": { "operations": { "${op.name}": "…" } } } }`;
+  // Changed or not, the review needs one: the unchanged operations in a flow are what the change is read by.
   const changed = op.change !== 'unchanged';
-  // Unchanged: met in a flow, not under review. One quiet line; the agent describes it when it runs the skill.
-  if (!changed) return <div className="summary muted missing-doc">No description yet (unchanged; the reviewing agent writes descriptions into the profile).</div>;
   return (
     <div className="summary muted missing-doc">
-      <p>No description: no doc comment, no API docs (<code>@ApiOperation</code>) on an endpoint that hands to it, nothing in the profile.{changed ? ' It changed, so the review needs one.' : ''}</p>
+      <p>No description: no doc comment, no API docs (<code>@ApiOperation</code>) on an endpoint that hands to it, nothing in the profile. {changed ? 'It changed, so the review needs one.' : 'It is in the flows around the change, so the review needs one too.'}</p>
       <p>Ask your agent: <i>“Describe {mod.className}.{op.name} in the modulegraph profile”</i> (module-review skill), or add it yourself in <code>{profile}</code>{g.source.profile?.exists ? '' : ' (create it)'}:</p>
       <pre className="code-block small">{snippet}</pre>
       <p>then ↻ refresh.</p>

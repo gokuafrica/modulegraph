@@ -1,0 +1,94 @@
+
+0. fixture  (0 s)
+  ✓ [setup] fixture is outside the modulegraph checkout
+  ✓ [setup] branch fix/conclude-review-row-scope checked out
+
+1. first run: no profile, --head, lazy (as the module-review skill runs it)  (0 s)
+  ✓ [I1] first run: every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] first run: one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] first run: no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] first run: every effect step in every flow names its target
+  ✓ [I7] first run: every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] first run: every gap names its file, line and a reason from the closed list
+  ✓ [I5] first run: api entry points = route decorators in src (15 / 15)
+
+2. the suggested profile applied as-is, full, --no-tests, --explain  (10 s)
+  ✓ [I1] suggested profile: every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] suggested profile: one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] suggested profile: no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] suggested profile: every effect step in every flow names its target
+  ✓ [I7] suggested profile: every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] suggested profile: every gap names its file, line and a reason from the closed list
+  ✓ [I5] suggested profile: api entry points = route decorators in src (15 / 15)
+  ✓ [I6] suggested profile: nothing is incomplete
+  ✓ [R4-1] --explain wrote <id>.explain.json with an entry per analyzed operation (43)
+  ✓ [R4-1] all 11 calls through values / function literals handed on (found independently from the source) are "followed" or a named "gap"
+  ✓ [R4-1] ConcludeManualReviewDecisionService.approve: fully typed project code, so no gap of its own (a gap carried up from a callee has "via")
+  ✓ [R4-1] ConcludeManualReviewDecisionService.updateUserRecordData: fully typed project code, so no gap of its own (a gap carried up from a callee has "via")
+  ✓ [R4-1] ConcludeManualReviewDecisionService.reject: fully typed project code, so no gap of its own (a gap carried up from a callee has "via")
+  ✓ [R4-1] ConcludeManualReviewDecisionService.setUserRecordManualReviewData: fully typed project code, so no gap of its own (a gap carried up from a callee has "via")
+  ✓ [R4-1] gap budget: at most 10% of analyzed operations carry a gap of their own (1/43)
+  ✓ [R4-2] ConcludeManualReviewDecisionService.approve: the steps that run between start and commit (callbacks run by executeQueries included) are in the transaction
+  ✓ [R4-2] ConcludeManualReviewDecisionService.approve: the read before and the calls after the commit are outside it
+  ✓ [R4-2] ConcludeManualReviewDecisionService.approve: the callbacks' steps come after UserRecordStatusService.setStatus (where executeQueries runs them), not where they are written
+  ✓ [R4-2] ConcludeManualReviewDecisionService.updateUserRecordData: the steps that run between start and commit (callbacks run by executeQueries included) are in the transaction
+  ✓ [R4-2] ConcludeManualReviewDecisionService.updateUserRecordData: the read before and the calls after the commit are outside it
+  ✓ [R4-2] two data sources are named as two transactions with separate commits, not as one
+  ✓ [R4-2] storeNationalities: the audit call inside manager.transaction(cb) writes through its own repository, not the manager: it is NOT in the transaction
+  ✓ [R4-2] storeNationalities: the writes through the transaction's manager are in it
+  ✓ [R4-2] reassign(): both strategy implementations are followed inside the transaction (inlined, or as call boxes in it with their writes in its effects), OR it carries an interface-dispatch gap
+  ✓ [R4-2] retry(() => …) is followed: RecordLocksService.freeze writes user_records
+  ✓ [R4-2] an abstract class with one implementation is followed: DocumentArchiveService.archive → http {FILE_STORE_URL}/objects/{key}
+  ✖ [B1] ConcludeManualReviewDecisionService.approve (head): no step is marked as running once per item (executeQueries' loop runs each callback once)
+        got: looped: call ConcludeManualReviewDecisionService.setUserRecordManualReviewDataForRow, db.write review_comments, db.write action_logs
+  ✖ [B1] ConcludeManualReviewDecisionService.approve (base): no step is marked as running once per item (executeQueries' loop runs each callback once)
+        got: looped: call ConcludeManualReviewDecisionService.setUserRecordManualReviewData, db.write review_comments, db.write action_logs
+  ✖ [B1] ConcludeManualReviewDecisionService.updateUserRecordData (head): no step is marked as running once per item (executeQueries' loop runs each callback once)
+        got: looped: call ConcludeManualReviewDecisionService.setUserRecordManualReviewDataForRow, db.write action_logs
+  ✖ [B1] ConcludeManualReviewDecisionService.updateUserRecordData (base): no step is marked as running once per item (executeQueries' loop runs each callback once)
+        got: looped: call ConcludeManualReviewDecisionService.setUserRecordManualReviewData, db.write action_logs
+  ✓ [B1] control: setUserRecordManualReviewData's per-row call (for … of rows) is still marked once per item
+  ✖ [B2] setStatus: the Map handler call (line 38) is "followed" to the three handler properties
+        got: [{"file":"src/user-records/user-record-status.service.ts","line":38,"text":"setStatus(record, changedBy, legacyManager, status)","disposition":"gap","reason":"function-value"}]
+  ✖ [B2] setStatus: the handlers' writes are its effects (db.write user_records, db.write record_messages)
+        got: db.write status_history, db.write status_history
+  ✖ [B2] setStatus: its one gap of its own is the runtime hook list (line 41), not the Map
+        got: [{"file":"src/user-records/user-record-status.service.ts","line":38,"reason":"function-value"},{"file":"src/user-records/user-record-status.service.ts","line":41,"reason":"function-value"}]
+  ✖ [B2] approve(): the status handlers' message write reaches its effects
+        got: db.write review_comments, db.write action_logs, db.read user_records, db.write status_history, db.write user_records, outbox ReviewConcludedNotification, kafka KAFKA_TOPICS.MANUAL_REVIEW_AUDIT, kafka KAFKA_TOPICS.REVIEW_CONCLUDED, db.write review_comments, db.write action_logs
+  ✖ [B2] ConcludeManualReviewDecisionService.approve: carries the setStatus gap up (operations[].gaps entry with "via", the original file and line 41)
+        got: []
+  ✖ [B2] ManualReviewService.approveUserRecord: carries the setStatus gap up (operations[].gaps entry with "via", the original file and line 41)
+        got: []
+  ✖ [B2] brief: approve()'s change names the gap it reaches (setStatus, its line) and does not claim "same … side effects"
+        got: ConcludeManualReviewDecision.approve: high risk, modified /  / - **Side effects**: +kafka `KAFKA_TOPICS.REVIEW_CONCLUDED` (via a submodule) / - **Calls**: +ConcludeManualReviewDecision.setUserRecordManualReviewDataForRow, +RecordEventsProducer.publishReviewConcluded, −ConcludeManualReviewDecision.setUserRecordManualReviewData / - **Behaviour inside** (steps of this operation, base → head): /   - NEW call ConcludeManualReviewDecision.setUserRecordManualReviewDataForRow (only when `record`, once per item, in ConcludeManualReviewDecisionService.executeQueries, in 2 transactions (legacy, admin), s
+  ✖ [B3] brief: "Needs a description" lists every undescribed operation drawn in the affected flows, at any depth (11)
+        got: not listed: SyncedMessageService.createSyncedMessage, RecordEventsProducer.publishRaw, ConcludeManualReviewDecisionService.reject, FeatureEnrollmentService.syncAreas
+  ✖ [B3] brief: the JSON skeleton the agent copies has every one of them, not only the changed ones
+        got: missing: UserRecordsService.findByGuid, NotificationsOutboxService.notifyReviewConcluded, SyncedMessageService.createSyncedMessage, ReviewAuditService.recordDecision, RecordEventsProducer.publishRaw, RecordEventsProducer.publishReviewConcluded, ConcludeManualReviewDecisionService.reject, FeatureEnrollmentService.syncAreas
+  ✓ [B3] with every listed one described in the profile, the brief asks for nothing more
+  ✓ [R4-3] DocumentLinksService.downloadLink (signUrl: local HMAC) has no side effect
+  ✓ [R4-3] VendorIdentityClient.getApplicant still has its network effect
+  ✓ [R4-3] SftpClientService.upload still has its network effect
+  ✓ [R4-4] AssessmentsClient.getAssessmentStatuses → http {ASSESSMENT_SERVICE_CONFIG.baseUrl}/v1/internal/entities/{entityId}/assessments/statuses
+  ✓ [R4-4] IdentityManagerClient.checkPassword → http {IDENTITY_MANAGER_CONFIG.baseUrl}/api/v1/manage/users/authenticate
+  ✓ [R4-7] a profile "disagreements" entry appears before the changes in the brief, with its note and line
+  ✓ [R4-7] and on the operation in the review JSON (operations[].disagreements), without changing its steps
+  ✓ [R4-6] brief: setUserRecordManualReviewData's "Behaviour inside" says the new read locks the rows (pessimistic write)
+
+3. UI (1440×900)  (25 s)
+  ✓ [R4-3] one click on "incomplete" shows each flagged item (package and why) and its rule, without a further click
+  ✖ [B3] unchanged, undescribed operation in the change's flow (UserRecordsService.findByGuid): the inspector asks for a description, as for a changed one
+        got: ✕
+UserRecords.findByGuid()
+
+Called through ReviewerDirectory.reviewerIdFor: Officers without an account of their own act as the shared review team. CONTEXT, NOT ITS OWN DESCRIPTION
+
+No description yet (unchanged; the reviewing agent writes descriptions into the profile).
+src/user-records/user-record
+  ✓ [R4-5] the changed, undescribed operation still asks for a description (required)
+  ✖ [B2] top level of the approve flow: the facade box shows the ⚠ for the gap it reaches in setStatus
+        got: ManualReview.approveUserRecord()changes insideuses ReviewerDirectory · ConcludeManualReviewDecision+⇶KafkaKAFKA_TOPICS.REVIEW_CONCLUDED⛁DB readuser_records⛁DB writereview_comments⛁DB writeaction_logs⛁DB writestatus_history⛁DB writeuser_records+2 morein{"guid":"g-1","dto":{"reviewerId":"offi…out{"id"
+  ✓ [R4-2] the flow labels the two-database box as 2 transactions with separate commits, not "one transaction"
+
+48/63 checks pass in 51 s; failing: B1, B2, B3

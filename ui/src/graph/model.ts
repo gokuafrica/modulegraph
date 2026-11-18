@@ -103,7 +103,9 @@ function scopeBefore(raw: Scope): Scope & { addedCount: number } {
 export function doubtOf(g: ModuleGraph, op: Operation): { text: string; all: string[] } | undefined {
   const all = [
     ...(op.disagreements ?? []).map((d) => `agent check, line ${d.line}: ${d.note}`),
-    ...(op.gaps ?? []).map((x) => `can't follow line ${x.line} (${x.reason.replace('-', ' ')}): what it does is not shown`),
+    ...(op.gaps ?? []).map((x) => (x.via
+      ? `reaches a gap in ${x.via} line ${x.line} (${x.reason.replace('-', ' ')}): what it does is not shown`
+      : `can't follow line ${x.line} (${x.reason.replace('-', ' ')}): what it does is not shown`)),
     ...(g.incomplete ?? []).filter((i) => i.kind === 'invariant' && i.scope === op.id).map((i) => i.message),
   ];
   return all.length ? { text: all.length > 1 ? `${all[0]} (+${all.length - 1} more)` : all[0], all } : undefined;
@@ -404,10 +406,11 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
   }
 
   // A step that runs while a transaction is open but doesn't go through its handle: not in it, whatever its position.
+  // In a box of several transactions, each step says which one it commits with.
   for (const node of nodes) {
     const step = scope.steps.find((s) => s.id === node.id);
-    if (!step?.outsideTransaction) continue;
-    const note = `runs during ${step.outsideTransaction}, not through it: a rollback doesn't undo it`;
+    if (!step?.outsideTransaction && !step?.commitsWith) continue;
+    const note = step.commitsWith ? `commits with ${step.commitsWith}` : `runs during ${step.outsideTransaction}, not through it: a rollback doesn't undo it`;
     const notes = [...((node.data as { notes?: string[] }).notes ?? []), note];
     node.data = { ...node.data, notes };
     node.height += Math.ceil(note.length / 36) * 15 + 6;

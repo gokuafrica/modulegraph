@@ -32,6 +32,11 @@ export interface Gap {
   file: string;
   line: number;
   reason: GapReason;
+  /**
+   * Set on a gap carried up from a callee: the operation it is in (`Class.method`). An operation that reaches a gap
+   * through what it calls is incomplete too. A gap of the operation itself has no `via`.
+   */
+  via?: string;
 }
 
 /**
@@ -283,7 +288,10 @@ export interface Operation {
   source: string;
   /** Lazy analyses only: whether callers (up) and callees (down) of this operation have been analyzed. */
   lazy?: { callersLoaded: boolean; calleesLoaded: boolean };
-  /** Calls in it (helpers included) the analysis can't follow: what they do is not shown. */
+  /**
+   * Calls in it (helpers included) the analysis can't follow: what they do is not shown. Then the gaps of the
+   * operations it reaches, carried up with `via`.
+   */
   gaps?: Gap[];
   /** The agent's blind check disagrees with the diagram here (profile `disagreements`). Steps are never changed by it. */
   disagreements?: Disagreement[];
@@ -376,7 +384,7 @@ export interface EntryPoint {
    * `guard AuthGuard (global)`. Any of these changes who may call the entry point or what runs around it.
    */
   pipelineDelta?: { added: string[]; removed: string[]; changed: string[] };
-  /** Calls in its handler the analysis can't follow. */
+  /** Calls in its handler the analysis can't follow; then those of the operations it reaches, with `via`. */
   gaps?: Gap[];
 }
 
@@ -437,6 +445,11 @@ export interface Step {
    * time on different handles commit separately: `2 transactions (orders, audit), separate commits`.
    */
   transaction?: string;
+  /**
+   * When `transaction` names several (separate commits): the one this step goes through, by its handle's name
+   * (`legacy`). If that one's commit fails, only its steps are undone.
+   */
+  commitsWith?: string;
   /** A transaction open while the step runs that the step doesn't go through: a rollback doesn't undo it. */
   outsideTransaction?: string;
   /**

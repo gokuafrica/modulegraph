@@ -111,10 +111,13 @@ function Checks({ g, focus }: { g: ModuleGraph; focus: (f: Finding) => void }) {
   // A property that fails on one operation is shown on its box, not as a review-wide state.
   const incomplete = all.filter((i) => !(i.kind === 'invariant' && i.scope && g.operations[i.scope]));
   const scoped = all.filter((i) => !incomplete.includes(i));
-  const state = errors ? 'sev-error' : incomplete.length ? 'sev-incomplete' : warnings ? 'sev-warning' : 'ok';
+  // A change that reaches a call the analysis can't follow is not "all clear" either: its ⚠ is on its box.
+  const gapped = Object.values(g.operations).filter((op) => (op.change !== 'unchanged' || op.containsChanges) && op.gaps?.length).length;
+  const state = errors ? 'sev-error' : incomplete.length ? 'sev-incomplete' : warnings || gapped ? 'sev-warning' : 'ok';
+  const notFollowed = gapped ? `${gapped} change${gapped > 1 ? 's' : ''} with calls not followed (⚠ on ${gapped > 1 ? 'their boxes' : 'its box'})` : '';
   const label = incomplete.length
     ? `◐ incomplete analysis${summary ? `, ${summary}` : ''}`
-    : `${errors ? '✖' : warnings ? '⚠' : '✓'} checks${summary ? `: ${summary}` : current.length ? `: ${current.length} note${current.length > 1 ? 's' : ''}` : ': all clear'}`;
+    : `${errors ? '✖' : warnings || gapped ? '⚠' : '✓'} checks${summary || notFollowed ? `: ${[summary, notFollowed].filter(Boolean).join(', ')}` : current.length ? `: ${current.length} note${current.length > 1 ? 's' : ''}` : ': all clear'}`;
   return (
     <div className="checks-menu" ref={ref}>
       <button className={`checks-button ${state}`} onClick={() => setOpen(!open)}
