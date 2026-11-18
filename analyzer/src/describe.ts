@@ -19,6 +19,11 @@ export function describe<G extends Pick<ModuleGraph, 'modules' | 'operations'> &
   }
   for (const op of Object.values(g.operations)) {
     op.context = undefined;
+    // The agent's blind check: shown on the operation, never acted on.
+    const cls = g.modules[op.moduleId]?.className ?? op.moduleId;
+    const doubt = config.disagreements?.[`${cls}.${op.name}`] ?? config.disagreements?.[op.id];
+    if (doubt?.length) op.disagreements = doubt.map((d) => ({ line: Number(d.line), note: String(d.note) }));
+    else delete op.disagreements;
     if (op.summarySource === 'code') continue;
     const mod = g.modules[op.moduleId];
     const written = mod ? operationText(overrideFor(config, mod), op.name) : undefined;
@@ -111,5 +116,5 @@ export function unmatchedDescriptions(config: Config, modules: Pick<ModuleInfo, 
 
 /** What `describe` reads from a profile: equal keys = nothing to re-apply. */
 export function descriptionsKey(config: Config): string {
-  return JSON.stringify(Object.entries(config.modules.overrides).map(([cls, o]) => [cls, o.summary, o.operations]));
+  return JSON.stringify([Object.entries(config.modules.overrides).map(([cls, o]) => [cls, o.summary, o.operations]), config.disagreements ?? {}]);
 }

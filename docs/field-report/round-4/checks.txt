@@ -1,0 +1,281 @@
+npm test
+
+> modulegraph@0.4.0 test
+> npm test --workspace analyzer
+> modulegraph-analyzer@0.3.0 test
+> tsx src/names-check.ts && tsx src/branches-check.ts && tsx src/mentions-check.ts && tsx src/framework-check.ts && tsx src/regression-check.ts && tsx src/changes-check.ts && tsx src/ui-model-check.ts && tsx src/legacy-review-check.ts && tsx src/invariants-check.ts && tsx src/standalone-check.ts && tsx src/lazy-check.ts && tsx src/lifecycle-check.ts
+names: no sample names in analyzer/src or ui/src (checks excluded), 39 names
+framework adapters find every module, entry point and side effect
+  ✓ the CLI says the analysis is incomplete
+  ✓ the CLI names the packages that do not resolve
+  ✓ the graph records why
+  ✓ the brief's verdict says INCOMPLETE
+  ✓ the brief explains it before the changes
+  ✓ --check fails on an incomplete analysis
+  ✓ full: error-level access-control-changed naming AuthGuard
+  ✓ full: every entry point behind the global guard is changed (19)
+  ✓ full: verdict BLOCKING
+  ✓ full: the brief names the guard
+  ✓ lazy: error-level access-control-changed naming AuthGuard
+  ✓ lazy: every entry point behind the global guard is changed (19)
+  ✓ lazy: verdict BLOCKING
+  ✓ lazy: the brief names the guard
+  ✓ full: error-level access-control-changed naming RolesGuard
+  ✓ full: all 7 OrdersController entry points changed (−RolesGuard), and only those
+  ✓ full: 7 entry points affected
+  ✓ full: verdict BLOCKING
+  ✓ lazy: error-level access-control-changed naming RolesGuard
+  ✓ lazy: all 7 OrdersController entry points changed (−RolesGuard), and only those
+  ✓ lazy: 7 entry points affected
+  ✓ lazy: verdict BLOCKING
+  ✓ full: OrdersService.get gains db.write orders
+  ✓ full: high risk, not implementation only
+  ✓ full: read-path-writes on GET /api/v1/orders/:id
+  ✓ lazy: OrdersService.get gains db.write orders
+  ✓ lazy: high risk, not implementation only
+  ✓ lazy: read-path-writes on GET /api/v1/orders/:id
+  ✓ full: PaymentsService.charge is modified though its code is not
+  ✓ full: it now calls FakeGateway.charge, not StripeGateway.charge, and loses http api.stripe.example
+  ✓ full: POST /api/v1/orders/:id/pay no longer calls the payment API
+  ✓ lazy: PaymentsService.charge is modified though its code is not
+  ✓ lazy: it now calls FakeGateway.charge, not StripeGateway.charge, and loses http api.stripe.example
+  ✓ lazy: POST /api/v1/orders/:id/pay no longer calls the payment API
+  ✓ full: ListOrdersHandler.execute gains db.write orders
+  ✓ full: GET /api/v1/orders (QueryBus.execute) reaches it: read-path-writes
+  ✓ lazy: ListOrdersHandler.execute gains db.write orders
+  ✓ lazy: GET /api/v1/orders (QueryBus.execute) reaches it: read-path-writes
+R5/R6: lazy analysis vs full analysis on the fixture
+  ✓ R5: callersOf(op) = the scopes that call it in full analysis, for every operation
+  ✓ R5: callersOf(OrdersService@fixtures/frameworks/nest/src/orders/orders.service.ts.release) includes OrdersService@fixtures/frameworks/nest/src/orders/orders.service.ts.resolveHold
+  ✓ R6: get of the two OrdersService classes are two operations (OrdersService@fixtures/frameworks/nest/src/orders/orders.service.ts.get / OrdersService.get)
+  ✓ R6: cancel of the two OrdersService classes are two operations (OrdersService@fixtures/frameworks/nest/src/orders/orders.service.ts.cancel / OrdersService.cancel)
+  ✓ R6: POST /api/legacy/orders/:id/cancel writes legacy_orders, not orders
+  ✓ R6: GET /api/v1/orders/:id reads orders, not legacy_orders
+  ✓ R6: ensureOp(id) analyzes the same class as full analysis, for every operation
+  ✓ callees reached only through a changed caller are parts of its change, and its risk is the highest of them
+  ✓ an unchanged module in between does not split the change
+  ✓ a shared module another flow reaches without the changed caller stays its own change
+  ✓ unrelated changes stay separate
+  ✓ nested changes go to the topmost one
+  ✓ two changed callers that both lead to it: neither owns it
+  ✓ a removed call folds the removed operation into the caller that dropped it
+  ✓ lazy: an operation whose callers were never listed is not folded on a guess
+  ✓ lazy: once its callers are listed, it folds
+  ✓ one change, starting at updateKycBirthInfo, with the verifier and the store inside
+  ✓ every changed operation is in exactly one change
+residency: feature/residency-declaration vs feature/enforce-document-birth-info, full and lazy
+  ✓ full: the read and the declaration, each with its store and service calls inside
+  ✓ lazy: the same two changes
+UI model: impact counts and the folded pipeline are right
+sample-legacy-nest-service fix/scope-manual-data-to-row, no profile (lazy, as the module-review skill runs it)
+  ✓ 9 test cases (12 tests) from 5 spec files in a worktree of the head, marked as from unit tests
+  ✓ INCOMPLETE: the handler map with its inherited handleMessages, the jobs, the producer (arg:0.topic) and the outbox calls, without factories, type-only imports or developer scripts
+  ✓ descriptions: @ApiOperation on the facade; the worker behind it is required, with the facade's text as context and the exact JSON
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I7] every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] every gap names its file, line and a reason from the closed list
+sample-service --head feature/kyc-risk-tiers --lazy
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I7] every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] every gap names its file, line and a reason from the closed list
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I7] every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] every gap names its file, line and a reason from the closed list
+  ✓ [I5] api entry points = route decorators in src (8 / 8)
+sample-nest-service --head feature/order-fraud-hold --lazy
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I7] every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] every gap names its file, line and a reason from the closed list
+  ✓ [I5] api entry points = route decorators in src (8 / 8)
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I7] every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] every gap names its file, line and a reason from the closed list
+  ✓ [I5] api entry points = route decorators in src (3 / 3)
+sample-birth-service --head feature/enforce-document-birth-info --lazy
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I7] every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] every gap names its file, line and a reason from the closed list
+  ✓ [I5] api entry points = route decorators in src (3 / 3)
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I7] every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] every gap names its file, line and a reason from the closed list
+  ✓ [I5] api entry points = route decorators in src (20 / 20)
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I7] every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] every gap names its file, line and a reason from the closed list
+fixtures/frameworks (working tree) --lazy
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I7] every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] every gap names its file, line and a reason from the closed list
+sample-legacy-nest-service --head fix/scope-manual-data-to-row --lazy, no profile
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I7] every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] every gap names its file, line and a reason from the closed list
+  ✓ [I5] api entry points = route decorators in src (20 / 20)
+  ✓ [I1] every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] every effect step in every flow names its target
+  ✓ [I7] every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] every gap names its file, line and a reason from the closed list
+  ✓ [I5] api entry points = route decorators in src (20 / 20)
+  ✓ [I6] with the suggested profile applied, nothing is incomplete
+all invariants hold on every review
+  ✓ npm ci: lru-cache 5.1.1 on top, path-scurry/node_modules/lru-cache 10.4.3
+  ✓ worktree: 9 test cases from 12 tests
+  ✓ checkout: 9 test cases from 12 tests
+  ✓ nothing left behind; node_modules intact
+  lazy: 37 scopes in 2443 ms · flows analyzed 2/28, reached 14, ops 21/29
+  lazy: 19 scopes in 2241 ms · flows analyzed 2/28, reached 5, ops 12/26
+  lazy: 31 scopes in 5790 ms · flows analyzed 4/18, reached 4, ops 23/33
+  lazy: 7 scopes in 4613 ms · flows analyzed 1/3, reached 0, ops 6/8
+  lazy: 24 scopes in 7618 ms · flows analyzed 2/20, reached 0, ops 22/78
+  lazy: 24 scopes in 7453 ms · flows analyzed 2/53, reached 1, ops 21/57
+lazy analysis matches full analysis on everything it analyzed
+  ✓ the server registers itself while it runs
+  ✓ its startup line says when it stops
+  ✓ with no requests it stops by itself, exit 0
+  ✓ and says why
+  ✓ and its registry entry is gone
+  ✓ a status request every second keeps it running past its 3 s idle limit
+  ✓ done and shutdown without the x-modulegraph header are refused (a web page cannot end a review)
+  ✓ the review files exist before done
+  ✓ modulegraph done exits 0
+  ✓ it stopped the server
+  ✓ and removed the graph, the brief and the index entry
+  ✓ the launcher started a server in a child process
+  ✓ killing the launcher hard stops the server too (even with --idle 0)
+  ✓ the scenario ran in a worktree of the branch and recorded calls
+  ✓ and left no .modulegraph-tmp folder, empty or not
+  ✓ and no git worktree
+  ✓ clean --dry-run lists what it would remove and removes nothing
+  ✓ clean removes the review older than 14 days
+  ✓ keeps the recent ones
+  ✓ removes the PR refs no remaining review uses (7, 9), keeps those in use (6, 8)
+  ✓ removes the worktrees of killed runs, also the one whose folder was deleted by hand
+  ✓ keeps the temp folder of a run that is still going
+  ✓ keeps anything in .modulegraph-tmp that is not a <pid> folder (output someone wrote there)
+  ✓ touches nothing outside the repos and home it was given
+  ✓ leaves the user's own prunable worktree, branch and uncommitted file alone
+  ✓ leaves the tracked code alone
+  ✓ done <id> of a review nobody serves removes its files and its PR ref
+  ✓ done --keep-brief keeps only the brief
+  ✓ done refuses ids that are paths
+  ✓ done without an id and nothing served asks which one (exit 2)
+exit 0
+
+npm run accept:r3 (no --fresh-clone)
+
+> modulegraph@0.4.0 accept:r3
+> node acceptance/run.mjs 3
+  ✓ [setup] fixture is outside the modulegraph checkout
+  ✓ [setup] own node_modules: top-level lru-cache 5.x (got 5.1.1), nested lru-cache 10.x under path-scurry/typeorm (got 10.4.3)
+  ✓ [setup] branch fix/conclude-review-row-scope checked out
+  ✓ [setup] read from the source: 29 handler-map entries, 7 jobs
+  ✓ [setup] the fixture's own `npx jest` passes (10 tests)
+1. no profile, --head, lazy
+  ✓ [R2-1] examples recorded from Jest (not "Tests: 0 total")
+  ✓ [R2-1] ≥5 cases from conclude-manual-review-decision-service.spec.ts
+  ✓ [R2-1] ConcludeManualReviewDecisionService.approve has an approved case and a NotFoundException case
+  ✓ [F5] INCOMPLETE with missing-entry-points and unknown-side-effects
+  ✓ [R2-3] suggests { "map": "ConsumerHandlerMap", "method": "handleMessages", "kind": "consumer" }
+  ✓ [R2-4] suggests { "argv": "src/main.ts", "kind": "cron" }
+  ✓ [R2-5] suggests AvroProducer.send with "target": "arg:0.topic"
+  ✓ [R2-5] suggests TypeORMOutboxService.createOutboxMessage as kind outbox
+  ✓ [R2-5] suggests no factory / lifecycle method (producer, consumer, connect, disconnect, end, isHealthy, forRootAsync, register)
+  ✓ [R2-5] suggests no "const:<package name>" target for a topic or event
+  ✓ [R2-8] @nestjs/microservices is not flagged (its only import is a type)
+  ✓ [R2-8] nothing under .local/ is counted
+  ✓ [R3-3] @vendorco/identity-api (does network I/O, no adapter knows it) is flagged under unknown-side-effects
+  ✓ [R3-3] ssh2-sftp-client (does network I/O, no adapter knows it) is flagged under unknown-side-effects
+  ✓ [R3-3] the suggested sinks cover both I/O packages
+  ✓ [I1] no profile: every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] no profile: one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] no profile: no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] no profile: every effect step in every flow names its target
+  ✓ [I7] no profile: every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] no profile: every gap names its file, line and a reason from the closed list
+  ✓ [I5] no profile: api entry points = route decorators in src (9 / 9)
+  ✓ [R2-1] working-tree run records examples too
+  ✓ [I6] with the suggested profile applied, nothing is incomplete
+  ✓ [R2-3] exactly the 29 handler-map consumers (got 29)
+  ✓ [R3-1] exactly the 7 jobs, one entry point each, labelled "job <name>" (got 7)
+  ✓ [R3-1] job duplicate-scan (onApplicationBootstrap → this.run()) has the effect of run(): kafka KAFKA_TOPICS.RECORD_DUPLICATE_FOUND
+  ✓ [R2-3/4] the 5 inherited sync handlers, review-decision-requested and 2 jobs reach the change
+  ✓ [R2-5] RecordEventsProducer.publishDuplicateFound → kafka KAFKA_TOPICS.RECORD_DUPLICATE_FOUND
+  ✓ [R2-5] RecordEventsProducer.publishReviewConcluded → kafka KAFKA_TOPICS.REVIEW_CONCLUDED
+  ✓ [R2-5] NotificationsOutboxService.notifyReviewConcluded → outbox ReviewConcludedNotification
+  ✓ [R2-5] RecordMessagesService.updateWithNotificationPayload → outbox RecordMessagesSynced
+  ✓ [R3-2] LocksClient.listLocks → http {LOCKS_SERVICE_BASE_URL}/locks
+  ✓ [R3-2] GeoIpClient.countryOf → http {GEOIP_PROXY_BASE_URL}/ip/{ip}
+  ✓ [R3-2] AssessmentsClient.getAssessmentStatuses → http {ASSESSMENTS_SERVICE_BASE_URL}/v1/internal/entities/{entityId}/assessments/statuses
+  ✓ [R3-2] VendorIdentityClient.getAccessToken → http {VENDOR_WORKFLOW_API_BASE_URL}/v1/oauth2/token
+  ✓ [R3-2] CaptchaService.validate (URL in a readonly field) → http challenges.captcha-vendor.example…
+  ✓ [R3-3] VendorIdentityClient.getApplicant (calls @vendorco/identity-api) has a non-database effect with a named target once the suggested rule is applied
+  ✓ [R3-3] VendorIdentityClient.startCheck (calls @vendorco/identity-api) has a non-database effect with a named target once the suggested rule is applied
+  ✓ [R3-3] SftpClientService.listDirectory (calls ssh2-sftp-client) has a non-database effect with a named target once the suggested rule is applied
+  ✓ [R3-3] SftpClientService.upload (calls ssh2-sftp-client) has a non-database effect with a named target once the suggested rule is applied
+  ✓ [R3-3] SftpClientService.onModuleDestroy (end()) and the SDK constructor are no effects
+  ✓ [R3-4] RecordNationalityService.storeNationalities → db.write user_nationalities (and no unnamed write)
+  ✓ [R3-4] RecordMessagesService.updateWithNotificationPayload → db.write record_messages, user_records (and no unnamed write)
+  ✓ [R3-4] UserRecordStatusService.setStatus → db.write user_records, status_history (and no unnamed write)
+  ✓ [R3-5] approve(): the 5 steps between startTransaction and commit are marked as in the transaction (queryRunner, through a helper, two data sources)
+  ✓ [R3-5] approve(): the read before the transaction and the calls after commit are not marked
+  ✓ [R3-5] the two data sources are told apart (legacy and admin)
+  ✓ [R2-5] no effect target is a code expression or "?"
+  ✓ [R2-8] no effect from .local/ (topic local-test)
+  ✓ [R3-6] the worker approve (behind a facade that calls a helper first) shows "Approve user record" as context in the brief
+  ✓ [I1] with profile, full: every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] with profile, full: one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] with profile, full: no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] with profile, full: every effect step in every flow names its target
+  ✓ [I7] with profile, full: every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] with profile, full: every gap names its file, line and a reason from the closed list
+  ✓ [I5] with profile, full: api entry points = route decorators in src (9 / 9)
+4. with the profile, lazy
+  ✓ [lazy] lazy lists the same consumers and jobs as full (29/29, 7/7)
+  ✓ [I1] with profile, lazy: every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] with profile, lazy: one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] with profile, lazy: no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] with profile, lazy: every effect step in every flow names its target
+  ✓ [I7] with profile, lazy: every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] with profile, lazy: every gap names its file, line and a reason from the closed list
+  ✓ [I5] with profile, lazy: api entry points = route decorators in src (9 / 9)
+  ✓ [R2-2] top bar / checks button of the no-profile review say "incomplete" and not "all clear"
+  ✓ [R2-2] after opening it, the page lists the missing entry points and the unknown side effects, with the profile JSON to add
+  ✓ [R3-7] the suggested profile JSON in the panel is readable without horizontal scrolling (wrapped, not clipped)
+  ✓ [R2-6] inspector of ConcludeManualReviewDecisionService.approve: every changed function name shown uncut at 1440 px
+  ✓ [R3-6] inspector of the worker approve shows "Approve user record" as context (its facade calls a helper first)
+  ✓ [R2-2] with the suggested profile (nothing incomplete) the top bar does not say "incomplete"
+77/77 checks pass
+exit 0

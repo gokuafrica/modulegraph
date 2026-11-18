@@ -107,7 +107,10 @@ function Checks({ g, focus }: { g: ModuleGraph; focus: (f: Finding) => void }) {
   const warnings = current.filter((f) => f.severity === 'warning').length;
   const summary = [errors && `${errors} error${errors > 1 ? 's' : ''}`, warnings && `${warnings} warning${warnings > 1 ? 's' : ''}`].filter(Boolean).join(', ');
   // The brief's verdict: an analysis that could not see everything is not "all clear", whatever the rules found.
-  const incomplete = g.incomplete ?? [];
+  const all = g.incomplete ?? [];
+  // A property that fails on one operation is shown on its box, not as a review-wide state.
+  const incomplete = all.filter((i) => !(i.kind === 'invariant' && i.scope && g.operations[i.scope]));
+  const scoped = all.filter((i) => !incomplete.includes(i));
   const state = errors ? 'sev-error' : incomplete.length ? 'sev-incomplete' : warnings ? 'sev-warning' : 'ok';
   const label = incomplete.length
     ? `◐ incomplete analysis${summary ? `, ${summary}` : ''}`
@@ -128,6 +131,9 @@ function Checks({ g, focus }: { g: ModuleGraph; focus: (f: Finding) => void }) {
               {incomplete.map((issue, i) => <IncompleteRow key={i} issue={issue} profile={g.source.profile?.path} />)}
             </div>
           )}
+          {scoped.length > 0 && (
+            <div className="small muted">On single operations (⚠ on their boxes): {scoped.map((i) => i.message).join('; ')}</div>
+          )}
           {current.length === 0 && <div className="muted small">{incomplete.length ? 'No findings from the parts the analysis sees.' : `Nothing new${hasDiff ? ' from this change' : ''}.`}</div>}
           {current.map((f, i) => <CheckRow key={i} f={f} onClick={() => { focus(f); setOpen(false); }} />)}
           {old.length > 0 && (
@@ -144,7 +150,8 @@ function Checks({ g, focus }: { g: ModuleGraph; focus: (f: Finding) => void }) {
 
 /** One thing the analysis could not see, what to do about it, and the profile JSON that fixes it (copyable). */
 function IncompleteRow({ issue, profile }: { issue: AnalysisIssue; profile?: string }) {
-  const [details, setDetails] = useState(false);
+  // Few items: shown at once, next to the rule that acts on them. Many: behind one more click.
+  const [details, setDetails] = useState((issue.items?.length ?? 0) <= 8);
   const [copied, setCopied] = useState(false);
   return (
     <div className="incomplete-issue" data-kind={issue.kind}>

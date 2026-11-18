@@ -7,7 +7,7 @@
  * code. Hooks cover what data can't say (route prefixes from `app.use('/x', router)`, Prisma's `prisma.user.*`).
  */
 import type { CallExpression, ClassDeclaration, Decorator, MethodDeclaration, NewExpression, Node, SourceFile, Type } from 'ts-morph';
-import type { DecoratorEntryRule, DocDecoratorRule, EntryRule, ResponseRule, SinkRule } from '../../../config.ts';
+import type { CallbackRule, DecoratorEntryRule, DocDecoratorRule, EntryRule, ResponseRule, SinkRule } from '../../../config.ts';
 import type { Effect, PipelineItem } from '../../../../../schema/modulegraph.ts';
 
 export interface Framework {
@@ -34,7 +34,27 @@ export interface Framework {
   docDecorators?: DocDecoratorRule[];
   /** Decorators that document a field of an input or output type (`@ApiProperty({ description })`). */
   fieldDocDecorators?: DocDecoratorRule[];
+  /** How the library opens transactions, so a step is in one when it goes through the transaction's handle. */
+  transactions?: TransactionApi[];
+  /** Library calls that run the function they are given in the same flow (as the profile's `callbacks`). */
+  callbacks?: CallbackRule[];
   hooks?: FrameworkHooks;
+}
+
+/**
+ * A library's transaction API, matched on calls the library declares (never on a project's own helpers): a call
+ * that returns a handle a transaction is opened on (TypeORM's `createQueryRunner()`), the handle's begin, commit and
+ * rollback methods, and methods that run a callback in a transaction, giving it the handle as its first parameter
+ * (`manager.transaction(async (em) => …)`). Names are the library's own.
+ */
+export interface TransactionApi {
+  /** Package(s) whose declarations these are, `a|b`. */
+  module: string;
+  handle?: string[];
+  begin?: string[];
+  commit?: string[];
+  rollback?: string[];
+  callback?: string[];
 }
 
 /** Facts about one call, as the TypeScript backend resolved it. */
@@ -104,6 +124,11 @@ export interface FrameworkHooks {
   pipeline?(method: MethodDeclaration, cls: ClassDeclaration, vars: Record<string, string>, ctx: HookContext): PipelineSpec[] | undefined;
   /** The class dependency injection binds a receiver to (`@Inject(TOKEN) gateway` → the provider's `useClass`). */
   implementation?(receiver: Node, ctx: HookContext): ClassDeclaration | undefined;
+  /**
+   * The classes of a list dependency injection binds a receiver to: a provider whose factory returns the instances
+   * it is given (`useFactory: (a, b) => [a, b], inject: [A, B]`). Calls on its items go to each of them.
+   */
+  implementations?(receiver: Node, ctx: HookContext): ClassDeclaration[] | undefined;
   /** Classes whose injected dependencies the code at `node` binds (a changed provider entry). */
   consumersAt?(node: Node, ctx: HookContext): ClassDeclaration[] | undefined;
   /** Handler methods a bus call dispatches to (CQRS `commandBus.execute(new X())` → `XHandler.execute`). */

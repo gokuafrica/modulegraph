@@ -29,7 +29,7 @@
     "live": "npm run live --workspace analyzer --",
     "check": "npm run typecheck --workspaces --if-present && npm run typecheck --prefix sample-legacy-nest-service",
     "test": "npm test --workspace analyzer",
-    "accept:r2": "node acceptance/run.mjs 2",
-    "accept:r3": "node acceptance/run.mjs 3"
+    "accept:r3": "node acceptance/run.mjs 3",
+    "accept:r4": "node acceptance/run.mjs 4"
   }
 }

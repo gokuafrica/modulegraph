@@ -5,7 +5,7 @@
  * a `Snapshot` per revision. A backend turns one revision of a codebase into that snapshot. To support another
  * language, implement `LanguageAnalyzer` and register it in ./index.ts. Nothing else in modulegraph changes.
  */
-import type { AnalysisIssue, CodeChange, EntryPoint, ModuleInfo, Operation, Scope } from '../../../schema/modulegraph.ts';
+import type { AnalysisIssue, CodeChange, EntryPoint, ExplainEntry, ModuleInfo, Operation, Scope } from '../../../schema/modulegraph.ts';
 import type { Config } from '../config.ts';
 
 export interface Snapshot {
@@ -17,6 +17,8 @@ export interface Snapshot {
   fingerprints: Record<string, string>;
   /** Functions behind each scope (its own function first, then inlined helpers), for per-function diffs. */
   parts: Record<string, Part[]>;
+  /** What the analysis did with every call of each scope (`--explain`). */
+  explain?: Record<string, ExplainEntry[]>;
 }
 
 export interface Part {

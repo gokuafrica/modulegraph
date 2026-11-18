@@ -123,6 +123,8 @@ export function endReview(files: ReviewFiles, opts: EndOptions = {}): string[] {
     del(files.json);
     // Jest's output from recording examples (written next to the graph when the tests ran).
     del(files.json.replace(/[.]json$/, '.tests.log'));
+    // What the analysis did with every call (`--explain`).
+    del(files.json.replace(/[.]json$/, '.explain.json'));
     if (!opts.keepBrief) del(files.brief);
     if (files.indexFile) removed.push(...dropFromIndex(files.indexFile, [files.id], opts.dryRun));
   }
@@ -238,7 +240,7 @@ export function savedReviews(dir = userReviewsDir): SavedReview[] {
   const names = readdirSync(dir);
   const ids = new Set([
     ...index.map((e) => e.id),
-    ...names.filter((n) => n.endsWith('.json') && n !== 'index.json').map((n) => n.slice(0, -'.json'.length)),
+    ...names.filter((n) => n.endsWith('.json') && n !== 'index.json' && !n.endsWith('.explain.json')).map((n) => n.slice(0, -'.json'.length)),
     ...names.filter((n) => n.endsWith('.brief.md')).map((n) => n.slice(0, -'.brief.md'.length)),
   ]);
   return [...ids].filter(validId).map((id) => {

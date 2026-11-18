@@ -184,6 +184,8 @@ export function ModuleNode({ data, selected }: NodeProps) {
     /** Impact view of a whole module: references go one level further up for the module, not one operation. */
     zoomTarget?: string;
     beforeMark?: string; conditionNow?: string;
+    warning?: { text: string; all: string[] };
+    notes?: string[];
   };
   const inside = d.containsChanges && !d.compact && !d.inImpact;
   const actions = useContext(ActionsContext);
@@ -208,8 +210,10 @@ export function ModuleNode({ data, selected }: NodeProps) {
         </div>
         <ChangeBadge change={d.change} containsChanges={inside} />
       </div>
+      {d.warning && <div className="node-doubt" title={d.warning.all.join('\n')}>⚠ {d.warning.text}</div>}
       {d.via && <div className="via">inlined from {d.via}</div>}
       {d.through && <div className="via" title="Same-module wrapper, skipped (untick “skip pass-through wrappers” to see it)">through {d.through}()</div>}
+      {d.notes?.map((n) => <div key={n} className="effect-note">{n}</div>)}
       {!!d.uses?.length && (
         <div className="uses" title="Modules this one calls. Drill in to see how.">
           uses{' '}
@@ -449,12 +453,21 @@ export function CodeNode({ data }: NodeProps) {
   );
 }
 
-/** A transaction the code opens: everything drawn inside commits together or not at all. */
+/**
+ * A transaction the code opens: everything drawn inside commits together or not at all. Transactions open at the same
+ * time on different handles are one box, labelled as what they are: separate commits, not one atomic unit.
+ */
 export function TxGroupNode({ data }: NodeProps) {
   const d = data as { label: string; count: number };
+  const several = /^\d+ transactions\b/.test(d.label);
   return (
-    <div className="txgroup" title={`The code opens ${d.label} here: the ${d.count} steps inside commit together or roll back together`}>
-      <span className="tx-label">⛓ one transaction</span> <span className="tx-what">{d.label}</span>
+    <div
+      className="txgroup"
+      title={several
+        ? `The code opens ${d.label} here: each step inside goes through one of them, and each commits on its own. One can commit while another fails: this box is not atomic.`
+        : `The code opens ${d.label} here: the ${d.count} steps inside commit together or roll back together`}
+    >
+      {several ? <span className="tx-label">⛓ {d.label}</span> : <><span className="tx-label">⛓ one transaction</span> <span className="tx-what">{d.label}</span></>}
     </div>
   );
 }

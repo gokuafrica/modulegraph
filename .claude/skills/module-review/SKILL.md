@@ -78,7 +78,36 @@ button; its top bar says so.
   `<id>.tests.log` next to the brief: say so in your brief (don't guess why).
 - If it says `analyzer: no static analyzer for <language>`, use "Services no backend understands" below.
 
-The last lines print two paths: `<id>.json` (for the UI) and **`<id>.brief.md` (the facts: read this one)**.
+The last lines print two paths: `<id>.json` (for the UI) and **`<id>.brief.md` (the facts: read this one, after
+step 1b)**.
+
+## 1b. Check the diagram against the code (before reading the brief)
+
+The diagram is read from the code by patterns. A shape it hasn't been taught can come out wrong while looking sure.
+Check it independently, **before** you read the brief or open the graph, so what it shows can't steer what you see.
+
+1. Take the changed operations from the analyzer's output (`changes (riskiest first)`). For each, open the method in
+   the code, and the private helpers and callbacks it runs (follow functions passed as arguments to where they're
+   called).
+2. Write down, from the code only:
+   - every database read and write (table), message published (topic or event type), and call to another system;
+   - which of them run inside a transaction, and how many transactions and commits there are (two data sources
+     committed separately are two transactions, not one);
+   - the order where it matters (before or after the commit; inside or outside a loop or a condition);
+   - any call you couldn't follow, with its line.
+3. Now read the brief's **Behaviour inside** for these operations and open their flows (`v=flow`, drill into the
+   operation). Compare, item by item.
+4. For each difference, add it to the service's profile, never to the code:
+
+   ```json
+   "disagreements": { "ConcludeExampleService.approve": [ { "line": 76, "note": "agent check: the three writes passed to startTransaction() run in executeQueries() before the commit, inside the transaction; the diagram draws them outside" } ] }
+   ```
+
+   Keyed by class and method as in `modules.overrides`; `line` is where the code shows it. Then refresh. The brief
+   lists the disagreements at the top and the graph marks the operation. The diagram itself is not changed:
+   **you add doubt; you never confirm or correct the diagram**.
+5. In your brief to the user, put the disagreements first, as "check these lines yourself". If you found none, say
+   which operations you checked. Don't say the diagram is verified.
 
 ## 2. Read the facts, then the code behind them
 
@@ -108,8 +137,10 @@ For each contract change, open the changed functions it lists (`file:line`) and 
 
 Descriptions come from the code first: doc comments, the API docs of the endpoint that hands a request to an
 operation (`@ApiOperation`), the class's doc comment. If the brief's **Needs a description** section lists operations
-with none of those, the reviewer will meet them in the graph with no explanation. **The changed operations it marks
-"Required" are a required step of this review, not an option**: describe them before writing the brief. Read each one (and what it calls), then write one or two sentences into the service's profile,
+with none of those, the reviewer will meet them in the graph with no explanation. **Describing every operation it
+lists is a required step of this review, not an option**: the changed ones under "Required" and the ones under "Also
+met in the flows" (the reviewer meets those in the change's flows too). Nobody else writes them: modulegraph only
+reads them. Describe them before writing the brief. Read each one (and what it calls), then write one or two sentences into the service's profile,
 the file the analyzer printed on its `profile:` line (none yet: create it as in step 4), never into the code:
 
 ```json
@@ -126,11 +157,12 @@ Say what it does and when it matters (inputs, outputs, effects, the rule it enfo
 repeat the method name. A doc comment in the code always wins; the UI labels yours "written by the review agent".
 Then refresh (or re-run the analyzer) and **check it took**: the run must not print
 `profile: … describe(s) nothing in this service`, the brief must have no **Profile descriptions not applied**
-section, and the **Required** list must be gone. If any is there, fix the key it names and run again.
+section, and the **Needs a description** list must be gone. If any is there, fix the key it names and run again.
 
 ## 3. Write the brief (≤ 25 lines)
 
 ```
+**Check these lines yourself:** your disagreements from step 1b, first (or which operations you checked and found none).
 **Goal:** one sentence (from the intent), and whether the contract changes match it.
 **Verdict:** copy the brief's verdict (BLOCKING with the error rules, INCOMPLETE with why, or not blocked).
 **Changes, riskiest first:** one bullet per change in the brief's "Changes" (not per changed operation):
@@ -145,7 +177,9 @@ section, and the **Required** list must be gone. If any is there, fix the key it
 ```
 
 Rules: don't invent effects or entry points that aren't in the facts; if the facts and the code disagree,
-say so. Say "no PR description" if the intent is missing.
+say so. A change whose facts say **Not followed** has calls the analysis could not follow (a gap, with its line and
+why): read those lines and say what they do. `modulegraph explain <id> <Class.method>` lists what the analysis did
+with every call of an operation (it needs `--explain` on the run). Say "no PR description" if the intent is missing.
 
 ## 3b. When the review is finished
 

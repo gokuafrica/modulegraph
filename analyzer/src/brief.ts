@@ -77,6 +77,18 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://127.0.0.
     out.push(`Lazy analysis: ${st.entryPointsAnalyzed} of ${st.entryPointsKnown} flows analyzed (${g.lazy!.seeds.map((x) => `\`${label(g, x.id)}\``).join(', ')}). Reach counts are lower bounds.`);
   }
 
+  // ---------- the agent's blind check ----------
+  // Before anything the diagram says: where the agent, reading the code alone, saw something else. Never applied.
+  const doubts = Object.entries(s.disagreements ?? {});
+  if (doubts.length) {
+    out.push('', '## Disagreements from the agent\'s blind check: check these lines yourself', '');
+    out.push('The reviewing agent read the changed code before the diagram and disagrees with it here. The diagram is not changed by this: read these lines yourself.', '');
+    for (const [key, list] of doubts) {
+      const op = Object.values(g.operations).find((o) => o.id === key || `${g.modules[o.moduleId]?.className}.${o.name}` === key);
+      for (const d of list) out.push(`- \`${key}\`${op ? ` (${op.file}:${d.line})` : ' (no such operation in this review)'}: ${d.note}`);
+    }
+  }
+
   // ---------- access control ----------
   // Before the module changes: a guard removed from a controller changes no operation, but opens every route on it.
   const pipelineFindings = newFindings.filter((f) => f.rule === 'access-control-changed' || f.rule === 'request-pipeline-changed');
@@ -135,6 +147,11 @@ export function brief(g: ModuleGraph, graphId: string, uiBase = 'http://127.0.0.
         ? '- Same inputs, outputs and side effects, but **behaviour changed inside** (above): check who relied on the old behaviour.'
         : '- Implementation only: same inputs, outputs and side effects.');
     }
+    if (op.gaps?.length) {
+      // Calls the analysis can't follow: what they do is not in the facts above.
+      out.push(`- **Not followed** (what these calls do is not shown above; read them): ${op.gaps.map((x) => `${x.file}:${x.line} (${x.reason})`).join(', ')}`);
+    }
+    for (const i of (g.incomplete ?? []).filter((x) => x.kind === 'invariant' && x.scope === op.id)) out.push(`- **Not to be trusted here**: ${i.message}`);
     out.push(`- **Reached from** ${entries.length}${partial && !op.lazy?.callersLoaded ? '+' : ''} entry point${entries.length === 1 ? '' : 's'}: ${list(entries.map((id) => `\`${label(g, id)}\``), 8)}`);
     out.push('');
   };
@@ -285,8 +302,8 @@ function typeChange(name: string, before: string, after: string): string {
 function behaviourChanges(g: ModuleGraph, opId: string): string[] {
   const scope = g.scopes[opId];
   if (!scope || g.operations[opId].change === 'added') return [];
-  const what = (s: Step) => (s.target ? `call ${opLabel(g, s.target)}` : `${s.effect!.kind} \`${s.effect!.target}\``);
-  const where = (s: Step) => [s.condition && `only ${when(s.condition)}`, s.loop && 'once per item', s.via && s.via !== opId && `in ${s.via}`].filter(Boolean).join(', ');
+  const what = (s: Step) => (s.target ? `call ${opLabel(g, s.target)}` : `${s.effect!.kind} \`${s.effect!.target}\`${s.effect!.lock ? `, rows locked ${s.effect!.lock}` : ''}`);
+  const where = (s: Step) => [s.condition && `only ${when(s.condition)}`, s.loop && 'once per item', s.via && s.via !== opId && `in ${s.via}`, s.transaction && `in ${s.transaction}`].filter(Boolean).join(', ');
   const out: string[] = [];
   for (const s of scope.steps) {
     if (s.delta === 'added') out.push(`NEW ${what(s)}${where(s) ? ` (${where(s)})` : ''}`);

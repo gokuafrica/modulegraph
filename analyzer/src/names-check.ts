@@ -4,7 +4,11 @@
  * that only matches the sample passes every check here and fails on the next real service.
  *
  * Scans analyzer/src and ui/src, comments included, except the checks (`*-check.ts`), which test the samples by name.
- * The names: those of the round-2 and round-3 acceptance fixtures (acceptance/) and of sample-legacy-nest-service.
+ * The names: those of the round-2, round-3 and round-4 acceptance fixtures (acceptance/) and of
+ * sample-legacy-nest-service: classes, config keys, and the helpers, parameters and properties a fix could be tempted
+ * to match (a helper that opens a transaction, the list of callbacks it keeps, the list of strategy steps).
+ * One exception, listed with the name: a library's own API that happens to share a name with a fixture's helper
+ * (TypeORM's `QueryRunner.startTransaction()`), allowed only in the adapter that declares that library.
  * usage: npm run names-check --workspace analyzer
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -12,7 +16,7 @@ import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const NAMES: [string, RegExp][] = [
+const NAMES: [string, RegExp, string?][] = [
   // round-2 acceptance fixture
   ['ConsumerHandlerMap', /ConsumerHandlerMap/],
   ['handleMessages', /handleMessages/],
@@ -33,6 +37,21 @@ const NAMES: [string, RegExp][] = [
   ['ASSESSMENTS_SERVICE_BASE_URL', /ASSESSMENTS_SERVICE_BASE_URL/],
   ['VENDOR_WORKFLOW_API_BASE_URL', /VENDOR_WORKFLOW_API_BASE_URL/],
   ['captcha-vendor', /captcha-vendor/],
+  // round-4 acceptance fixture (acceptance/round-4): helpers, parameters and properties
+  ['startTransaction', /startTransaction/, 'analyzer/src/analyzers/typescript/frameworks/data.ts'],
+  ['executeQueries', /executeQueries/],
+  ['TransactionContext', /TransactionContext/i],
+  ['queries (as a name to match)', /['"`]queries['"`]|\.queries\b/],
+  ['steps (as a name to match)', /['"`]steps['"`]/],
+  ['REASSIGNMENT_STEPS', /REASSIGNMENT_STEPS/],
+  ['ReassignmentStep', /Reassign(ment|Record)Step|MoveCommentsStep/],
+  ['setUserRecordManualReviewData', /setUserRecordManualReviewData/],
+  ['signUrl', /signUrl|url-signer/],
+  ['ASSESSMENT_SERVICE_CONFIG', /ASSESSMENT_SERVICE_CONFIG/],
+  ['IDENTITY_MANAGER_CONFIG', /IDENTITY_MANAGER_CONFIG/],
+  ['NationalityAuditService', /NationalityAudit/],
+  ['DocumentArchiveService', /DocumentArchive|HttpFileStorage/],
+  ['GeoIpClient', /GeoIpClient/],
   // sample-legacy-nest-service and its packages
   ['ConcludeManualReview', /ConcludeManualReview/],
   ['user-records-service', /user-records-service/],
@@ -53,8 +72,8 @@ const files = (dir: string): string[] =>
 let hits = 0;
 for (const file of [...files(join(repo, 'analyzer/src')), ...files(join(repo, 'ui/src'))]) {
   readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
-    for (const [name, re] of NAMES) {
-      if (!re.test(line)) continue;
+    for (const [name, re, allowedIn] of NAMES) {
+      if (!re.test(line) || (allowedIn && relative(repo, file).replace(/\\/g, '/') === allowedIn)) continue;
       console.log(`  ✖ ${relative(repo, file).replace(/\\/g, '/')}:${i + 1} names \`${name}\`: ${line.trim().slice(0, 120)}`);
       hits++;
     }

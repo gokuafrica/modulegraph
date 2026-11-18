@@ -92,6 +92,20 @@ export interface RegistryEntryRule {
   label: string;
 }
 
+/**
+ * A library function or method that runs the function it is given in place, in the same flow (`catchError` from
+ * rxjs): its steps are placed there. Without a rule, a function handed to a library call is a gap.
+ */
+export interface CallbackRule {
+  module?: string;
+  class?: string;
+  function?: string;
+  method?: string;
+  runs: 'in-place';
+  /** Its steps run only then (`on error` for an error handler). */
+  condition?: string;
+}
+
 /** A call whose argument is the handler's response (`res.json(x)`): it feeds the exit like a `return`. */
 export interface ResponseRule extends CallMatch {
   arg: number;
@@ -147,6 +161,13 @@ export interface Config {
    * side effects), script names (`start:debug`), or registry variable names.
    */
   coverage?: { ignore?: string[] };
+  /** Library calls that run the function they are given in place (see `CallbackRule`). */
+  callbacks?: CallbackRule[];
+  /**
+   * The agent's blind check (module-review skill): where it read the code differently from the diagram, by
+   * `Class.method`. Shown at the top of the brief and on the operation; never changes a step.
+   */
+  disagreements?: Record<string, { line: number; note: string }[]>;
   /** Extra description decorators for handlers and methods, and for DTO fields (added to the adapters'). */
   docDecorators?: DocDecoratorRule[];
   fieldDocDecorators?: DocDecoratorRule[];

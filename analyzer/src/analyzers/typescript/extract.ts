@@ -18,14 +18,14 @@ import {
   type SourceFile,
   type Type,
 } from 'ts-morph';
-import type { AnalysisIssue, Edge, Effect, EntryPoint, Exit, Param, PipelineItem, Scope, Step, TypeShape } from '../../../../schema/modulegraph.ts';
-import type { CallMatch, Config, DecoratorEntryRule, DocDecoratorRule, EntryRule, RegistryEntryRule, ResponseRule, SinkRule } from '../../config.ts';
+import type { AnalysisIssue, Edge, Effect, EntryPoint, Exit, ExplainEntry, Gap, GapReason, Param, PipelineItem, Scope, Step, TypeShape } from '../../../../schema/modulegraph.ts';
+import type { CallbackRule, CallMatch, Config, DecoratorEntryRule, DocDecoratorRule, EntryRule, RegistryEntryRule, ResponseRule, SinkRule } from '../../config.ts';
 import { argvScripts, CONSUMER_PACKAGES, EFFECT_NAME, isEffectMethod, isNetworkCall, networkVia, readPackageJson, registryKind, sinkKind, suggestedTarget, wraps } from './coverage-hints.ts';
 import { frameworks as allFrameworks } from './frameworks/index.ts';
 import { pipelineKey } from '../../compare.ts';
 import { dedupeEffects } from '../../effects.ts';
 import type { OperationTarget, Part, RevisionAnalysis, Snapshot } from '../types.ts';
-import type { CallSite, Framework, FrameworkHooks, HookContext, PipelineSpec } from './frameworks/types.ts';
+import type { CallSite, Framework, FrameworkHooks, HookContext, PipelineSpec, TransactionApi } from './frameworks/types.ts';
 
 export type { Part, Snapshot } from '../types.ts';
 
@@ -50,6 +50,8 @@ interface FnResult {
   parts: Part[];
   /** Arguments of response calls (`res.json(x)`): what the handler returns when it doesn't `return`. */
   responses: Node[];
+  /** What it returns, as far as the code shows (`Val`). */
+  vals: Val[];
 }
 
 /** A resolved call: the shared CallSite plus what the extractor needs internally. */
@@ -99,6 +101,10 @@ interface Rules {
   entryNames: Set<string>;
   /** Callee names that can dispatch to handlers (CQRS buses), for finding a handler's callers. */
   dispatchNames: Set<string>;
+  /** Libraries' transaction APIs (handles, begin and commit, callbacks run in a transaction). */
+  transactions: TransactionApi[];
+  /** Library calls that run the function they are given in place (adapters', then the profile's `callbacks`). */
+  callbacks: CallbackRule[];
 }
 
 const MAX_TYPE = 110;
@@ -108,6 +114,223 @@ const HANDLER_FAMILIES = [/^handle/, /^(process|consume)/, /^on[A-Z]/, /^(execut
 const LIFECYCLE_HOOK = /^on(Module|Application)(Init|Bootstrap|Destroy|Shutdown)$|^beforeApplicationShutdown$/;
 /** The order a framework calls start hooks in (Nest: every `onModuleInit`, then every `onApplicationBootstrap`). */
 const START_ORDER = ['onModuleInit', 'onApplicationBootstrap'];
+
+/** Library methods that run the function they are given right there, once per item: its steps are in a loop. */
+const ARRAY_CALLBACKS = new Set(['map', 'forEach', 'filter', 'reduce', 'reduceRight', 'some', 'every', 'find', 'findIndex', 'findLast', 'findLastIndex', 'flatMap', 'sort', 'toSorted']);
+/** A promise's continuations: they run after it, in the same flow. */
+const PROMISE_CALLBACKS = new Set(['then', 'catch', 'finally']);
+
+type Guard = { condition?: string; loop?: boolean };
+
+/** How a function is run: the scope it closes over, the values of its arguments, an enclosing `@Transactional`. */
+interface Invoke {
+  env?: Env;
+  args?: Val[][];
+  ambient?: string;
+}
+
+/** A transaction the analyzed code opens on a handle (a query runner; the manager a transaction callback is given). */
+interface Tx {
+  /** The data source it is opened on (`@InjectDataSource('orders')` → orders), or the callback API (`dataSource.transaction`). */
+  name: string;
+  /** A callback transaction's name is its API, used as it is. */
+  fixed?: boolean;
+  begun: boolean;
+  /** When it began and committed (call count): transactions open at the same time commit separately. */
+  from: number;
+  to?: number;
+}
+
+/**
+ * What the analysis knows a value is, as far as the code shows it: a function (with the scope it closes over), a
+ * transaction's handle (or what was got from it: `runner.manager`, a repository from it), a field of the class (a
+ * data source, by the name it is injected with), an object or a list of these, or one implementation of an interface
+ * the module wiring lists.
+ */
+type Val =
+  | { k: 'fn'; fn: Fn; env?: Env }
+  | { k: 'handle'; tx: Tx; result?: boolean }
+  | { k: 'source'; node: Node }
+  | { k: 'obj'; props: Map<string, Val[]> }
+  | { k: 'arr'; items: Val[][] }
+  | { k: 'impl'; cls: ClassDeclaration };
+
+/** Variables in scope: where each value came from (`Prod`, for data arrows) and what it is (`Val`). Closures chain. */
+class Env {
+  private readonly prods = new Map<string, Prod>();
+  private readonly vals = new Map<string, Val[]>();
+  constructor(private readonly parent?: Env) {}
+  has(name: string): boolean {
+    return this.prods.has(name) || !!this.parent?.has(name);
+  }
+  prod(name: string): Prod | undefined {
+    return this.prods.has(name) ? this.prods.get(name) : this.parent?.prod(name);
+  }
+  val(name: string): Val[] {
+    return this.vals.has(name) ? this.vals.get(name)! : this.parent?.val(name) ?? [];
+  }
+  define(name: string, prod: Prod, vals: Val[]): void {
+    this.prods.set(name, prod);
+    this.vals.set(name, vals);
+  }
+  assign(name: string, prod: Prod, vals: Val[]): void {
+    let e: Env | undefined = this;
+    while (e && !e.prods.has(name)) e = e.parent;
+    (e ?? this).define(name, prod, vals);
+  }
+}
+
+/**
+ * What one scope's analysis did with each call (`--explain`), the transactions it saw opened, and which steps go
+ * through their handles. Dispositions: `step`, `inlined` (a project helper whose steps are the caller's), `external`
+ * (a library call no adapter or rule makes I/O), `followed` (a function value or an interface call, to the code it
+ * runs) and `gap` (it can't be followed: why, from a closed list).
+ */
+class Trace {
+  clock = 0;
+  readonly txs: Tx[] = [];
+  /** step id → the transactions it goes through */
+  readonly stepTx = new Map<string, Tx[]>();
+  /** step id → transactions open while it runs that it doesn't go through (a rollback doesn't undo it) */
+  readonly outside = new Map<string, Tx[]>();
+  /** Function literals handed to a call, and where they were run. */
+  readonly handed = new Map<Node, { file: string; line: number; text: string; to: string[] }>();
+  private readonly entries = new Map<string, ExplainEntry>();
+
+  note(e: ExplainEntry): void {
+    const key = `${e.file}:${e.line}:${e.text}`;
+    const prev = this.entries.get(key);
+    if (!prev || (e.disposition === 'gap' && prev.disposition !== 'gap')) this.entries.set(key, e);
+    else if (prev.disposition === 'followed' && e.to) prev.to = [...new Set([...(prev.to?.split(', ') ?? []), ...e.to.split(', ')])].join(', ');
+  }
+
+  /**
+   * Names each step's transaction. Transactions open at the same time are separate commits (one can commit and the
+   * other fail), so they are named together, never as one: `2 transactions (orders, audit), separate commits`.
+   */
+  label(steps: Step[]): void {
+    const used = [...new Set([...this.stepTx.values(), ...this.outside.values()].flat())];
+    const overlap = (a: Tx, b: Tx) => a.from < (b.to ?? Infinity) && b.from < (a.to ?? Infinity);
+    const groups: Tx[][] = [];
+    for (const t of used) {
+      const hit = groups.filter((g) => g.some((u) => overlap(t, u)));
+      for (const h of hit) groups.splice(groups.indexOf(h), 1);
+      groups.push([t, ...hit.flat()]);
+    }
+    const names = new Map<Tx, string>();
+    const seen = new Map<string, number>();
+    for (const g of groups.sort((a, b) => Math.min(...a.map((t) => t.from)) - Math.min(...b.map((t) => t.from)))) {
+      g.sort((a, b) => a.from - b.from);
+      let name = g.length === 1 ? (g[0].fixed ? g[0].name : `${g[0].name} transaction`) : `${g.length} transactions (${g.map((t) => t.name).join(', ')}), separate commits`;
+      const n = (seen.get(name) ?? 0) + 1;
+      seen.set(name, n);
+      if (n > 1) name = `${name} #${n}`;
+      for (const t of g) names.set(t, name);
+    }
+    for (const s of steps) {
+      const through = this.stepTx.get(s.id);
+      if (through) s.transaction = names.get(through[0]);
+      else if (!s.transaction && this.outside.has(s.id)) s.outsideTransaction = names.get(this.outside.get(s.id)![0]);
+    }
+  }
+
+  finish(): { explain: ExplainEntry[]; gaps: Gap[] } {
+    for (const h of this.handed.values()) {
+      if (h.to.length) this.note({ file: h.file, line: h.line, text: h.text, disposition: 'followed', to: [...new Set(h.to)].join(', ') });
+      else this.note({ file: h.file, line: h.line, text: h.text, disposition: 'gap', reason: 'function-value' });
+    }
+    const explain = [...this.entries.values()].sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
+    const gaps = [...new Map(explain.filter((e) => e.disposition === 'gap').map((e) => [`${e.file}:${e.line}:${e.reason}`, { file: e.file, line: e.line, reason: e.reason! }])).values()];
+    return { explain, gaps };
+  }
+}
+
+/**
+ * A read that locks what it reads: TypeORM `find…({ lock: { mode: 'pessimistic_write' } })`, a query builder's
+ * `.setLock('pessimistic_write')`, SQL `… FOR UPDATE`. Undefined when it locks nothing.
+ */
+function lockOf(call: Invocation): string | undefined {
+  const mode = (m: string) => (/write|update/i.test(m) ? 'for update' : /read|share/i.test(m) ? 'for share' : /optimistic/i.test(m) ? undefined : `(${m})`);
+  for (const arg of call.getArguments()) {
+    if (!Node.isObjectLiteralExpression(arg)) continue;
+    const lock = arg.getProperty('lock');
+    const value = lock && Node.isPropertyAssignment(lock) ? lock.getInitializer() : undefined;
+    const m = value && Node.isObjectLiteralExpression(value) ? value.getProperty('mode') : undefined;
+    const text = m && Node.isPropertyAssignment(m) ? m.getInitializer()?.getText().replace(/['"`]/g, '') : undefined;
+    if (text) return mode(text);
+  }
+  for (let cur: Node | undefined = call.getExpression(); cur && (Node.isPropertyAccessExpression(cur) || Node.isCallExpression(cur)); cur = cur.getExpression()) {
+    if (Node.isCallExpression(cur) && calleeName(cur) === 'setLock') {
+      const first = cur.getArguments()[0];
+      if (first) return mode(first.getText().replace(/['"`]/g, ''));
+    }
+  }
+  const sql = call.getArguments()[0];
+  if (sql && (Node.isStringLiteral(sql) || Node.isNoSubstitutionTemplateLiteral(sql) || Node.isTemplateExpression(sql)) && /\bfor\s+(no\s+key\s+)?update\b/i.test(sql.getText())) return 'for update';
+  return undefined;
+}
+
+/** Binds a name or a destructuring pattern (`{ runner, jobs }`, `[a, b]`) to the parts of `vals` it takes. */
+function destructure(name: Node, vals: Val[], define: (name: string, vals: Val[]) => void): void {
+  if (Node.isIdentifier(name)) return define(name.getText(), vals);
+  if (Node.isObjectBindingPattern(name)) {
+    for (const el of name.getElements()) {
+      const prop = el.getPropertyNameNode()?.getText() ?? el.getNameNode().getText();
+      destructure(el.getNameNode(), el.getDotDotDotToken() ? vals : member(vals, prop), define);
+    }
+  } else if (Node.isArrayBindingPattern(name)) {
+    name.getElements().forEach((el, i) => {
+      if (Node.isBindingElement(el)) destructure(el.getNameNode(), vals.flatMap((v) => (v.k === 'arr' ? v.items[i] ?? v.items.flat() : [])), define);
+    });
+  }
+}
+
+/** `x.name` of these values: an object's property; anything got from a handle works on its connection too. */
+function member(vals: Val[], name: string): Val[] {
+  return vals.flatMap((v): Val[] => (v.k === 'obj' ? v.props.get(name) ?? [] : v.k === 'handle' ? [{ k: 'handle', tx: v.tx }] : []));
+}
+
+/** Transactions whose handles these values are or hold. */
+function handlesIn(vals: Val[], depth = 0): Tx[] {
+  if (depth > 4) return [];
+  const out = new Set<Tx>();
+  for (const v of vals) {
+    if (v.k === 'handle') out.add(v.tx);
+    else if (v.k === 'obj') for (const x of v.props.values()) handlesIn(x, depth + 1).forEach((t) => out.add(t));
+    else if (v.k === 'arr') for (const x of v.items) handlesIn(x, depth + 1).forEach((t) => out.add(t));
+  }
+  return [...out];
+}
+
+/** What an array method gives back: its items (`find`, `at`), a list of them (`filter`, `slice`), or the callback's results (`map`). */
+function arrayResult(name: string, recv: Val[], results: Val[]): Val[] {
+  const arrs = recv.filter((v): v is Extract<Val, { k: 'arr' }> => v.k === 'arr');
+  if (!arrs.length) return [];
+  if (name === 'map' || name === 'flatMap') return [{ k: 'arr', items: [results] }];
+  if (['filter', 'slice', 'sort', 'toSorted', 'reverse', 'concat', 'flat'].includes(name)) return [{ k: 'arr', items: arrs.flatMap((a) => a.items) }];
+  if (['find', 'findLast', 'at', 'pop', 'shift'].includes(name)) return arrs.flatMap((a) => a.items.flat());
+  return [];
+}
+
+/** Function literals among a call's arguments, directly or in an array or object literal argument. */
+function literalsIn(args: Node[]): Fn[] {
+  const out: Fn[] = [];
+  const visit = (n: Node, depth: number) => {
+    if (Node.isArrowFunction(n) || Node.isFunctionExpression(n)) out.push(n);
+    else if (depth < 3 && Node.isArrayLiteralExpression(n)) n.getElements().forEach((e) => visit(e, depth + 1));
+    else if (depth < 3 && Node.isObjectLiteralExpression(n)) for (const p of n.getProperties()) if (Node.isPropertyAssignment(p) && p.getInitializer()) visit(p.getInitializer()!, depth + 1);
+  };
+  for (const a of args) visit(a, 0);
+  return out;
+}
+
+/** Code inside a function or class nested in `body`: it runs when that function runs, not here. */
+function insideNested(n: Node, body: Node): boolean {
+  for (let p = n.getParent(); p && p !== body; p = p.getParent()) {
+    if (isFnNode(p) || Node.isClassDeclaration(p) || Node.isClassExpression(p) || Node.isGetAccessorDeclaration(p) || Node.isSetAccessorDeclaration(p) || Node.isConstructorDeclaration(p)) return true;
+  }
+  return false;
+}
 
 export function extract(project: Project, repoRoot: string, projectDir: string, config: Config, frameworks: Framework[] = []): Snapshot {
   return new Extractor(project, repoRoot, projectDir, config, frameworks).run();
@@ -136,8 +359,6 @@ export class Extractor implements RevisionAnalysis {
   private currentClass?: ClassDeclaration;
   /** npm packages of the framework adapters in use: when these don't resolve, the analysis is blind. */
   private frameworkPackages: Set<string>;
-  /** Calls on injected dependencies (`this.repo.save()`) analyzed so far, and those that resolved to nothing. */
-  private injectedCalls = new Set<Node>();
   /** Request pipeline of each decorated entry point (guards, interceptors, …), as the framework adapters found it. */
   private pipelines = new Map<string, PipelineSpec[]>();
   /** Code that applies a pipeline item, or runs as one (`canActivate`), → the entry points it is in front of. */
@@ -151,7 +372,6 @@ export class Extractor implements RevisionAnalysis {
   private hookMemo = new Map<string, unknown>();
   /** Class names more than one module has. */
   private sharedNames = new Set<string>();
-  private unresolvedInjected = new Map<Node, string>();
 
   constructor(
     readonly project: Project,
@@ -178,6 +398,8 @@ export class Extractor implements RevisionAnalysis {
       registries: config.entryRegistries ?? [],
       entryNames: new Set(entries.flatMap((r) => (methodsOf(r).includes('new') ? (r.class ?? '').split('|') : methodsOf(r)))),
       dispatchNames: new Set(frameworks.flatMap((f) => f.hooks?.dispatchNames ?? [])),
+      transactions: frameworks.flatMap((f) => f.transactions ?? []),
+      callbacks: all(config.callbacks ?? [], (f) => f.callbacks),
     };
   }
 
@@ -737,11 +959,12 @@ export class Extractor implements RevisionAnalysis {
     const suspects = deps.filter((d) => !known.has(d) && (EFFECT_NAME.test(d) || wraps(this.projectDir, d).length || networkVia(this.projectDir, d).length));
     const fxItems: string[] = [];
     const sinks: string[] = [];
+    const ignored: string[] = [];
     for (const dep of suspects) {
       const files = this.valueImporters(dep);
       const imported = new Set(files.flatMap((f) => f.getImportDeclarations().filter((i) => i.getModuleSpecifierValue() === dep || i.getModuleSpecifierValue().startsWith(`${dep}/`)).flatMap((i) => i.getNamedImports().map((n) => n.getName()))));
       if ([...imported].some((n) => sinkClasses.has(n))) continue;
-      const calls = new Map<string, { n: number; owner: string; method: string; target: string }>();
+      const calls = new Map<string, { n: number; owner: string; method: string; target: string; plain: boolean }>();
       for (const f of files) {
         for (const call of f.getDescendantsOfKind(SyntaxKind.CallExpression)) {
           const site = this.site(call);
@@ -752,7 +975,8 @@ export class Extractor implements RevisionAnalysis {
           const owner = ownerType && (imported.has(ownerType) || site.pkg === dep) && site.receiver?.getType().isClass() ? ownerType : site.owner;
           const key = `${owner}.${site.name}`;
           const prev = calls.get(key);
-          calls.set(key, { n: (prev?.n ?? 0) + 1, owner, method: site.name, target: prev?.target ?? suggestedTarget(site.decl, dep) });
+          // A plain function (`sign(url, secret)`), not a method of something the package built: no client, no I/O.
+          calls.set(key, { n: (prev?.n ?? 0) + 1, owner, method: site.name, target: prev?.target ?? suggestedTarget(site.decl, dep), plain: !site.owner });
         }
       }
       const via = wraps(this.projectDir, dep);
@@ -760,22 +984,28 @@ export class Extractor implements RevisionAnalysis {
       // messaging package does I/O in every call but opening, closing and configuring it (`getApplicant` too): its
       // target is the package, as no argument names a topic.
       const net = !via.length && !EFFECT_NAME.test(dep) ? networkVia(this.projectDir, dep) : [];
-      const effectful = [...calls.values()].filter((c) => (net.length ? isNetworkCall(c.method) : isEffectMethod(c.method))).map((c) => (net.length ? { ...c, target: `const:${dep}` } : c));
+      // A package that can do network I/O, used only for its plain functions (a URL signer next to its HTTP
+      // client): nothing the service calls on it leaves the process.
+      if (net.length && calls.size && [...calls.values()].every((c) => c.plain)) continue;
+      const effectful = [...calls.values()].filter((c) => !(net.length && c.plain) && (net.length ? isNetworkCall(c.method) : isEffectMethod(c.method))).map((c) => (net.length ? { ...c, target: `const:${dep}` } : c));
       const built = via.length ? ` (wraps ${via.join(', ')})` : net.length && net[0] !== dep ? ` (network I/O through ${net.join(', ')})` : net.length ? ' (network I/O)' : '';
       fxItems.push(`${dep}${built}: ${calls.size ? [...calls.entries()].map(([k, c]) => `${k}${c.n > 1 ? ` ×${c.n}` : ''}`).join(', ') : `${[...imported].join(', ')} imported`} in ${files.map((f) => this.rel(f.getFilePath())).slice(0, 2).join(', ')}${files.length > 2 ? ', …' : ''}`);
       for (const c of effectful) {
         sinks.push(`{ "class": "${c.owner}", "module": "${dep}", "method": "${c.method}", "kind": "${sinkKind(dep, c.owner)}", "target": "${c.target}" }`);
       }
+      // Flagged, but no call of it looks like I/O: the rule to act on is to say it has none.
+      if (!effectful.length) ignored.push(dep);
     }
     if (fxItems.length) {
       out.push({
         kind: 'unknown-side-effects',
         message: `${fxItems.length} package${fxItems.length > 1 ? 's look' : ' looks'} like ${fxItems.length > 1 ? 'producers, outboxes or network clients' : 'a producer, an outbox or a network client'}, but no adapter or profile rule describes ${fxItems.length > 1 ? 'them' : 'it'}: calls into ${fxItems.length > 1 ? 'them' : 'it'} are not side effects in this review (no Kafka topic, outbox event or external call is shown for them).`,
-        hint: sinks.length
-          ? 'Describe the calls that publish, write or call out as `sinks` in the service\'s profile (suggested below: check the kind and which argument names the topic or event; factories such as `producer()` and `connect()` are left out), then analyze again. A package without side effects: add it to `coverage.ignore`.'
-          : 'Describe their calls as `sinks` in the service\'s profile (docs/analyzers.md), or add the package to `coverage.ignore`.',
+        hint: 'Describe the calls that publish, write or call out as `sinks` in the service\'s profile (suggested below: check the kind and which argument names the topic or event; factories such as `producer()` and `connect()` are left out), then analyze again. A package with no call that looks like I/O is suggested for `coverage.ignore`: check that it has none.',
         items: fxItems,
-        ...(sinks.length ? { suggestion: `"sinks": [\n  ${sinks.join(',\n  ')}\n]` } : {}),
+        suggestion: [
+          ...(sinks.length ? [`"sinks": [\n  ${sinks.join(',\n  ')}\n]`] : []),
+          ...(ignored.length ? [`"coverage": { "ignore": [${[...(this.config.coverage?.ignore ?? []), ...ignored].map((d) => `"${d}"`).join(', ')}] }`] : []),
+        ].join(',\n'),
       });
     }
     return out;
@@ -836,22 +1066,10 @@ export class Extractor implements RevisionAnalysis {
 
   // ---------- completeness ----------
 
-  /** `this.dep.method()`: counted, and remembered when it resolved to nothing (an untyped or missing package). */
-  private noteInjectedCall(call: Invocation, resolved: Resolved, fn: Fn): void {
-    const expr = call.getExpression();
-    if (!Node.isPropertyAccessExpression(expr)) return;
-    const receiver = expr.getExpression();
-    if (!Node.isPropertyAccessExpression(receiver) || receiver.getExpression().getKind() !== SyntaxKind.ThisKeyword) return;
-    this.injectedCalls.add(call);
-    if (resolved.kind === 'unknown' && !this.site(call)) {
-      this.unresolvedInjected.set(call, `${fnName(fn)}: ${short(expr.getText(), 50)}`);
-    }
-  }
-
   /**
    * What may have made this analysis miss things. Imports of packages that aren't installed (or path aliases
    * that don't resolve) turn every call into them into "unknown": no side effects, no entry points, and no error.
-   * Calls on injected dependencies that resolve to nothing say the same from the other side.
+   * A single call that resolves to nothing (an untyped dependency) is a gap of the operation it is in, shown there.
    */
   issues(): AnalysisIssue[] {
     const out: AnalysisIssue[] = [...this.coverageHints()];
@@ -867,14 +1085,17 @@ export class Extractor implements RevisionAnalysis {
         items: packages.map((p) => `${p} (imported in ${[...missing.get(p)!].slice(0, 2).join(', ')}${missing.get(p)!.size > 2 ? ', …' : ''})`),
       });
     }
-    const unresolved = [...this.unresolvedInjected.values()];
-    if (unresolved.length >= 3 && unresolved.length >= 0.2 * this.injectedCalls.size) {
-      out.push({
-        kind: 'unresolved-calls',
-        message: `${unresolved.length} of ${this.injectedCalls.size} calls on injected dependencies resolve to nothing (untyped or missing packages, \`any\`): their side effects are unknown.`,
-        hint: 'Install typed dependencies, or describe these clients as sinks in the profile.',
-        items: unresolved.slice(0, 8),
-      });
+    // I5: every HTTP route the framework declares is an entry point.
+    const routes = this.rules.decorators.filter((r) => r.kind === 'api' && r.decorator);
+    for (const file of this.projectFiles()) {
+      for (const cls of file.getClasses()) {
+        for (const m of cls.getMethods()) {
+          if (!m.getDecorators().length || !routes.some((r) => this.findDecorator(m, r.decorator!, r.from))) continue;
+          if (this.entriesOfMethod(m).length) continue;
+          const id = `${cls.getName()}.${m.getName()}`;
+          out.push({ kind: 'invariant', scope: id, message: `I5: ${id} (${this.rel(file.getFilePath())}:${m.getStartLineNumber()}) is an HTTP route, but not an entry point of this review` });
+        }
+      }
     }
     return out;
   }
@@ -1051,6 +1272,7 @@ export class Extractor implements RevisionAnalysis {
       change: 'unchanged',
       containsChanges: false,
       source: dedent(method.getText()),
+      ...(this.gapsOf.get(id)?.length ? { gaps: this.gapsOf.get(id) } : {}),
     };
     this.recordParts(id, { name: method.getName(), role: 'operation', file: this.rel(method.getSourceFile().getFilePath()), line: method.getStartLineNumber(), text: method.getText() }, scope.result.parts);
   }
@@ -1200,6 +1422,7 @@ export class Extractor implements RevisionAnalysis {
     const scope = this.buildScope(id, handler, prelude);
     this.currentClass = outer;
     for (const p of scope.prelude) if (entry.pipeline?.[p.item]) entry.pipeline[p.item].functions = p.functions;
+    if (this.gapsOf.get(id)?.length) entry.gaps = this.gapsOf.get(id);
     const label = entry.label;
     // Where the pipeline items are applied is part of the entry point too: removing `@UseGuards(X)` changes it.
     const pipeline = (entry.pipeline ?? []).map(pipelineKey).join('\n');
@@ -1277,6 +1500,8 @@ export class Extractor implements RevisionAnalysis {
 
   private buildScope(id: string, fn: Fn, prelude: Prelude[] = []): { scope: Scope; result: FnResult; prelude: { item: number; functions: string[] }[] } {
     this.stepCounter = 0;
+    const outerTrace = this.trace;
+    const trace = (this.trace = new Trace());
     // Pipeline functions first (they run before the handler), as if inlined: their steps say `via` which one.
     const outer = this.currentClass;
     const pre = prelude.map((p) => {
@@ -1286,12 +1511,17 @@ export class Extractor implements RevisionAnalysis {
       return { p, r };
     });
     const result = this.analyzeFn(fn, new Set([fn]));
+    this.trace = outerTrace;
     for (const { p, r } of pre.reverse()) {
       // Marked as the pipeline's, so a reviewer can fold cross-cutting code (metrics, logging) out of the business flow.
       result.steps.unshift(...r.steps.map((s) => ({ ...s, via: s.via ?? p.name, ...(p.label ? { pipeline: p.label } : {}) })));
       result.edges.push(...r.edges);
       result.parts.unshift({ name: p.name, role: p.label ? 'pipeline' : 'handler', file: this.rel(p.fn.getSourceFile().getFilePath()), line: p.fn.getStartLineNumber(), text: p.fn.getText() }, ...r.parts);
     }
+    trace.label(result.steps);
+    const { explain, gaps } = trace.finish();
+    (this.snapshot.explain ??= {})[id] = explain;
+    this.gapsOf.set(id, gaps);
     const preludeFunctions = pre.filter(({ p }) => p.item >= 0).map(({ p, r }) => ({ item: p.item, functions: [p.name, ...r.parts.map((x) => x.name)] }));
     const edges = [...result.edges];
     for (const [producer, labels] of result.returns) {
@@ -1317,79 +1547,320 @@ export class Extractor implements RevisionAnalysis {
     return { scope, result, prelude: preludeFunctions };
   }
 
-  private analyzeFn(fn: Fn, stack: Set<Node>): FnResult {
+  /** Gaps of each scope built so far (calls it could not follow), for its operation or entry point. */
+  private gapsOf = new Map<string, Gap[]>();
+  private trace = new Trace();
+
+  /**
+   * The steps of a function, in the order they run. Every call gets one disposition (see `Trace`): a step, a helper
+   * whose steps are inlined, a library call with no side effect, a function value followed to the code it runs, or a
+   * gap. Values are followed as far as the code shows them (`Val`): functions handed to a call run where that call
+   * runs them (an array method in place, a helper of the project where it calls them, a transaction callback with the
+   * transaction's handle), never where they are written; a transaction's steps are those that go through its handle.
+   */
+  private analyzeFn(fn: Fn, stack: Set<Node>, ctx: Invoke = {}): FnResult {
     const steps: Step[] = [];
     const edges: Edge[] = [];
     const parts: Part[] = [];
     const responses: Node[] = [];
-    const vars = new Map<string, Prod>();
+    const env = new Env(ctx.env);
     const callProd = new Map<Node, Prod>();
+    const callVals = new Map<Node, Val[]>();
+    const trace = this.trace;
     let returns: Prod = new Map();
-    for (const p of fn.getParameters()) {
-      for (const name of bindingNames(p.getNameNode())) vars.set(name, new Map([['entry', new Set()]]));
-    }
+    const returned: Val[] = [];
+    // `@Transactional()`: the framework opens a transaction around the method; all of it runs inside, helpers too.
+    const ambient = (Node.isMethodDeclaration(fn) && fn.getDecorators().some((d) => /^Transactional$/i.test(d.getName())) ? '@Transactional' : undefined) ?? ctx.ambient;
+    fn.getParameters().forEach((p, i) => {
+      const given = ctx.args?.[i] ?? [];
+      destructure(p.getNameNode(), given, (name, vals) => env.define(name, new Map([['entry', new Set()]]), vals));
+    });
     const body = fn.getBody();
-    if (!body) return { steps, edges, returns, parts, responses };
+    if (!body) return { steps, edges, returns, parts, responses, vals: returned };
 
     const prodOf = (node: Node | undefined): Prod => {
       if (!node) return new Map();
       node = unwrap(node);
       if (callProd.has(node)) return callProd.get(node)!;
-      if (Node.isIdentifier(node)) return relabel(vars.get(node.getText()), node.getText());
-      if (Node.isShorthandPropertyAssignment(node)) return relabel(vars.get(node.getName()), node.getName());
+      if (Node.isIdentifier(node)) return relabel(env.prod(node.getText()), node.getText());
+      if (Node.isShorthandPropertyAssignment(node)) return relabel(env.prod(node.getName()), node.getName());
       if (Node.isPropertyAssignment(node)) return prodOf(node.getInitializer());
       if (Node.isPropertyAccessExpression(node)) {
         const root = rootIdentifier(node);
-        if (root && vars.get(root)?.has('entry')) return new Map([['entry', new Set([short(node.getText(), 40)])]]);
+        if (root && env.prod(root)?.has('entry')) return new Map([['entry', new Set([short(node.getText(), 40)])]]);
         return prodOf(node.getExpression());
       }
+      // A function literal is a value: what it closes over flows in when it runs, not here.
+      if (isFnNode(node)) return new Map();
       const out: Prod = new Map();
       node.forEachChild((child) => mergeInto(out, prodOf(child)));
       return out;
     };
 
-    const bind = (nameNode: Node, init: Node | undefined) => {
+    /** What the code shows a value to be: functions, transaction handles, objects and lists of them. */
+    const valOf = (node: Node | undefined, depth = 0): Val[] => {
+      if (!node || depth > 12) return [];
+      let n = node;
+      while (Node.isParenthesizedExpression(n) || Node.isAsExpression(n) || Node.isNonNullExpression(n) || Node.isSatisfiesExpression(n) || Node.isTypeAssertion(n)) n = n.getExpression();
+      const next = (x: Node | undefined) => valOf(x, depth + 1);
+      if (Node.isAwaitExpression(n)) {
+        const inner = n.getExpression();
+        // What an awaited call on a handle gives back is data (rows, a count), not the handle.
+        const innerCallee = Node.isCallExpression(inner) ? inner.getExpression() : undefined;
+        if (innerCallee && Node.isPropertyAccessExpression(innerCallee) && !callVals.has(inner) && handlesIn(next(innerCallee.getExpression())).length) return [];
+        return next(inner).filter((v) => !(v.k === 'handle' && Node.isCallExpression(inner) && v.result));
+      }
+      if (callVals.has(n)) return callVals.get(n)!;
+      if (Node.isArrowFunction(n) || Node.isFunctionExpression(n)) return [{ k: 'fn', fn: n, env }];
+      if (Node.isIdentifier(n)) {
+        const name = n.getText();
+        if (env.has(name)) return env.val(name);
+        const decl = this.resolveDeclaration(n);
+        if (!decl || !this.isProjectFile(decl.getSourceFile().getFilePath())) return [];
+        if (isFn(decl)) return decl.getBody() ? [{ k: 'fn', fn: decl }] : [];
+        // A module-level constant of the service (`const HANDLERS = { a: () => … }`).
+        return Node.isVariableDeclaration(decl) && Node.isSourceFile(decl.getVariableStatement()?.getParent()) ? next(decl.getInitializer()) : [];
+      }
+      if (Node.isPropertyAccessExpression(n)) {
+        const recv = n.getExpression();
+        if (recv.getKind() === SyntaxKind.ThisKeyword) return this.fieldVals(n);
+        return member(next(recv), n.getName());
+      }
+      if (Node.isElementAccessExpression(n)) {
+        const key = this.literal(n.getArgumentExpressionOrThrow());
+        return next(n.getExpression()).flatMap((v) => {
+          if (v.k === 'arr') return /^\d+$/.test(key) && v.items[Number(key)] ? v.items[Number(key)] : v.items.flat();
+          if (v.k === 'obj') return v.props.get(key) ?? [...v.props.values()].flat();
+          return v.k === 'handle' ? [v] : [];
+        });
+      }
+      if (Node.isObjectLiteralExpression(n)) {
+        const props = new Map<string, Val[]>();
+        for (const p of n.getProperties()) {
+          if (Node.isPropertyAssignment(p)) props.set(p.getName(), next(p.getInitializer()));
+          else if (Node.isShorthandPropertyAssignment(p)) props.set(p.getName(), env.has(p.getName()) ? env.val(p.getName()) : next(p.getNameNode()));
+          else if (Node.isMethodDeclaration(p)) props.set(p.getName(), [{ k: 'fn', fn: p, env }]);
+          else if (Node.isSpreadAssignment(p)) for (const v of next(p.getExpression())) if (v.k === 'obj') for (const [k, x] of v.props) props.set(k, x);
+        }
+        return [{ k: 'obj', props }];
+      }
+      if (Node.isArrayLiteralExpression(n)) {
+        const items: Val[][] = [];
+        for (const e of n.getElements()) {
+          if (Node.isSpreadElement(e)) items.push(...next(e.getExpression()).flatMap((v) => (v.k === 'arr' ? v.items : [])));
+          else items.push(next(e));
+        }
+        return [{ k: 'arr', items }];
+      }
+      if (Node.isConditionalExpression(n)) return [...next(n.getWhenTrue()), ...next(n.getWhenFalse())];
+      if (Node.isBinaryExpression(n) && [SyntaxKind.QuestionQuestionToken, SyntaxKind.BarBarToken, SyntaxKind.AmpersandAmpersandToken].includes(n.getOperatorToken().getKind())) {
+        return [...next(n.getLeft()), ...next(n.getRight())];
+      }
+      if (Node.isCallExpression(n)) {
+        // Not run yet (a call inside an argument being read early): only what needs no running.
+        const callee = n.getExpression();
+        if (isPromiseAll(n) || /^Promise\.resolve$/.test(callee.getText())) return next(n.getArguments()[0]);
+        if (Node.isPropertyAccessExpression(callee)) {
+          const recv = next(callee.getExpression());
+          if (callee.getName() === 'bind') return recv.filter((v) => v.k === 'fn');
+          const h = handlesIn(recv, 0);
+          if (h.length) return h.map((tx) => ({ k: 'handle', tx, result: true }) as Val);
+          return arrayResult(callee.getName(), recv, []);
+        }
+      }
+      return [];
+    };
+
+    const bind = (nameNode: Node, init: Node | undefined, how: 'define' | 'assign' | 'each') => {
       if (!init) return;
       const value = unwrap(init);
       if (Node.isArrayBindingPattern(nameNode) && isPromiseAll(value)) {
         const items = (value as CallExpression).getArguments()[0];
         if (Node.isArrayLiteralExpression(items)) {
           nameNode.getElements().forEach((el, i) => {
-            if (Node.isBindingElement(el)) bind(el.getNameNode(), items.getElements()[i]);
+            if (Node.isBindingElement(el)) bind(el.getNameNode(), items.getElements()[i], how);
           });
           return;
         }
       }
       const produced = strip(prodOf(init));
-      for (const name of bindingNames(nameNode)) vars.set(name, produced);
+      let vals = valOf(init);
+      if (how === 'each') vals = vals.flatMap((v) => (v.k === 'arr' ? v.items.flat() : v.k === 'obj' ? [] : []));
+      destructure(nameNode, vals, (name, v) => (how === 'assign' ? env.assign(name, produced, v) : env.define(name, produced, v)));
+    };
+
+    const where = (node: Node) => ({ file: this.rel(node.getSourceFile().getFilePath()), line: node.getStartLineNumber() });
+    const at = (node: Node) => {
+      const w = where(node);
+      return `${w.file}:${w.line}`;
+    };
+
+    /** Runs `v` (a function value) here, with these arguments: its steps are this call's. */
+    const invoke = (call: Invocation, v: Extract<Val, { k: 'fn' }>, args: Val[][], guard: Guard, inputs: Map<string, Set<string>>, extra: { loop?: boolean; via?: string } = {}) => {
+      // A method of a class given as a value (`items.forEach(this.process)`): as if called.
+      if (Node.isMethodDeclaration(v.fn) && !v.env) {
+        const r = this.resolveMethod(v.fn);
+        if (r.kind === 'op') return handleTarget(call, r, { ...guard, loop: guard.loop || extra.loop || undefined }, new Map(), inputs, args);
+      }
+      if (stack.has(v.fn)) return;
+      stack.add(v.fn);
+      const sub = this.analyzeFn(v.fn, stack, { env: v.env, args, ambient });
+      stack.delete(v.fn);
+      const handed = trace.handed.get(v.fn);
+      if (handed) handed.to.push(at(call));
+      merge(call, sub, extra.via, { ...guard, loop: guard.loop || extra.loop || undefined }, inputs);
+    };
+
+    /** Steps of a function run by this call (a helper, a callback), merged into this one's. */
+    const merge = (call: Invocation, sub: FnResult, via: string | undefined, guard: Guard, inputs: Map<string, Set<string>>) => {
+      for (const s of sub.steps) {
+        steps.push({
+          ...s,
+          condition: [guard.condition, s.condition].filter(Boolean).join(' and ') || undefined,
+          loop: guard.loop || s.loop || undefined,
+          ...(s.via ?? via ? { via: s.via ?? via } : {}),
+        });
+      }
+      for (const e of sub.edges) {
+        if (e.from !== 'entry') edges.push(e);
+        else if (inputs.size === 0) edges.push(e);
+        else for (const [producer, labels] of inputs) edges.push({ from: producer, to: e.to, kind: 'data', label: [...labels].join(', ') || e.label });
+      }
+      const result: Prod = new Map();
+      for (const [producer, labels] of sub.returns) {
+        if (producer === 'entry') mergeInto(result, inputs);
+        else result.set(producer, labels);
+      }
+      produced(call, result);
+      callVals.set(call, [...(callVals.get(call) ?? []), ...sub.vals]);
+      responses.push(...sub.responses);
+    };
+
+    const produced = (call: Invocation, prod: Prod) => {
+      const prev = callProd.get(call);
+      if (prev) mergeInto(prev, prod);
+      else callProd.set(call, prod);
     };
 
     const handleCall = (call: Invocation) => {
-      const resolved = this.resolve(call);
-      this.noteInjectedCall(call, resolved, fn);
-      if (resolved.kind === 'response') {
-        if (resolved.arg) {
-          mergeInto(returns, prodOf(resolved.arg));
-          responses.push(resolved.arg);
-        }
-        return;
-      }
+      trace.clock++;
+      const w = { ...where(call), text: short(call.getText(), 100) };
+      const callee = call.getExpression();
+      const args = call.getArguments();
       const { guardNodes, ...guard } = guardOf(call, fn);
-      const transaction = transactionOf(call, fn) ?? this.openedTransaction(call, fn);
       const guards: Prod = new Map();
       for (const g of guardNodes) mergeInto(guards, strip(prodOf(g)));
       const inputs = new Map<string, Set<string>>();
-      for (const arg of call.getArguments()) mergeInto(inputs, prodOf(arg));
-      // A bus call runs each handler registered for the message: one step per handler.
-      for (const target of resolved.kind === 'dispatch' ? resolved.targets : [resolved]) handleTarget(call, target, guard, guards, inputs, transaction);
+      for (const arg of args) mergeInto(inputs, prodOf(arg));
+      const argVals = args.map((a) => valOf(a));
+      // Function literals handed to the call: where they run is decided below, or they are a gap.
+      for (const lit of literalsIn(args)) if (!trace.handed.has(lit)) trace.handed.set(lit, { ...where(lit), text: `${calleeName(call) || short(callee.getText(), 30)}(… ${short(lit.getText(), 60)} …)`, to: [] });
+
+      // 1. A call through a value: a parameter, a local, an item of a list (`for (const run of runs) await run(x)`).
+      const local = Node.isIdentifier(callee) && env.has(callee.getText());
+      const resolved = local ? ({ kind: 'unknown' } as Resolved) : this.resolve(call);
+      if (resolved.kind === 'unknown') {
+        const viaCall = Node.isPropertyAccessExpression(callee) && callee.getName() === 'call' ? callee.getExpression() : undefined;
+        const fns = valOf(viaCall ?? callee).filter((v): v is Extract<Val, { k: 'fn' }> => v.k === 'fn');
+        if (fns.length) {
+          const given = viaCall ? argVals.slice(1) : argVals;
+          for (const v of fns) invoke(call, v, given, guard, inputs);
+          trace.note({ ...w, disposition: 'followed', to: [...new Set(fns.map((v) => at(v.fn)))].join(', ') });
+          return;
+        }
+        if (local) {
+          trace.note({ ...w, disposition: 'gap', reason: 'function-value' });
+          return;
+        }
+      }
+
+      // 2. An interface whose implementations the module wiring lists (`@Inject(TOKEN) steps: Step[]`): each of them.
+      if (resolved.kind === 'unknown' && Node.isPropertyAccessExpression(callee)) {
+        const impls = [...new Set(valOf(callee.getExpression()).flatMap((v) => (v.k === 'impl' ? [v.cls] : [])))];
+        const methods = impls.map((c) => methodOf(c, callee.getName())).filter((m): m is MethodDeclaration => !!m);
+        if (methods.length) {
+          for (const m of methods) {
+            const cls = m.getParent() as ClassDeclaration;
+            const condition = methods.length > 1 ? [guard.condition, `when ${short(callee.getExpression().getText(), 30)} is ${cls.getName()}`].filter(Boolean).join(' and ') : guard.condition;
+            handleTarget(call, this.resolveMethod(m), { ...guard, condition }, guards, inputs, argVals);
+          }
+          trace.note({ ...w, disposition: 'followed', to: methods.map((m) => at(m)).join(', ') });
+          return;
+        }
+      }
+
+      // 3. A library's transaction API: a handle (`createQueryRunner()`), begin and commit on it, a callback it runs
+      //    in a transaction with the handle (`manager.transaction(async (em) => …)`).
+      const api = resolved.kind === 'unknown' ? this.transactionApi(call) : undefined;
+      if (api) {
+        const recv = Node.isPropertyAccessExpression(callee) ? valOf(callee.getExpression()) : [];
+        if (api.op === 'handle') {
+          const source = recv.flatMap((v) => (v.k === 'source' ? [v.node] : []))[0] ?? (Node.isPropertyAccessExpression(callee) ? callee.getExpression() : undefined);
+          const tx: Tx = { name: (source && this.dataSourceName(source)) || lastName(callee), begun: false, from: trace.clock };
+          trace.txs.push(tx);
+          callVals.set(call, [{ k: 'handle', tx }]);
+        } else if (api.op === 'begin') {
+          for (const tx of handlesIn(recv, 0)) Object.assign(tx, { begun: true, from: trace.clock, to: undefined });
+        } else if (api.op === 'commit') {
+          for (const tx of handlesIn(recv, 0)) if (tx.begun && tx.to === undefined) tx.to = trace.clock;
+        } else if (api.op === 'callback') {
+          const tx: Tx = { name: short(callee.getText().replace(/^this\./, ''), 40), fixed: true, begun: true, from: trace.clock };
+          trace.txs.push(tx);
+          for (const vals of argVals) for (const v of vals) if (v.k === 'fn') invoke(call, v, [[{ k: 'handle', tx }]], guard, inputs);
+          tx.to = ++trace.clock;
+        }
+        trace.note({ ...w, disposition: 'external' });
+        return;
+      }
+
+      // 4. A library call that runs the function it is given right there: array methods, a promise's continuations,
+      //    `new Promise(executor)`, and what the profile's `callbacks` say.
+      if (resolved.kind === 'unknown' || resolved.kind === 'response') {
+        const name = Node.isNewExpression(call) ? callee.getText() : calleeName(call);
+        const recv = Node.isPropertyAccessExpression(callee) ? valOf(callee.getExpression()) : [];
+        const rule = this.callbackRule(call);
+        const inPlace = ARRAY_CALLBACKS.has(name) || PROMISE_CALLBACKS.has(name) || (Node.isNewExpression(call) && name === 'Promise') || !!rule;
+        if (inPlace) {
+          const when = rule?.condition ? { ...guard, condition: [guard.condition, rule.condition].filter(Boolean).join(' and ') } : guard;
+          const items = recv.flatMap((v) => (v.k === 'arr' ? v.items.flat() : []));
+          const results: Val[] = [];
+          // The functions given: directly, or in an observer object (`tap({ next: …, error: … })`; `error` runs on error).
+          const given = argVals.flat().flatMap((v) => (v.k === 'fn' ? [{ v, onError: false }] : v.k === 'obj' ? [...v.props].flatMap(([k, xs]) => xs.filter((x) => x.k === 'fn').map((x) => ({ v: x, onError: /^error$/i.test(k) }))) : []));
+          for (const { v, onError } of given) {
+            if (v.k !== 'fn') continue;
+            const before = callVals.get(call)?.length ?? 0;
+            const guardFor = onError ? { ...when, condition: [when.condition, 'on error'].filter(Boolean).join(' and ') } : when;
+            invoke(call, v, ARRAY_CALLBACKS.has(name) ? [items, [], recv] : [], guardFor, inputs, { loop: ARRAY_CALLBACKS.has(name) });
+            results.push(...(callVals.get(call) ?? []).slice(before));
+          }
+          callVals.set(call, ARRAY_CALLBACKS.has(name) ? arrayResult(name, recv, results) : results);
+        } else if (isPromiseAll(call)) callVals.set(call, argVals[0] ?? []);
+        else if (Node.isPropertyAccessExpression(callee)) {
+          const r = arrayResult(callee.getName(), recv, []);
+          if (r.length) callVals.set(call, r);
+          // A method of a handle gives what works on the same connection (`runner.manager.getRepository(X)`).
+          const h = handlesIn(recv, 0);
+          if (h.length && !callVals.has(call)) callVals.set(call, h.map((tx) => ({ k: 'handle', tx, result: true })));
+        }
+        if (resolved.kind === 'response') {
+          if (resolved.arg) {
+            mergeInto(returns, prodOf(resolved.arg));
+            responses.push(resolved.arg);
+          }
+          trace.note({ ...w, disposition: 'external' });
+          return;
+        }
+        const d = this.unknownCall(call);
+        trace.note({ ...w, ...d });
+        return;
+      }
+
+      // 5. A step, a helper, a bus that runs handlers.
+      for (const target of resolved.kind === 'dispatch' ? resolved.targets : [resolved]) handleTarget(call, target, guard, guards, inputs, argVals);
+      trace.note({ ...w, disposition: resolved.kind === 'inline' ? 'inlined' : 'step', ...(resolved.kind === 'op' ? { to: resolved.opId } : {}) });
     };
 
-    const handleTarget = (call: Invocation, resolved: Resolved, guard: { condition?: string; loop?: boolean }, guards: Prod, inputs: Map<string, Set<string>>, transaction: string | undefined) => {
-      const produced = (prod: Prod) => {
-        const prev = callProd.get(call);
-        if (prev) mergeInto(prev, prod);
-        else callProd.set(call, prod);
-      };
+    const handleTarget = (call: Invocation, resolved: Resolved, guard: Guard, guards: Prod, inputs: Map<string, Set<string>>, argVals: Val[][]) => {
       if (resolved.kind === 'op' || resolved.kind === 'sink') {
         const step: Step = {
           id: `s${++this.stepCounter}`,
@@ -1398,110 +1869,146 @@ export class Extractor implements RevisionAnalysis {
           line: call.getStartLineNumber(),
           file: this.rel(call.getSourceFile().getFilePath()),
           ...guard,
-          ...(transaction ? { transaction } : {}),
+          ...(ambient ? { transaction: ambient } : {}),
         };
         steps.push(step);
+        // In a transaction when it goes through the transaction's handle: as its receiver, or given to it.
+        const callee = call.getExpression();
+        const through = [...new Set([...(Node.isPropertyAccessExpression(callee) ? handlesIn(valOf(callee.getExpression()), 0) : []), ...argVals.flatMap((v) => handlesIn(v, 0))])].filter((t) => t.begun && t.to === undefined);
+        if (through.length) trace.stepTx.set(step.id, through);
+        else if (!ambient) {
+          const open = trace.txs.filter((t) => t.begun && t.to === undefined);
+          if (open.length) trace.outside.set(step.id, open);
+        }
         for (const [producer, labels] of inputs) {
           edges.push({ from: producer, to: step.id, kind: 'data', label: [...labels].join(', ') || undefined });
         }
         for (const producer of guards.keys()) {
           if (producer !== 'entry' && !inputs.has(producer)) edges.push({ from: producer, to: step.id, kind: 'control', label: 'guards' });
         }
-        produced(new Map([[step.id, new Set()]]));
-      } else if (resolved.kind === 'inline' && !stack.has(resolved.fn)) {
-        stack.add(resolved.fn);
-        const sub = this.analyzeFn(resolved.fn, stack);
-        stack.delete(resolved.fn);
-        parts.push({ name: resolved.name, role: 'helper', file: this.rel(resolved.fn.getSourceFile().getFilePath()), line: resolved.fn.getStartLineNumber(), text: resolved.fn.getText() }, ...sub.parts);
-        for (const s of sub.steps) {
-          steps.push({
-            ...s,
-            condition: [guard.condition, s.condition].filter(Boolean).join(' and ') || undefined,
-            loop: guard.loop || s.loop || undefined,
-            via: s.via ?? resolved.name,
-            ...(s.transaction ?? transaction ? { transaction: s.transaction ?? transaction } : {}),
+        produced(call, new Map([[step.id, new Set()]]));
+        // A function given to another operation, which calls it (`locks.withLock(key, async () => …)`): its steps run
+        // there, right after the call starts.
+        if (resolved.kind === 'op') {
+          const target = this.findOp(resolved.opId)?.method;
+          argVals.forEach((vals, i) => {
+            const runAt = target && this.callOfParam(target, i);
+            if (!runAt) return;
+            for (const v of vals) if (v.k === 'fn') {
+              invoke(call, v, [], guard, new Map(), { via: resolved.opId });
+              const handed = trace.handed.get(v.fn);
+              if (handed) handed.to.splice(-1, 1, at(runAt));
+            }
           });
         }
-        for (const e of sub.edges) {
-          if (e.from !== 'entry') edges.push(e);
-          else if (inputs.size === 0) edges.push(e);
-          else for (const [producer, labels] of inputs) edges.push({ from: producer, to: e.to, kind: 'data', label: [...labels].join(', ') || e.label });
-        }
-        const result: Prod = new Map();
-        for (const [producer, labels] of sub.returns) {
-          if (producer === 'entry') mergeInto(result, inputs);
-          else result.set(producer, labels);
-        }
-        produced(result);
-        responses.push(...sub.responses);
+      } else if (resolved.kind === 'inline' && !stack.has(resolved.fn)) {
+        stack.add(resolved.fn);
+        const sub = this.analyzeFn(resolved.fn, stack, { args: argVals, ambient });
+        stack.delete(resolved.fn);
+        parts.push({ name: resolved.name, role: 'helper', file: this.rel(resolved.fn.getSourceFile().getFilePath()), line: resolved.fn.getStartLineNumber(), text: resolved.fn.getText() }, ...sub.parts);
+        merge(call, sub, resolved.name, guard, inputs);
       }
     };
 
-    const nodes = [body, ...body.getDescendants()];
+    // Statements run in order; code inside a function literal runs when (and where) that function is run.
+    const nodes = [body, ...body.getDescendants()].filter((n) => n === body || !insideNested(n, body));
     const events = nodes.filter(
       (n) =>
         Node.isCallExpression(n) ||
-        Node.isNewExpression(n) && this.rules.sinks.some((r) => methodsOf(r).includes('new')) ||
+        Node.isNewExpression(n) && (this.rules.sinks.some((r) => methodsOf(r).includes('new')) || n.getExpression().getText() === 'Promise' || literalsIn(n.getArguments()).length > 0) ||
         Node.isVariableDeclaration(n) ||
         Node.isBinaryExpression(n) && n.getOperatorToken().getKind() === SyntaxKind.EqualsToken ||
-        Node.isReturnStatement(n) && n.getFirstAncestor(isFnNode) === fn,
+        Node.isReturnStatement(n),
     );
     events.sort((a, b) => a.getEnd() - b.getEnd() || rank(a) - rank(b));
     for (const ev of events) {
       if (Node.isCallExpression(ev) || Node.isNewExpression(ev)) handleCall(ev);
       else if (Node.isVariableDeclaration(ev)) {
         const loop = ev.getParent()?.getParent();
-        bind(ev.getNameNode(), Node.isForOfStatement(loop) || Node.isForInStatement(loop) ? loop.getExpression() : ev.getInitializer());
+        const each = Node.isForOfStatement(loop) || Node.isForInStatement(loop);
+        bind(ev.getNameNode(), each ? loop.getExpression() : ev.getInitializer(), each && Node.isForOfStatement(loop) ? 'each' : 'define');
       }
-      else if (Node.isBinaryExpression(ev)) bind(ev.getLeft(), ev.getRight());
-      else if (Node.isReturnStatement(ev)) mergeInto(returns, prodOf(ev.getExpression()));
+      else if (Node.isBinaryExpression(ev)) bind(ev.getLeft(), ev.getRight(), 'assign');
+      else if (Node.isReturnStatement(ev)) {
+        mergeInto(returns, prodOf(ev.getExpression()));
+        returned.push(...valOf(ev.getExpression()));
+      }
     }
-    if (!Node.isBlock(body)) returns = prodOf(body);
-    return { steps, edges, returns, parts, responses };
+    if (!Node.isBlock(body)) {
+      returns = prodOf(body);
+      returned.push(...valOf(body));
+    }
+    return { steps, edges, returns, parts, responses, vals: returned };
   }
 
-  // ---------- transactions opened by hand ----------
+  /** The library transaction API a call is, by the adapters' `transactions` rules (matched on the library's declaration). */
+  private transactionApi(call: Invocation): { op: 'handle' | 'begin' | 'commit' | 'rollback' | 'callback' } | undefined {
+    if (Node.isNewExpression(call)) return undefined;
+    const site = this.site(call);
+    const name = calleeName(call);
+    for (const t of this.rules.transactions) {
+      if (!site || !site.pkg || !t.module.split('|').includes(site.pkg)) continue;
+      for (const op of ['handle', 'begin', 'commit', 'rollback', 'callback'] as const) if (t[op]?.includes(name)) return { op };
+    }
+    // Any other library's `transaction(cb)` / `$transaction(cb)` (Sequelize, Knex, …): a callback transaction.
+    if (/^\$?transaction$/i.test(name) && literalsIn(call.getArguments()).length) return { op: 'callback' };
+    return undefined;
+  }
 
-  private txWindows = new Map<Node, { start: number; end: number; name: string } | null>();
+  /** The `callbacks` rule (an adapter's or the profile's) for a library call that runs the function it is given in place. */
+  private callbackRule(call: Invocation): CallbackRule | undefined {
+    const rules = this.rules.callbacks;
+    if (!rules.length || Node.isNewExpression(call)) return undefined;
+    const site = this.site(call);
+    if (!site) return undefined;
+    return rules.find((r) => r.runs === 'in-place' && (r.function ?? r.method) === site.name && (!r.module || r.module.split('|').includes(site.pkg)) && (!r.class || r.class.split('|').includes(site.owner)));
+  }
+
+  /** `this.x`: what the class holds there (a data source, by the name it is injected with; a list of implementations). */
+  private fieldVals(access: Node): Val[] {
+    const ctx = this.hookContext();
+    for (const h of this.rules.hooks) {
+      const list = h.implementations?.(access, ctx);
+      if (list?.length) return [{ k: 'arr', items: list.map((cls) => [{ k: 'impl', cls } as Val]) }];
+    }
+    const decl = Node.isPropertyAccessExpression(access) ? this.resolveDeclaration(access) : undefined;
+    if (decl && Node.isMethodDeclaration(decl) && decl.getBody() && this.isProjectFile(decl.getSourceFile().getFilePath())) return [{ k: 'fn', fn: decl }];
+    return [{ k: 'source', node: access }];
+  }
+
+  /** Where a function calls the function it is given as parameter `index` (`retry(op)` runs `op()`), if it does. */
+  private callOfParam(fn: Fn, index: number): CallExpression | undefined {
+    const p = fn.getParameters()[index];
+    if (!p || !Node.isIdentifier(p.getNameNode())) return undefined;
+    return fn.getDescendantsOfKind(SyntaxKind.CallExpression).find((c) => Node.isIdentifier(c.getExpression()) && c.getExpression().getText() === p.getName() && this.resolveDeclaration(c.getExpression()) === p);
+  }
 
   /**
-   * A transaction opened by hand rather than with a callback: `queryRunner.startTransaction()` … `commitTransaction()`
-   * (TypeORM; any client whose methods are called that), directly or through the function's own helpers
-   * (`Promise.all([this.begin(this.ordersDb), this.begin(this.auditDb)])`). Every call between the start and the
-   * last commit runs in it; they commit together, so it is one transaction, named after the data sources it was
-   * opened on (`@InjectDataSource('orders')` → `orders`): `orders + audit transaction`.
+   * A call that is no step, no helper and no function value: a library call (`external`), or one the analysis can't
+   * follow (a gap): a method only declared in the project (an interface or abstract method the wiring doesn't bind),
+   * a function-typed property or parameter, a computed callee (`handlers[type](…)`), or a dependency with no types.
    */
-  private openedTransaction(call: Invocation, fn: Fn): string | undefined {
-    if (!this.txWindows.has(fn)) this.txWindows.set(fn, this.txWindow(fn));
-    const w = this.txWindows.get(fn);
-    return w && call.getStart() >= w.start && call.getStart() < w.end ? w.name : undefined;
-  }
-
-  private txWindow(fn: Fn): { start: number; end: number; name: string } | null {
-    const body = fn.getBody();
-    if (!body) return null;
-    const calls = body.getDescendantsOfKind(SyntaxKind.CallExpression);
-    // A call that does `name` itself, or through a helper of the service's own that does.
-    const does = (call: CallExpression, name: string) => {
-      if (calleeName(call) === name) return true;
-      const decl = this.resolveDeclaration(call.getExpression());
-      return !!decl && isFn(decl) && this.isProjectFile(decl.getSourceFile().getFilePath()) && (decl as Fn).getDescendantsOfKind(SyntaxKind.CallExpression).some((c) => calleeName(c) === name);
-    };
-    const starts = calls.filter((c) => does(c, 'startTransaction'));
-    if (!starts.length) return null;
-    const commits = calls.filter((c) => c.getStart() > starts[0].getEnd() && does(c, 'commitTransaction'));
-    const names: string[] = [];
-    for (const s of starts) {
-      const callee = s.getExpression();
-      // `runner.startTransaction()`: the runner; a helper (`this.begin(this.ordersDb)`): what it is given.
-      const sources = [...(Node.isPropertyAccessExpression(callee) ? [callee.getExpression()] : []), ...s.getArguments()];
-      const name = sources.map((a) => this.dataSourceName(a)).find(Boolean);
-      if (name && !names.includes(name)) names.push(name);
+  private unknownCall(call: Invocation): { disposition: 'external' } | { disposition: 'gap'; reason: GapReason } {
+    const callee = call.getExpression();
+    if (Node.isNewExpression(call)) return { disposition: 'external' };
+    if (Node.isElementAccessExpression(callee)) return { disposition: 'gap', reason: 'dynamic' };
+    const decl = this.resolveDeclaration(callee);
+    if (decl && this.isProjectFile(decl.getSourceFile().getFilePath())) {
+      if (Node.isMethodSignature(decl) || (Node.isMethodDeclaration(decl) && !decl.getBody())) {
+        return { disposition: 'gap', reason: Node.isInterfaceDeclaration(decl.getParent()) || Node.isClassDeclaration(decl.getParent()) ? 'interface-dispatch' : 'function-value' };
+      }
+      if (Node.isPropertySignature(decl) || Node.isPropertyDeclaration(decl) || Node.isParameterDeclaration(decl) || Node.isVariableDeclaration(decl) || Node.isBindingElement(decl)) return { disposition: 'gap', reason: 'function-value' };
+      return { disposition: 'external' };
     }
-    // The whole start expression (`Promise.all([...])`) comes before the first step in the transaction.
-    let first: Node = starts[0];
-    for (let p = first.getParent(); p && p !== body && !Node.isStatement(p); p = p.getParent()) first = p;
-    return { start: Math.max(...starts.map((s) => s.getEnd()), first.getEnd()), end: commits.at(-1)?.getStart() ?? body.getEnd(), name: `${names.join(' + ') || 'queryRunner'} transaction` };
+    if (!decl) {
+      // A dependency of the class with no types (`this.client.send(…)` on `any`): what it does is unknown.
+      const recv = Node.isPropertyAccessExpression(callee) ? callee.getExpression() : undefined;
+      let root: Node | undefined = recv;
+      while (root && (Node.isPropertyAccessExpression(root) || Node.isCallExpression(root) || Node.isElementAccessExpression(root))) root = root.getExpression();
+      if (recv && root?.getKind() === SyntaxKind.ThisKeyword && recv.getType().isAny()) return { disposition: 'gap', reason: 'untyped' };
+      if (Node.isIdentifier(callee) && callee.getType().isAny()) return { disposition: 'gap', reason: 'untyped' };
+    }
+    return { disposition: 'external' };
   }
 
   /**
@@ -1572,7 +2079,10 @@ export class Extractor implements RevisionAnalysis {
     const site = this.site(call);
     if (site && (site.owner || site.pkg)) {
       const effect = this.sinkEffect(site);
-      if (effect) return { kind: 'sink', effect: { ...effect, file: this.rel(call.getSourceFile().getFilePath()), line: call.getStartLineNumber() } };
+      if (effect) {
+        const lock = effect.kind === 'db.read' ? lockOf(call) : undefined;
+        return { kind: 'sink', effect: { ...effect, ...(lock ? { lock } : {}), file: this.rel(call.getSourceFile().getFilePath()), line: call.getStartLineNumber() } };
+      }
       const response = this.rules.responses.find((r) => matches(r, site));
       if (response) return { kind: 'response', arg: call.getArguments()[response.arg] };
       for (const h of this.rules.hooks) {
@@ -1814,10 +2324,23 @@ export class Extractor implements RevisionAnalysis {
       const decl = symbol?.getDeclarations()[0];
       if (decl && Node.isVariableDeclaration(decl)) return next(decl.getInitializer());
       if (decl && Node.isParameterDeclaration(decl)) return `{${decl.getName()}}`;
+      // `const { baseUrl } = config.get('IDENTITY_CONFIG')`: that property of the config value.
+      const pattern = decl && Node.isBindingElement(decl) ? decl.getParent() : undefined;
+      const holder = pattern && Node.isObjectBindingPattern(pattern) ? pattern.getParent() : undefined;
+      if (decl && Node.isBindingElement(decl) && holder && Node.isVariableDeclaration(holder)) return member(next(holder.getInitializer()), decl.getPropertyNameNode()?.getText() ?? decl.getName());
       return undefined;
     }
-    if (Node.isPropertyAccessExpression(n) && unwrap(n.getExpression()).getKind() === SyntaxKind.ThisKeyword) return next(this.fieldValue(n));
+    if (Node.isPropertyAccessExpression(n)) {
+      if (unwrap(n.getExpression()).getKind() === SyntaxKind.ThisKeyword) return next(this.fieldValue(n));
+      // `config.baseUrl`, where `config` holds a config value: `{CONFIG_KEY.baseUrl}`.
+      return member(next(n.getExpression()), n.getName());
+    }
     return undefined;
+
+    /** A property of a config value in braces is a longer key; of anything else, unknown. */
+    function member(of: string | undefined, prop: string): string | undefined {
+      return of && /^\{[^{}]+\}$/.test(of) ? `${of.slice(0, -1)}.${prop}}` : undefined;
+    }
   }
 
   /**
@@ -2300,22 +2823,6 @@ function guardOf(call: Node, fn: Node): { condition?: string; loop?: boolean; gu
     node = node.getParent();
   }
   return { condition: conditions.reverse().join(' and ') || undefined, loop: loop || undefined, guardNodes };
-}
-
-/**
- * The transaction a call runs in: inside a callback given to `….transaction(…)` / `$transaction(…)` (TypeORM,
- * Prisma, Sequelize, Knex), or in a method marked `@Transactional()`. Undefined when the code shows none.
- */
-function transactionOf(call: Node, fn: Node): string | undefined {
-  let child: Node = call;
-  for (let node = call.getParent(); node && node !== fn; child = node, node = node.getParent()) {
-    if (Node.isCallExpression(node) && isFnNode(child) && node.getArguments().includes(child as never)) {
-      const callee = node.getExpression().getText();
-      if (/(^|\.)\$?transaction$/i.test(callee)) return short(callee.replace(/^this\./, ''), 40);
-    }
-  }
-  if (Node.isMethodDeclaration(fn) && fn.getDecorators().some((d) => /^Transactional$/i.test(d.getName()))) return '@Transactional';
-  return undefined;
 }
 
 /** `unless (x)`, but `if (x)` for `unless (!x)`: an early `if (!order) throw` means "only when order". */

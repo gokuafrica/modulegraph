@@ -18,7 +18,8 @@ export function revisionIssues(head: RevisionAnalysis, base: RevisionAnalysis | 
   const own = head.issues?.() ?? [];
   out.push(...own);
   // The base is usually broken the same way (missing packages); say it once, unless only the base has it.
-  for (const issue of base?.issues?.() ?? []) if (!own.some((i) => i.kind === issue.kind)) out.push({ ...issue, side: 'base' });
+  // Invariants are about the review being read: the head's.
+  for (const issue of base?.issues?.() ?? []) if (issue.kind !== 'invariant' && !own.some((i) => i.kind === issue.kind)) out.push({ ...issue, side: 'base' });
   return out;
 }
 

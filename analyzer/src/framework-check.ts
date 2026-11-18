@@ -280,7 +280,8 @@ const cases: Expected[] = [
     transactions: {
       // between `Promise.all([this.begin(this.booksDb), this.begin(this.archiveDb)])` and the commits; the helper's
       // insert through the runner it is given too
-      'LedgerService.transfer': { 'call RatesClient.rate': '', 'db.write ledger_entries': 'books + archive transaction', 'db.write transfer_log': 'books + archive transaction', 'call AuditService.record': '' },
+      // Two query runners, committed one after the other: two transactions, never named as one.
+      'LedgerService.transfer': { 'call RatesClient.rate': '', 'db.write ledger_entries': '2 transactions (books, archive), separate commits', 'db.write transfer_log': '2 transactions (books, archive), separate commits', 'call AuditService.record': '' },
     },
     pipelines: {
       // consumer.apply(RequestIdMiddleware).forRoutes(OrdersController, 'reviews')

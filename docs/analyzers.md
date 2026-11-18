@@ -92,7 +92,9 @@ call, so it has no side effects, and its review said "not blocked". Now the back
 `incomplete` field, the CLI (`ANALYSIS INCOMPLETE`) and the brief's verdict (`INCOMPLETE analysis, not a pass`) say:
 
 - `unresolved-imports`: imported packages that are not installed (or tsconfig path aliases that don't resolve);
-- `unresolved-calls`: many calls on injected dependencies (`this.dep.m()`) resolve to nothing (`any`, untyped);
+- `invariant`: a property every correct review has fails here (an effect whose target is code, an entry point listed
+  twice, an HTTP route that is no entry point, a flagged package with no rule): scoped to the operation or entry
+  point it is about, shown with ⚠ on its box, not as a review-wide state;
 - `unmapped-change`: changed code in a function no operation, entry point or pipeline covers. Composition-root
   wiring (`const x = new Module(…)`) and tests / dev tooling folders (`dev/`, `scripts/`, `seeds/`, `migrations/`,
   `mocks/`, `e2e/`) don't count.
@@ -121,6 +123,62 @@ service: tests, dot-folders (`.local/scripts/…`) and a top-level `scripts/` or
 Add a name to `coverage.ignore` in the profile to stop a false alarm.
 
 `--check` fails on an incomplete analysis unless `--allow-incomplete`.
+
+### How calls are followed: dispositions, gaps, `--explain`
+
+Every call in an analyzed operation (its private helpers included) gets one disposition: a `step` of the operation,
+`inlined` (a project helper whose steps are the operation's), `external` (a library call no adapter or rule makes
+I/O), `followed` (a function value or an interface call, resolved to the code it runs) or a `gap` (it can't be
+followed). A gap has a reason from a closed list, `function-value`, `interface-dispatch`, `untyped` or `dynamic`, and
+is stored on the operation (`operations[].gaps: [{ file, line, reason }]`). The box gets one ⚠ with the line and
+reason, and the brief lists gaps under each change ("Not followed"). One gap is enough to show: there is no
+threshold.
+
+Steps are placed where they run, not where they are written. A function handed to a call runs:
+- in place, once per item, for array methods (`map`, `forEach`, `filter`, …); in place for a promise's `then` /
+  `catch` / `finally`, `new Promise(executor)`, and the library calls the adapters or the profile's `callbacks` name
+  (NestJS: rxjs operators such as `tap`, `map`, `switchMap`; `catchError` only on error);
+- where a project function calls it: directly (`retry(fn)` → `fn()`), or after storing it and calling it later
+  (`const ctx = begin(ds, [cb])` … `run(ctx)` → `for (const q of ctx.list) await q(ctx.runner)`): values are followed
+  through parameters, return values, objects, arrays, destructuring and closures;
+- in another operation that calls the parameter it is given (`locks.withLock(key, async () => …)`), right after
+  that call step;
+- anywhere else (a library this analysis doesn't know runs it, `setTimeout`, an event emitter): a `function-value`
+  gap, and its steps are not shown. Teach a library's rule in the profile:
+  `"callbacks": [{ "module": "rxjs", "function": "catchError", "runs": "in-place", "condition": "on error" }]`.
+
+A call on an interface or abstract class goes to every implementation the module wiring provides (`useClass`, and a
+`useFactory` that returns its injected instances as a list, with `inject`), as call steps, with a `condition` naming
+the implementation when there is more than one. Unbound: an `interface-dispatch` gap.
+
+`analyze --explain` writes `<id>.explain.json` next to the review: for every analyzed operation and entry point,
+`[{ file, line, text, disposition, to?, reason? }]`. `modulegraph explain <id> <Class.method>` prints the same for a
+person (no operation: the ones with gaps). Attach it to a bug note.
+
+### Transactions
+
+A step is in a transaction when it goes through the transaction's handle, directly or through what it is passed to:
+the query runner a transaction is opened on (TypeORM `createQueryRunner()` + `startTransaction()`), what is got from
+it (`runner.manager`, a repository from it), the handle a `transaction(cb)` callback is given (`manager`, Prisma's
+`tx`), or the handle given to a helper or another operation as an argument. Position doesn't count: a write inside the
+callback or between begin and commit that doesn't go through the handle is outside, and the flow notes it ("runs
+during …, not through it: a rollback doesn't undo it"). A `@Transactional()` method's steps are all in it.
+
+Transactions open at the same time on different handles commit separately (one can commit and another fail), so
+they are never named as one: `2 transactions (legacy, admin), separate commits`, drawn as one box labelled that way.
+One handle: `legacy transaction`, named after the data source (`@InjectDataSource('legacy')`, else the field).
+
+### The agent's blind check: `disagreements`
+
+The module-review skill has the agent read the changed code before the diagram and write what it reads differently
+into the profile: `"disagreements": { "Class.method": [{ "line": 76, "note": "…" }] }`. modulegraph shows them at the
+top of the brief, on `operations[].disagreements` and as the ⚠ on the box. It never changes a step because of them.
+
+### Invariants on every review
+
+Every review checks I1-I5, I7 and I9 of the testers' `invariants.mjs` (acceptance/round-4) on itself
+(`analyzer/src/invariants.ts`; I5 in the backend: every HTTP route declared with a framework decorator is an entry
+point). A failure is an `invariant` item scoped to its operation or entry point.
 
 ### Teaching it a framework without writing code
 
@@ -219,11 +277,13 @@ and marks it `generator: "agent:<model>"`.
   others are `OrdersService@<file>`. Adding a class with an existing name in a file that sorts earlier renames the
   existing module's id in that review.
 - Raw SQL is classified by its leading keyword; a stored procedure call (`CALL`, `EXEC`) counts as a write.
-- Transactions: `….transaction(cb)`, `@Transactional()`, and transactions opened by hand
-  (`queryRunner.startTransaction()` … `commitTransaction()`, directly or through the method's own helpers, on one or
-  several data sources). For the last, every step between the start and the last commit is in the transaction, which
-  is named after the data sources (`@InjectDataSource('orders')`): `orders + audit transaction`. A transaction a
-  method's caller opened and passes in (a `queryRunner` parameter) shows in the caller's flow, not in the method's.
+- Transactions are read from handles (see "Transactions"): TypeORM query runners and `transaction(cb)`, Prisma /
+  Sequelize / Knex `transaction(cb)` / `$transaction(cb)`, `@Transactional()`. Other clients (a Mongo session) need
+  an adapter. A transaction a method's caller opened and passes in (a `queryRunner` parameter) shows in the caller's
+  flow, on the call step, not in the method's own flow. Values are followed as far as the code shows them: a
+  function stored in a class field and called from another method is a gap. When one call runs functions from a
+  list (`for (const q of list) await q(runner)`), each gets every handle in play, so its steps carry the combined
+  transaction name.
 - Examples from tests: Jest only (config in `package.json` or `jest.config.json/js/cjs`; `jest.config.ts` is not read),
   specs picked by name (`*.spec.*` / `*.test.*` that mention a changed class or its callers, or import their files); e2e
   specs are not run. A branch that isn't checked out runs in a temporary git worktree with links to the checkout's

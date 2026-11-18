@@ -26,6 +26,8 @@ export const typeorm: Framework = {
     { class: 'Repository|TreeRepository|MongoRepository|EntityManager', method: TYPEORM_WRITE, kind: 'db.write', target: 'entity' },
   ],
   notModuleDecorators: ['Entity', 'ViewEntity', 'EventSubscriber'],
+  // A query runner is the handle of a transaction opened by hand; `transaction(cb)` gives the callback its manager.
+  transactions: [{ module: 'typeorm', handle: ['createQueryRunner'], begin: ['startTransaction'], commit: ['commitTransaction'], rollback: ['rollbackTransaction'], callback: ['transaction'] }],
   hooks: {
     sink(site, ctx) {
       if (site.pkg !== 'typeorm') return undefined;

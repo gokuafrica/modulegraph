@@ -11,6 +11,8 @@ import type { CallSite, Framework, HookContext } from './types.ts';
 
 interface Binding {
   cls?: ClassDeclaration;
+  /** A factory that returns the instances it is injected with, as a list: their classes, in order. */
+  list?: ClassDeclaration[];
   /** The provider object literal. */
   at: Node;
 }
@@ -58,7 +60,7 @@ function providers(ctx: HookContext): Map<string, Binding[]> {
         const decl = value && ctx.resolve(value);
         if (decl && Node.isClassDeclaration(decl)) cls = decl;
       }
-      out.set(key, [...(out.get(key) ?? []), { cls, at: obj }]);
+      out.set(key, [...(out.get(key) ?? []), { cls, list: injectedList(obj, ctx), at: obj }]);
     }
   }
   return out;
@@ -69,6 +71,36 @@ function boundClass(key: string, ctx: HookContext): ClassDeclaration | undefined
   const classes = new Set((ctx.memo('nest:providers', () => providers(ctx)).get(key) ?? []).map((b) => b.cls));
   const [only] = classes;
   return classes.size === 1 ? only : undefined;
+}
+
+/** `useFactory: (a: A, b: B) => [a, b], inject: [A, B]`: the classes of the list it returns. */
+function injectedList(obj: Node, ctx: HookContext): ClassDeclaration[] | undefined {
+  if (!Node.isObjectLiteralExpression(obj)) return undefined;
+  const factory = obj.getProperty('useFactory');
+  const inject = obj.getProperty('inject');
+  const fn = factory && Node.isPropertyAssignment(factory) ? factory.getInitializer() : undefined;
+  const tokens = inject && Node.isPropertyAssignment(inject) ? inject.getInitializer() : undefined;
+  const list = returned(fn);
+  if (!fn || !(Node.isArrowFunction(fn) || Node.isFunctionExpression(fn)) || !list || !Node.isArrayLiteralExpression(list) || !tokens || !Node.isArrayLiteralExpression(tokens)) return undefined;
+  const params = fn.getParameters().map((p) => p.getName());
+  const out: ClassDeclaration[] = [];
+  for (const e of list.getElements()) {
+    const token = tokens.getElements()[params.indexOf(e.getText())];
+    const decl = token && ctx.resolve(token);
+    if (!decl || !Node.isClassDeclaration(decl)) return undefined;
+    out.push(decl);
+  }
+  return out.length ? out : undefined;
+}
+
+/** A list the wiring injects (`@Inject(TOKEN) handlers: Handler[]`): the classes in it, when one provider says. */
+export function implementations(receiver: Node, ctx: HookContext): ClassDeclaration[] | undefined {
+  if (!Node.isPropertyAccessExpression(receiver) || receiver.getExpression().getKind() !== SyntaxKind.ThisKeyword) return undefined;
+  const decl = ctx.resolve(receiver);
+  const key = decl && injectionKey(decl, ctx);
+  if (!key) return undefined;
+  const lists = (ctx.memo('nest:providers', () => providers(ctx)).get(key) ?? []).flatMap((b) => (b.list ? [b.list] : []));
+  return lists.length === 1 ? lists[0] : undefined;
 }
 
 export function implementation(receiver: Node, ctx: HookContext): ClassDeclaration | undefined {

@@ -46,6 +46,15 @@
         "none"
       ]
     },
+    "GapReason": {
+      "type": "string",
+      "enum": [
+        "function-value",
+        "interface-dispatch",
+        "untyped",
+        "dynamic"
+      ]
+    },
     "Effect": {
       "type": "object",
       "properties": {
@@ -55,6 +64,10 @@
         "target": {
           "type": "string",
           "description": "Table name, outbox event type, Kafka topic or external service name."
+        },
+        "lock": {
+          "type": "string",
+          "description": "A read that locks the rows it reads: `for update` (pessimistic write), `for share` (pessimistic read)."
         },
         "file": {
           "type": "string"
@@ -66,6 +79,79 @@
       "required": [
         "kind",
         "target"
+      ],
+      "additionalProperties": false
+    },
+    "Gap": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "number"
+        },
+        "reason": {
+          "$ref": "#/definitions/GapReason"
+        }
+      },
+      "required": [
+        "file",
+        "line",
+        "reason"
+      ],
+      "additionalProperties": false
+    },
+    "ExplainEntry": {
+      "type": "object",
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "number"
+        },
+        "text": {
+          "type": "string"
+        },
+        "disposition": {
+          "type": "string",
+          "enum": [
+            "step",
+            "inlined",
+            "external",
+            "followed",
+            "gap"
+          ]
+        },
+        "to": {
+          "type": "string"
+        },
+        "reason": {
+          "$ref": "#/definitions/GapReason"
+        }
+      },
+      "required": [
+        "file",
+        "line",
+        "text",
+        "disposition"
+      ],
+      "additionalProperties": false
+    },
+    "Disagreement": {
+      "type": "object",
+      "properties": {
+        "line": {
+          "type": "number"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "line",
+        "note"
       ],
       "additionalProperties": false
     },
@@ -204,9 +290,14 @@
             "unresolved-calls",
             "unmapped-change",
             "missing-entry-points",
-            "unknown-side-effects"
+            "unknown-side-effects",
+            "invariant"
           ],
-          "description": "`unresolved-imports`: packages the code imports are not installed, so library calls (and their side effects)\ncan't be recognised. `unresolved-calls`: many calls on injected dependencies resolve to nothing.\n`unmapped-change`: changed code that is in no flow the analyzer knows (a framework it doesn't model).\n`missing-entry-points`: signs of entry points the analysis did not find (a Kafka client but no consumer, a handler\nmap, scripts that start the app with an argument). `unknown-side-effects`: packages that look like messaging,\noutbox or cloud clients, which no adapter or profile rule describes, so their calls are not side effects."
+          "description": "`unresolved-imports`: packages the code imports are not installed, so library calls (and their side effects)\ncan't be recognised. `unresolved-calls`: many calls on injected dependencies resolve to nothing.\n`unmapped-change`: changed code that is in no flow the analyzer knows (a framework it doesn't model).\n`missing-entry-points`: signs of entry points the analysis did not find (a Kafka client but no consumer, a handler\nmap, scripts that start the app with an argument). `unknown-side-effects`: packages that look like messaging,\noutbox or cloud clients, which no adapter or profile rule describes, so their calls are not side effects.\n`invariant`: a property every correct review has does not hold here (an effect that names no target, an entry\npoint listed twice, …), scoped to the operation or entry point it is about."
+        },
+        "scope": {
+          "type": "string",
+          "description": "The operation or entry point it is about, when it is about one."
         },
         "message": {
           "type": "string",
@@ -429,6 +520,29 @@
           ],
           "additionalProperties": false,
           "description": "The service profile this review used, or where to create one (`exists: false`), with the home folder as `~`:\nwhere descriptions and rules go. The UI names it in its \"add a description\" hints. The service profile this review read (or would read). `unmatched`: descriptions in it that name no class or\nmethod of the service (a typo, or a display name instead of the class name): they are not shown anywhere. The service's profile. `registries`: how many `entryRegistries` rules it has (their handler classes are counted as\nentry points, not modules, so a run with them counts fewer modules than one without, for the same code)."
+        },
+        "disagreements": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "number"
+                },
+                "note": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "line",
+                "note"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "description": "The agent's blind check, from the profile (`disagreements`): `Class.method` → where it disagrees with the diagram."
         },
         "command": {
           "type": "string",
@@ -789,6 +903,20 @@
           ],
           "additionalProperties": false,
           "description": "Lazy analyses only: whether callers (up) and callees (down) of this operation have been analyzed."
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Gap"
+          },
+          "description": "Calls in it (helpers included) the analysis can't follow: what they do is not shown."
+        },
+        "disagreements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Disagreement"
+          },
+          "description": "The agent's blind check disagrees with the diagram here (profile `disagreements`). Steps are never changed by it."
         }
       },
       "required": [
@@ -1135,6 +1263,13 @@
           ],
           "additionalProperties": false,
           "description": "Set when comparing with a base and the pipeline differs: items added, removed, or whose code changed, as\n`guard AuthGuard (global)`. Any of these changes who may call the entry point or what runs around it."
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Gap"
+          },
+          "description": "Calls in its handler the analysis can't follow."
         }
       },
       "required": [
@@ -1331,7 +1466,11 @@
         },
         "transaction": {
           "type": "string",
-          "description": "The transaction the step runs in, as the code opens it (`dataSource.transaction`, `@Transactional`)."
+          "description": "The transaction the step runs in: it goes through the transaction's handle (a query runner, its manager, the\nmanager a `transaction(cb)` callback is given), or the method is `@Transactional`. Transactions open at the same\ntime on different handles commit separately: `2 transactions (orders, audit), separate commits`."
+        },
+        "outsideTransaction": {
+          "type": "string",
+          "description": "A transaction open while the step runs that the step doesn't go through: a rollback doesn't undo it."
         },
         "pipeline": {
           "type": "string",

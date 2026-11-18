@@ -4,28 +4,7 @@ Checks here come from the people who test modulegraph on real services, not from
 **don't edit them to make a check pass.** If an expectation looks wrong, leave it failing and say why in the reply
 to the field report.
 
-## Round 2 (`round-2/`)
-
-| File | What it is |
-|---|---|
-| `create-r2-fixture.mjs` | Writes `records-review-service`: a standalone NestJS 10 + TypeORM 0.3 + Jest 29 service shaped like the real one (29 handler-map consumers, 7 argv jobs, in-house Kafka and outbox wrappers), as a git repo with `main` and `fix/conclude-review-row-scope`, and its own `npm install`. It refuses to write inside a git repo. |
-| `accept-r2.mjs` | 33 checks, each tagged with its field-report item (R2-1 …): four `analyze` runs, the UI in a headless installed Edge or Chrome, and a fresh clone running `setup` + `npm test`. Exit 0 only when all pass. |
-| `red-baseline-3b811d5.txt` | What it printed on `3b811d5`, before the round-2 fixes (9/33). |
-
-Run it on this checkout (makes the fixture in the OS temp folder the first time, about a minute):
-
-```bash
-npm run accept:r2
-```
-
-With the fresh-clone check (R2-7), against a pushed `main` or a local clone source:
-
-```bash
-npm run accept:r2 -- --fresh-clone https://github.com/gokuafrica/modulegraph.git
-```
-
-`MODULEGRAPH_R2_FIXTURE=<dir>` puts the fixture elsewhere (outside any repo). The fixture must never become a
-workspace of this repo: npm would hoist its packages, which is exactly what hid R2-1.
+Round 2's kit (`round-2/`) is retired: round 3 contains all its checks. It is in git history (`3275457`).
 
 ## Round 3 (`round-3/`)
 
@@ -33,7 +12,7 @@ workspace of this repo: npm would hoist its packages, which is exactly what hid 
 |---|---|
 | `create-r3-fixture.mjs` | The round-2 service plus the shapes the real service still had: jobs whose start hook calls `run()`, HTTP clients whose URL comes from a field, a local or `request({ url })`, a vendor SDK and an SFTP client (network I/O no adapter knows), entity arrays saved in a transaction, a `queryRunner` transaction over two data sources, a facade that calls a helper first. Same rules: outside any repo, its own `npm install`. |
 | `accept-r3.mjs` | 72 checks: every round-2 check (regressions), the R3 items, and the invariants on every review it makes. The "with profile" runs use the profile the first run's brief suggests, applied as-is. |
-| `invariants.mjs` | I1-I5: properties of any correct review, with no names in them. `npm test` runs them over every sample and fixture in this repo too (`invariants-check`). |
+| `invariants.mjs` | Round 4's copy (I1-I5, I7, I9), as round 4 says it replaces round 3's. |
 | `red-baseline-3275457.txt` | What it printed on `3275457`, before the round-3 fixes (47/72). |
 
 ```bash
@@ -44,8 +23,24 @@ npm run accept:r3
 npm run accept:r3 -- --fresh-clone https://github.com/gokuafrica/modulegraph.git
 ```
 
-`MODULEGRAPH_R3_FIXTURE=<dir>` puts its fixture elsewhere (outside any repo). Both rounds run from
-`acceptance/run.mjs <round>`.
+`MODULEGRAPH_R3_FIXTURE=<dir>` puts its fixture elsewhere (outside any repo). The fixture must never become a
+workspace of this repo: npm would hoist its packages, which is what hid R2-1.
+
+## Round 4 (`round-4/`)
+
+| File | What it is |
+|---|---|
+| `create-r4-fixture.mjs` | Round 3's service plus the round-4 shapes, copied from the real code with names changed: callbacks handed to a helper that stores them and runs them later, two query runners committed separately, a `transaction(cb)` whose callback also writes through its own repository, strategy steps injected as a list, `retry(fn)`, an abstract class bound with `useClass`, a URL signer next to an HTTP client, URLs from a config object's property and from destructuring, a read that locks its rows. |
+| `accept-r4.mjs` | 47 checks, about 45 s (`--only R4-2` for one item): two runs (no profile, lazy; then the suggested profile, full, `--explain`), the invariants on both, the call accounting, one browser page with `--ui`. |
+| `accounting.mjs` | An independent list, from the TypeScript parser only, of every call through a value and every function literal handed to a call: each must be in `--explain` as `followed` or a `gap`. |
+| `invariants.mjs` | I1-I5, I7, I9. `npm test` runs them over every sample and fixture in this repo (`invariants-check`), and every review checks the same properties on itself (`analyzer/src/invariants.ts`). |
+| `red-baseline-4b292fb.txt` | What it printed on `4b292fb`, before the round-4 fixes (30/47). |
+
+```bash
+npm run accept:r4
+```
+
+`MODULEGRAPH_R4_FIXTURE=<dir>` puts its fixture elsewhere. Both rounds run from `acceptance/run.mjs <round>`.
 
 `npm test` also runs `names-check`: none of the fixture's or the in-repo samples' names may appear in
 `analyzer/src` or `ui/src` (checks excluded), so a fix can't just match the sample's words.

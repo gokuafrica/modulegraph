@@ -14,6 +14,7 @@ import { appRoot, graphsDirFor, insideApp, profileDirs, uiDistDir, userConfigsDi
 import { brief } from './brief.ts';
 import { analysisIssues, issueLines } from './coverage.ts';
 import { endReview, recordRepo } from './cleanup.ts';
+import { withInvariants } from './invariants.ts';
 import { describe, descriptionsKey, unmatchedDescriptions } from './describe.ts';
 import { LazySession } from './lazy.ts';
 import { changeNames, jestConfigOf, recordTestExamples, type TestExamplesResult } from './test-examples.ts';
@@ -57,6 +58,9 @@ options
   --out <file>             output path (default: ~/.modulegraph/reviews/<id>.json, also updates index.json)
   --demo                   write to the shipped demo graphs (ui/public/graphs/, kept in git) instead: only for
                            a demo service inside the modulegraph folder (npm run demo uses it)
+  --explain                also write <id>.explain.json: for every analyzed operation, each call and what the
+                           analysis did with it (step, inlined, external, followed, gap). modulegraph explain <id>
+                           <Class.method> prints it. Attach it to a bug report
   --check                  exit 1 when the change introduces new error-level findings (CI gate), or when the
                            analysis is incomplete (packages not installed, changed code in no known flow)
   --allow-incomplete       with --check: don't fail only because the analysis is incomplete
@@ -96,6 +100,7 @@ const { values: args } = parseArgs({
     out: { type: 'string' },
     demo: { type: 'boolean' },
     check: { type: 'boolean' },
+    explain: { type: 'boolean' },
     'allow-incomplete': { type: 'boolean' },
     'no-examples': { type: 'boolean' },
     'no-tests': { type: 'boolean' },
@@ -247,6 +252,7 @@ function resolveRevisions(): Revisions {
   r.source.analyzer = { id: analyzer.id, language: analyzer.language, frameworks: detectedFrameworks };
   const profilePath = configFile ?? `${userConfigsDir}/${config.service}/modulegraph.config.json`;
   r.source.profile = { path: displayHome(profilePath), exists: !!configFile && existsSync(configFile), ...(config.entryRegistries?.length ? { registries: config.entryRegistries.length } : {}) };
+  if (Object.keys(config.disagreements ?? {}).length) r.source.disagreements = config.disagreements;
   r.source.command = reviewCommand(r.source);
   if (intent) {
     r.source.intent = intent;
@@ -348,6 +354,7 @@ if (args.lazy) {
 }
 
 describe(output, config);
+withInvariants(output);
 {
   // Descriptions the profile has for nothing (a wrong key) would vanish without a word: say which.
   const unmatched = unmatchedDescriptions(config, Object.values(output.modules), headProject.knownOperations());
@@ -360,6 +367,7 @@ describe(output, config);
 
 // ---------- write ----------
 const briefFile = outFile.replace(/\.json$/, '') + '.brief.md';
+const explainFile = outFile.replace(/\.json$/, '') + '.explain.json';
 /** Set once the review is done (deleted): nothing may write it back. */
 let ended = false;
 function write(graph: ModuleGraph): void {
@@ -367,6 +375,11 @@ function write(graph: ModuleGraph): void {
   mkdirSync(dirname(outFile), { recursive: true });
   writeFileSync(outFile, JSON.stringify(graph, null, 2));
   writeFileSync(briefFile, brief(graph, id));
+  if (args.explain) {
+    // Every analyzed operation and entry point of the head revision: what each of its calls became.
+    const explain = (session?.headAnalysis ?? headProject).snapshot.explain ?? {};
+    writeFileSync(explainFile, JSON.stringify(Object.fromEntries(Object.entries(explain).filter(([k]) => graph.operations[k] || graph.entryPoints[k])), null, 1));
+  }
   if (args.out) return;
   const indexFile = join(graphsDir, 'index.json');
   const index = existsSync(indexFile) ? (JSON.parse(readFileSync(indexFile, 'utf8')) as { id: string }[]) : [];
@@ -421,6 +434,8 @@ if (output.lazy) {
 const displayPath = (file: string) => (relative(userCwd, file).startsWith('..') ? file : relative(userCwd, file)).replace(/\\/g, '/');
 console.log(`\nwrote ${displayPath(outFile)}`);
 console.log(`wrote ${displayPath(briefFile)}   <- review facts for agents and people: start here`);
+if (args.explain) console.log(`wrote ${displayPath(explainFile)}   <- every call of every analyzed operation and what became of it (modulegraph explain ${id} <Class.method>)`);
+console.log('descriptions: the code\'s doc comments and API docs, else what the reviewing agent writes into the profile (its "Needs a description" step); modulegraph writes none');
 
 if (args.serve && session) {
   const live = session;

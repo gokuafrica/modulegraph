@@ -96,6 +96,19 @@ function scopeBefore(raw: Scope): Scope & { addedCount: number } {
   };
 }
 
+/**
+ * Why not to take this box at face value, as one ⚠ line: the agent's blind check disagrees with it, a call in it the
+ * analysis can't follow, or a property of correct reviews that fails here. All of them in the tooltip.
+ */
+export function doubtOf(g: ModuleGraph, op: Operation): { text: string; all: string[] } | undefined {
+  const all = [
+    ...(op.disagreements ?? []).map((d) => `agent check, line ${d.line}: ${d.note}`),
+    ...(op.gaps ?? []).map((x) => `can't follow line ${x.line} (${x.reason.replace('-', ' ')}): what it does is not shown`),
+    ...(g.incomplete ?? []).filter((i) => i.kind === 'invariant' && i.scope === op.id).map((i) => i.message),
+  ];
+  return all.length ? { text: all.length > 1 ? `${all[0]} (+${all.length - 1} more)` : all[0], all } : undefined;
+}
+
 function moduleNode(g: ModuleGraph, id: string, opId: string, extra: Record<string, unknown> = {}): VNode {
   const op = g.operations[opId];
   // Lazy graphs can reference operations that are not analyzed yet: name them from their class.
@@ -109,7 +122,8 @@ function moduleNode(g: ModuleGraph, id: string, opId: string, extra: Record<stri
   const opsLines = Array.isArray(extra.ops) ? Math.ceil((extra.ops as string[]).length / 2) : 0;
   const deltaLine = extra.delta || extra.beforeMark === 'removed' ? 18 : 0;
   const uses = extra.compact ? [] : usesOf(g, opId);
-  const height = (extra.compact ? 56 : 62) + chipLines * 19 + shown * 5 + (chips.length > 6 ? 22 : 0) + (extra.condition ? 20 : 0) + (extra.via ? 16 : 0) + (extra.through ? 16 : 0) + (uses.length ? 18 : 0) + opsLines * 16 + deltaLine;
+  const warning = op ? doubtOf(g, op) : undefined;
+  const height = (warning ? Math.ceil(warning.text.length / 34) * 15 + 6 : 0) + (extra.compact ? 56 : 62) + chipLines * 19 + shown * 5 + (chips.length > 6 ? 22 : 0) + (extra.condition ? 20 : 0) + (extra.via ? 16 : 0) + (extra.through ? 16 : 0) + (uses.length ? 18 : 0) + opsLines * 16 + deltaLine;
   return {
     id,
     type: 'module',
@@ -130,6 +144,7 @@ function moduleNode(g: ModuleGraph, id: string, opId: string, extra: Record<stri
       stub: !op,
       partial: !!g.lazy && !!op && !op.lazy?.calleesLoaded,
       reachPartial: !!g.lazy && !!op && !op.lazy?.callersLoaded,
+      warning,
       ...extra,
       chipsOverride: undefined,
     },
@@ -386,6 +401,16 @@ export function flowModel(g: ModuleGraph, scopeId: string, opts: FlowOptions): M
     }
     node.data = { ...node.data, notes };
     node.height += notes.reduce((n, t) => n + Math.ceil(t.length / 36), 0) * 15 + 6;
+  }
+
+  // A step that runs while a transaction is open but doesn't go through its handle: not in it, whatever its position.
+  for (const node of nodes) {
+    const step = scope.steps.find((s) => s.id === node.id);
+    if (!step?.outsideTransaction) continue;
+    const note = `runs during ${step.outsideTransaction}, not through it: a rollback doesn't undo it`;
+    const notes = [...((node.data as { notes?: string[] }).notes ?? []), note];
+    node.data = { ...node.data, notes };
+    node.height += Math.ceil(note.length / 36) * 15 + 6;
   }
 
   // Steps that commit or roll back together are drawn inside one box per transaction.

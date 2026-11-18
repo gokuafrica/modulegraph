@@ -1,5 +1,5 @@
 /**
- * The testers' invariants (acceptance/round-3/invariants.mjs, unchanged: properties of ANY correct review, no names
+ * The testers' invariants (acceptance/round-4/invariants.mjs, unchanged: properties of ANY correct review, no names
  * in them) over every review this repo's samples and fixtures give, the way an agent runs the CLI:
  *   I1 every effect target is a name, never code or "?";  I2 one entry point per job / consumer / route;
  *   I3 no unknown entry point labels;  I4 every effect step names its target;
@@ -19,7 +19,7 @@ import type { ModuleGraph } from '../../schema/modulegraph.ts';
 type Result = { id: string; what: string; pass: boolean; detail: string };
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, '../..');
-const { invariants } = (await import(pathToFileURL(join(repo, 'acceptance/round-3/invariants.mjs')).href)) as { invariants: (g: ModuleGraph, projectDir?: string) => Result[] };
+const { invariants } = (await import(pathToFileURL(join(repo, 'acceptance/round-4/invariants.mjs')).href)) as { invariants: (g: ModuleGraph, projectDir?: string) => Result[] };
 
 interface Run {
   project: string;

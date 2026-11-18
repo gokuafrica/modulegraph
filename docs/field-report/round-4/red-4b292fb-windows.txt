@@ -1,0 +1,103 @@
+0. fixture  (0 s)
+  ✓ [setup] fixture is outside the modulegraph checkout
+  ✓ [setup] branch fix/conclude-review-row-scope checked out
+
+1. first run: no profile, --head, lazy (as the module-review skill runs it)  (0 s)
+  ✓ [I1] first run: every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] first run: one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] first run: no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] first run: every effect step in every flow names its target
+  ✓ [I7] first run: every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] first run: every gap names its file, line and a reason from the closed list
+  ✓ [I5] first run: api entry points = route decorators in src (15 / 15)
+
+2. the suggested profile applied as-is, full, --no-tests, --explain  (24 s)
+ node:internal/util/parse_args/parse_args:102
+      throw new ERR_PARSE_ARGS_UNKNOWN_OPTION(
+            ^
+
+TypeError [ERR_PARSE_ARGS_UNKNOWN_OPTION]: Unknown option '--explain'
+    at checkOptionUsage (node:internal/util/parse_args/parse_args:102:13)
+    at node:internal/util/parse_args/parse_args:377:9
+    at Array.forEach (<anonymous>)
+    at parseArgs (node:internal/util/parse_args/parse_args:374:3)
+    at <anonymous> (<modulegraph>\analyzer\src\cli.ts:81:26)
+    at ModuleJob.run (node:internal/modules/esm/module_job:430:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:661:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  code: 'ERR_PARSE_ARGS_UNKNOWN_OPTION'
+}
+
+Node.js v24.13.1
+
+  ✓ [I1] suggested profile: every effect target is a name (table, topic, event type, host or URL template), never code or "?"
+  ✓ [I2] suggested profile: one entry point per job / consumer / route (no key listed twice)
+  ✓ [I3] suggested profile: no entry point label is unknown ("?", "undefined", "<…>")
+  ✓ [I4] suggested profile: every effect step in every flow names its target
+  ✓ [I7] suggested profile: every flagged package comes with a suggested rule (sink or coverage.ignore)
+  ✓ [I9] suggested profile: every gap names its file, line and a reason from the closed list
+  ✓ [I5] suggested profile: api entry points = route decorators in src (15 / 15)
+  ✓ [I6] suggested profile: nothing is incomplete
+  ✖ [R4-1] --explain wrote <id>.explain.json with an entry per analyzed operation (42)
+        got: no explain file
+  ✖ [R4-1] all 9 calls through values / function literals handed on (found independently from the source) are "followed" or a named "gap"
+        got: GeoIpClient.countryOf L18 passed-fn: catchError(… (error) => { this.logger.warn(`geo-ip lookup faile …) | RecordLocksService.freeze L13 passed-fn: retry(… () => this.legacyDataSource.getRepository(UserRecord).update …) | RecordMessagesService.updateWithNotificationPayload L20 passed-fn: transaction(… async (manager) => { await this.outboxService.createOu …) | RecordNationalityService.storeNationalities L24 passed-fn: transaction(… async (manager) => { if (entitiesToSave.length) { …) | ConcludeManualReviewDecisionService.approve L40 passed-fn: startTransaction(… (queryRunner: QueryRunner) => this.setUserRecordManualReview …) | ConcludeManualReviewDecisionService.approve L43 passed-fn: startTr
+  ✓ [R4-1] ConcludeManualReviewDecisionService.approve: fully typed project code, so no gap
+  ✓ [R4-1] ConcludeManualReviewDecisionService.updateUserRecordData: fully typed project code, so no gap
+  ✓ [R4-1] ConcludeManualReviewDecisionService.reject: fully typed project code, so no gap
+  ✓ [R4-1] ConcludeManualReviewDecisionService.setUserRecordManualReviewData: fully typed project code, so no gap
+  ✓ [R4-1] gap budget: at most 10% of analyzed operations carry a gap (0/42)
+  ✖ [R4-2] ConcludeManualReviewDecisionService.approve: the steps that run between start and commit (callbacks run by executeQueries included) are in the transaction
+        got: not marked: call ConcludeManualReviewDecisionService.setUserRecordManualReviewDataForRow, db.write review_comments, db.write action_logs — call UserRecordsService.findByGuid | call ConcludeManualReviewDecisionService.setUserRecordManualReviewDataForRow | db.write review_comments | db.write action_logs | call UserRecordStatusService.setStatus [tx legacy + admin transaction] | call NotificationsOutboxService.notifyReviewConcluded [tx legacy + admin transaction] | call ReviewAuditService.recordDecision | call RecordEventsProducer.publishReviewConcluded
+  ✓ [R4-2] ConcludeManualReviewDecisionService.approve: the read before and the calls after the commit are outside it
+  ✖ [R4-2] ConcludeManualReviewDecisionService.approve: the callbacks' steps come after UserRecordStatusService.setStatus (where executeQueries runs them), not where they are written
+        got: placed before or missing: call ConcludeManualReviewDecisionService.setUserRecordManualReviewDataForRow, db.write review_comments, db.write action_logs — call UserRecordsService.findByGuid | call ConcludeManualReviewDecisionService.setUserRecordManualReviewDataForRow | db.write review_comments | db.write action_logs | call UserRecordStatusService.setStatus [tx legacy + admin transaction] | call NotificationsOutboxService.notifyReviewConcluded [tx legacy + admin transaction] | call ReviewAuditService.recordDecision | call RecordEventsProducer.publishReviewConcluded
+  ✖ [R4-2] ConcludeManualReviewDecisionService.updateUserRecordData: the steps that run between start and commit (callbacks run by executeQueries included) are in the transaction
+        got: not marked: call ConcludeManualReviewDecisionService.setUserRecordManualReviewDataForRow, db.write action_logs — call UserRecordsService.findByGuid | call ConcludeManualReviewDecisionService.setUserRecordManualReviewDataForRow | db.write action_logs
+  ✓ [R4-2] ConcludeManualReviewDecisionService.updateUserRecordData: the read before and the calls after the commit are outside it
+  ✖ [R4-2] two data sources are named as two transactions with separate commits, not as one
+        got: legacy + admin transaction
+  ✖ [R4-2] storeNationalities: the audit call inside manager.transaction(cb) writes through its own repository, not the manager: it is NOT in the transaction
+        got: db.read user_nationalities | db.write user_nationalities [tx nationalitiesRepository.manager.transac…] | db.write user_nationalities [tx nationalitiesRepository.manager.transac…] | call NationalityAuditService.record [tx nationalitiesRepository.manager.transac…]
+  ✓ [R4-2] storeNationalities: the writes through the transaction's manager are in it
+  ✖ [R4-2] reassign(): the strategy steps' writes are in the transaction (both implementations followed), OR it carries an interface-dispatch gap
+        got: steps: none; gaps: []
+  ✓ [R4-2] retry(() => …) is followed: RecordLocksService.freeze writes user_records
+  ✓ [R4-2] an abstract class with one implementation is followed: DocumentArchiveService.archive → http {FILE_STORE_URL}/objects/{key}
+  ✖ [R4-3] DocumentLinksService.downloadLink (signUrl: local HMAC) has no side effect
+        got: http @acme/url-signer, http @acme/url-signer
+  ✓ [R4-3] VendorIdentityClient.getApplicant still has its network effect
+  ✓ [R4-3] SftpClientService.upload still has its network effect
+  ✖ [R4-4] AssessmentsClient.getAssessmentStatuses → http {ASSESSMENT_SERVICE_CONFIG.baseUrl}/v1/internal/entities/{entityId}/assessments/statuses
+        got: {baseUrl}/v1/internal/entities/{entityId}/assessments/statuses, {baseUrl}/v1/internal/entities/{entityId}/assessments/statuses
+  ✖ [R4-4] IdentityManagerClient.checkPassword → http {IDENTITY_MANAGER_CONFIG.baseUrl}/api/v1/manage/users/authenticate
+        got: {baseUrl}/api/v1/manage/users/authenticate, {baseUrl}/api/v1/manage/users/authenticate
+  ✖ [R4-7] a profile "disagreements" entry appears before the changes in the brief, with its note and line
+        got: Handler classes the profile's `entryRegistries` list are counted as entry points, not modules: a run without those rules counts them as modules, for the same code.
+Change: 2 files, +21/−5, 4 contract changes, 10 entry points affected.
+
+**Verdict: not blocked by checks.** No new errors (`--check` passes). 5 new warnings.
+
+Stated intent (commits): “fix: scope manual review data to the approved row”
+
+  ✖ [R4-7] and on the operation in the review JSON (operations[].disagreements), without changing its steps
+  ✖ [R4-6] brief: setUserRecordManualReviewData's "Behaviour inside" says the new read locks the rows (pessimistic write)
+        got: ConcludeManualReviewDecision.setUserRecordManualReviewData: medium risk, modified /  / - **Side effects**: +db.read `user_records` / - **Calls**: +ConcludeManualReviewDecision.setUserRecordManualReviewDataForRow / - **Behaviour inside** (steps of this operation, base → head): /   - NEW db.read `user_records` /   - NEW call ConcludeManualReviewDecision.setUserRecordManualReviewDataForRow (once per 
+
+3. UI (1440×900)  (40 s)
+  ✖ [R4-3] one click on "incomplete" shows each flagged item (package and why) and its rule, without a further click
+        got: item lines visible for: none; rule shown
+  ✖ [R4-5] unchanged, undescribed operation (UserRecordsService.findByGuid): no "Ask your agent" block, no profile JSON
+        got: ✕
+UserRecords.findByGuid()
+
+Called through ReviewerDirectory.reviewerIdFor: Officers without an account of their own act as the shared review team. CONTEXT, NOT ITS OWN DESCRIPTION
+
+No description: no doc comment, no API docs (@ApiOperation) on an endpoint that hands to it, nothing in the profile.
+
+
+  ✓ [R4-5] the changed, undescribed operation still asks for a description (required)
+  ✖ [R4-2] the flow labels the two-database box as 2 transactions with separate commits, not "one transaction"
+        got: ⛓ one transaction legacy + admin transaction
+
+30/47 checks pass in 89 s; failing: R4-1, R4-2, R4-3, R4-4, R4-7, R4-6, R4-5

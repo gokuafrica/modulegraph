@@ -295,6 +295,8 @@ function MissingDescription({ g, op }: { g: ModuleGraph; op: Operation }) {
   const profile = g.source.profile?.path ?? `~/.modulegraph/configs/${g.service}/modulegraph.config.json`;
   const snippet = `"modules": { "overrides": { "${mod.className}": { "operations": { "${op.name}": "…" } } } }`;
   const changed = op.change !== 'unchanged';
+  // Unchanged: met in a flow, not under review. One quiet line; the agent describes it when it runs the skill.
+  if (!changed) return <div className="summary muted missing-doc">No description yet (unchanged; the reviewing agent writes descriptions into the profile).</div>;
   return (
     <div className="summary muted missing-doc">
       <p>No description: no doc comment, no API docs (<code>@ApiOperation</code>) on an endpoint that hands to it, nothing in the profile.{changed ? ' It changed, so the review needs one.' : ''}</p>

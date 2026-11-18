@@ -1,7 +1,7 @@
 import { type ClassDeclaration, type Decorator, type MethodDeclaration, Node, SyntaxKind } from 'ts-morph';
 import type { DecoratorEntryRule } from '../../../config.ts';
 import { joinPath } from '../extract.ts';
-import { consumersAt, implementation } from './nest-di.ts';
+import { consumersAt, implementation, implementations } from './nest-di.ts';
 import { nestPipeline } from './nest-pipeline.ts';
 import type { Framework, HookContext } from './types.ts';
 
@@ -20,6 +20,12 @@ export const nestjs: Framework = {
   id: 'nestjs',
   name: 'NestJS',
   packages: ['@nestjs/core', '@nestjs/common'],
+  // Interceptors and HttpService work with observables: an rxjs operator runs its function in the same flow, as the
+  // observable is consumed (`next.handle().pipe(tap(() => …))`, `firstValueFrom(http.get(…).pipe(map(…)))`).
+  callbacks: [
+    ...['map', 'tap', 'filter', 'switchMap', 'mergeMap', 'concatMap', 'exhaustMap', 'finalize'].map((f) => ({ module: 'rxjs', function: f, runs: 'in-place' as const })),
+    { module: 'rxjs', function: 'catchError', runs: 'in-place', condition: 'on error' },
+  ],
   decoratorEntries: [
     ...HTTP_VERBS.map((verb): DecoratorEntryRule => ({
       decorator: verb,
@@ -66,6 +72,7 @@ export const nestjs: Framework = {
     },
     pipeline: nestPipeline,
     implementation,
+    implementations,
     consumersAt,
   },
 };

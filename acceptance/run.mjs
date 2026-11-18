@@ -8,7 +8,7 @@
  * Extra arguments go to accept-r<n>.mjs, e.g. `--fresh-clone https://github.com/<owner>/modulegraph.git` once main is
  * pushed. Exit code: accept-r<n>.mjs's (0 only when every check passes).
  *
- *   node acceptance/run.mjs <n> [--fresh-clone <git url>] [--keep]     (npm run accept:r2 / accept:r3)
+ *   node acceptance/run.mjs <n> [--fresh-clone <git url>] [--keep]     (npm run accept:r3 / accept:r4)
  *   MODULEGRAPH_R<n>_FIXTURE=<dir>   use (or make) the fixture there instead
  */
 import { spawnSync } from 'node:child_process';

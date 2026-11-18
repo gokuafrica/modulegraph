@@ -14,8 +14,44 @@ export interface Effect {
   kind: EffectKind;
   /** Table name, outbox event type, Kafka topic or external service name. */
   target: string;
+  /** A read that locks the rows it reads: `for update` (pessimistic write), `for share` (pessimistic read). */
+  lock?: string;
   file?: string;
   line?: number;
+}
+
+/**
+ * A call in an operation the analysis can't follow, so what it does is not in the review: a function value that
+ * nothing in the code shows (`function-value`), an interface or abstract method the module wiring doesn't bind
+ * (`interface-dispatch`), a dependency with no types (`untyped`), a computed callee such as `handlers[type](…)`
+ * (`dynamic`).
+ */
+export type GapReason = 'function-value' | 'interface-dispatch' | 'untyped' | 'dynamic';
+
+export interface Gap {
+  file: string;
+  line: number;
+  reason: GapReason;
+}
+
+/**
+ * What the analysis did with one call of an operation (`analyze --explain`, `modulegraph explain`): `step` (a step of
+ * the operation), `inlined` (a project helper whose steps are inlined), `external` (outside the project, and not I/O by
+ * any adapter or rule), `followed` (a function value or interface call, resolved to `to`) or `gap` (with `reason`).
+ */
+export interface ExplainEntry {
+  file: string;
+  line: number;
+  text: string;
+  disposition: 'step' | 'inlined' | 'external' | 'followed' | 'gap';
+  to?: string;
+  reason?: GapReason;
+}
+
+/** A difference the agent found between the code and the diagram (its blind check), from the profile. */
+export interface Disagreement {
+  line: number;
+  note: string;
 }
 
 export interface Param {
@@ -63,8 +99,12 @@ export interface AnalysisIssue {
    * `missing-entry-points`: signs of entry points the analysis did not find (a Kafka client but no consumer, a handler
    * map, scripts that start the app with an argument). `unknown-side-effects`: packages that look like messaging,
    * outbox or cloud clients, which no adapter or profile rule describes, so their calls are not side effects.
+   * `invariant`: a property every correct review has does not hold here (an effect that names no target, an entry
+   * point listed twice, …), scoped to the operation or entry point it is about.
    */
-  kind: 'unresolved-imports' | 'unresolved-calls' | 'unmapped-change' | 'missing-entry-points' | 'unknown-side-effects';
+  kind: 'unresolved-imports' | 'unresolved-calls' | 'unmapped-change' | 'missing-entry-points' | 'unknown-side-effects' | 'invariant';
+  /** The operation or entry point it is about, when it is about one. */
+  scope?: string;
   /** One line, for the CLI and the top of the brief. */
   message: string;
   /** What to do about it. */
@@ -145,6 +185,8 @@ export interface Source {
    * entry points, not modules, so a run with them counts fewer modules than one without, for the same code).
    */
   profile?: { path: string; exists: boolean; unmatched?: string[]; registries?: number };
+  /** The agent's blind check, from the profile (`disagreements`): `Class.method` → where it disagrees with the diagram. */
+  disagreements?: Record<string, { line: number; note: string }[]>;
   /** The command that analyzes this review again, live (`modulegraph review …`): shown when the review is only a saved file. */
   command?: string;
   /** Which backend produced the graph and which framework adapters it used. */
@@ -241,6 +283,10 @@ export interface Operation {
   source: string;
   /** Lazy analyses only: whether callers (up) and callees (down) of this operation have been analyzed. */
   lazy?: { callersLoaded: boolean; calleesLoaded: boolean };
+  /** Calls in it (helpers included) the analysis can't follow: what they do is not shown. */
+  gaps?: Gap[];
+  /** The agent's blind check disagrees with the diagram here (profile `disagreements`). Steps are never changed by it. */
+  disagreements?: Disagreement[];
 }
 
 /** One request of the example scenario, e.g. `POST /users/u-2/kyc-birth-info`. */
@@ -330,6 +376,8 @@ export interface EntryPoint {
    * `guard AuthGuard (global)`. Any of these changes who may call the entry point or what runs around it.
    */
   pipelineDelta?: { added: string[]; removed: string[]; changed: string[] };
+  /** Calls in its handler the analysis can't follow. */
+  gaps?: Gap[];
 }
 
 export interface Scope {
@@ -383,8 +431,14 @@ export interface Step {
   delta?: 'added' | 'removed';
   /** The step's guard on the base revision, when it changed ("" = had none). */
   conditionBefore?: string;
-  /** The transaction the step runs in, as the code opens it (`dataSource.transaction`, `@Transactional`). */
+  /**
+   * The transaction the step runs in: it goes through the transaction's handle (a query runner, its manager, the
+   * manager a `transaction(cb)` callback is given), or the method is `@Transactional`. Transactions open at the same
+   * time on different handles commit separately: `2 transactions (orders, audit), separate commits`.
+   */
   transaction?: string;
+  /** A transaction open while the step runs that the step doesn't go through: a rollback doesn't undo it. */
+  outsideTransaction?: string;
   /**
    * The step runs in the request pipeline in front of the handler, not in the handler: the item it belongs to, as
    * `interceptor RequestTimer` or `guard AuthGuard`. The UI folds these into one "request pipeline" node.

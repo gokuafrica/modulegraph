@@ -39,6 +39,9 @@ if (command === 'open') {
   args = ['--lazy', '--serve', ...(rest.includes('--no-open') ? [] : ['--open']), ...rest.filter((a) => a !== '--no-open')];
 } else if (command === 'analyze') {
   args = rest;
+} else if (command === 'explain') {
+  script = 'analyzer/src/explain.ts';
+  args = rest;
 } else if (!command || command === 'help' || command === '--help' || command === '-h') {
   console.log(`modulegraph: module-level review of a change
 
@@ -49,6 +52,8 @@ if (command === 'open') {
                                   machine it is served live again (refresh, done; what was explored is analyzed
                                   again); --static shows only the saved file. Also stops when idle
   modulegraph setup               install dependencies, build the UI, install the agent skill
+  modulegraph explain <id> <op>   what the analysis did with every call of an operation (step, inlined, external,
+                                  followed, gap); needs a review analyzed with --explain
 
 Ending reviews (reviews are saved in ~/.modulegraph/reviews/ until you remove them):
   modulegraph stop [<id>]         stop the server serving <id>, or every modulegraph server; deletes nothing
@@ -67,7 +72,7 @@ committed and uncommitted, against the repo's default branch. Options of review 
 } else if (command.startsWith('--')) {
   args = [command, ...rest];
 } else {
-  console.error(`unknown command "${command}": use review, analyze, open, stop, done, clean, setup or help`);
+  console.error(`unknown command "${command}": use review, analyze, open, explain, stop, done, clean, setup or help`);
   process.exit(2);
 }
 
